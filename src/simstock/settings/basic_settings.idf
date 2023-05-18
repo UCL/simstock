@@ -1,0 +1,928 @@
+!-Generator IDFEditor 1.50
+!-Option SortedOrder UseSpecialFormat
+
+!-NOTE: All comments with '!-' are ignored by the IDFEditor and are generated automatically.
+!-      Use '!' comments if they need to be retained when using the IDFEditor.
+
+
+!-   ===========  ALL OBJECTS IN CLASS: VERSION ===========
+
+Version,8.9;
+
+!-   ===========  ALL OBJECTS IN CLASS: SIMULATIONCONTROL ===========
+
+
+SimulationControl,
+    No,                      !- Do Zone Sizing Calculation
+    No,                      !- Do System Sizing Calculation
+    No,                      !- Do Plant Sizing Calculation
+    No,                      !- Run Simulation for Sizing Periods
+    Yes;                     !- Run Simulation for Weather File Run Periods
+
+
+!-   ===========  ALL OBJECTS IN CLASS: BUILDING ===========
+
+Building,
+    building,                !- Name
+    0.0,                     !- North Axis {deg}
+    City,                    !- Terrain
+    0.04,                    !- Loads Convergence Tolerance Value
+    0.4,                     !- Temperature Convergence Tolerance Value {deltaC}
+    FullExterior,            !- Solar Distribution
+    25,                      !- Maximum Number of Warmup Days
+    6;                       !- Minimum Number of Warmup Days
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SHADOWCALCULATION ===========
+
+ShadowCalculation,
+    AverageOverDaysInFrequency,  !- Calculation Method
+    20,                      !- Calculation Frequency
+    15000,                   !- Maximum Figures in Shadow Overlap Calculations
+    SutherlandHodgman,       !- Polygon Clipping Algorithm
+    SimpleSkyDiffuseModeling;!- Sky Diffuse Modeling Algorithm
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:INSIDE ===========
+
+SurfaceConvectionAlgorithm:Inside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:OUTSIDE ===========
+
+SurfaceConvectionAlgorithm:Outside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: HEATBALANCEALGORITHM ===========
+
+HeatBalanceAlgorithm,ConductionTransferFunction,200;
+
+!-   ===========  ALL OBJECTS IN CLASS: TIMESTEP ===========
+
+Timestep,6;
+
+!-   ===========  ALL OBJECTS IN CLASS: RUNPERIOD ===========
+
+
+RunPeriod,
+    ,                        !- Name
+    1,                       !- Begin Month
+    1,                       !- Begin Day of Month
+    12,                      !- End Month
+    31,                      !- End Day of Month
+    Monday,                  !- Day of Week for Start Day
+    Yes,                     !- Use Weather File Holidays and Special Days
+    Yes,                     !- Use Weather File Daylight Saving Period
+    No,                      !- Apply Weekend Holiday Rule
+    Yes,                     !- Use Weather File Rain Indicators
+    Yes,                     !- Use Weather File Snow Indicators
+    1;                       !- Number of Times Runperiod to be Repeated
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULETYPELIMITS ===========
+
+ScheduleTypeLimits,
+    Any Number,              !- Name
+    ,                        !- Lower Limit Value
+    ,                        !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Fraction,                !- Name
+    0,                       !- Lower Limit Value
+    1,                       !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Temperature,             !- Name
+    ,                        !- Lower Limit Value
+    ,                        !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Control Type,            !- Name
+    0,                       !- Lower Limit Value
+    4,                       !- Upper Limit Value
+    Discrete;                !- Numeric Type
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:COMPACT ===========
+
+Schedule:Compact,
+    Activity Schedule 98779, !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 108;       !- Field 4
+
+Schedule:Compact,
+    Clothing Schedule 98779, !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 4/1,            !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 1,         !- Field 4
+    Through: 9/30,           !- Field 5
+    For: AllDays,            !- Field 6
+    Until: 24:00, .5,        !- Field 8
+    Through: 12/31,          !- Field 9
+    For: AllDays,            !- Field 10
+    Until: 24:00, 1;         !- Field 12
+
+Schedule:Compact,
+    Dwell_Occ,               !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 07:00, 1,         !- Field 4
+    Until: 09:00, 0.5,       !- Field 6
+    Until: 17:00, 0,         !- Field 8
+    Until: 19:00, 0.5,       !- Field 10
+    Until: 24:00, 1,         !- Field 12
+    For: Weekends,           !- Field 13
+    Until: 07:00, 1,         !- Field 15
+    Until: 19:00, 0.5,       !- Field 17
+    Until: 24:00, 1,         !- Field 19
+    For: Holidays,           !- Field 20
+    Until: 07:00, 1,         !- Field 22
+    Until: 19:00, 0.5,       !- Field 24
+    Until: 24:00, 1;         !- Field 26
+
+Schedule:Compact,
+    Dwell_Heat,              !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 15:00, 12,        !- Field 4
+    Until: 23:00, 21,        !- Field 6
+    Until: 24:00, 12,        !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 15:00, 12,        !- Field 11
+    Until: 23:00, 21,        !- Field 13
+    Until: 24:00, 12,        !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 15:00, 12,        !- Field 18
+    Until: 23:00, 21,        !- Field 20
+    Until: 24:00, 12;        !- Field 22
+
+Schedule:Compact,
+    Dwell_Cool,              !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 15:00, 50,        !- Field 4
+    Until: 23:00, 25,        !- Field 6
+    Until: 24:00, 50,        !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 15:00, 50,        !- Field 11
+    Until: 23:00, 25,        !- Field 13
+    Until: 24:00, 50,        !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 15:00, 50,        !- Field 18
+    Until: 23:00, 25,        !- Field 20
+    Until: 24:00, 50;        !- Field 22
+
+Schedule:Compact,
+    Dwell_Equip,             !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 17:00, 0.05,      !- Field 4
+    Until: 18:00, 0.5,       !- Field 6
+    Until: 22:00, 1,         !- Field 8
+    Until: 23:00, 0.75,      !- Field 10
+    Until: 24:00, 0.05,      !- Field 12
+    For: Weekends,           !- Field 13
+    Until: 08:00, 0.05,      !- Field 15
+    Until: 22:00, 1,         !- Field 17
+    Until: 24:00, 0.35,      !- Field 19
+    For: Holidays,           !- Field 20
+    Until: 08:00, 0.05,      !- Field 22
+    Until: 22:00, 1,         !- Field 24
+    Until: 24:00, 0.35;      !- Field 26
+
+Schedule:Compact,
+    Dwell_Light,             !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 17:00, 0,         !- Field 4
+    Until: 23:00, 1,         !- Field 6
+    Until: 24:00, 0,         !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 17:00, 0,         !- Field 11
+    Until: 23:00, 1,         !- Field 13
+    Until: 24:00, 0,         !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 17:00, 0,         !- Field 18
+    Until: 23:00, 1,         !- Field 20
+    Until: 24:00, 0;         !- Field 22
+
+Schedule:Compact,
+    Work Efficiency,         !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 0;         !- Field 4
+
+Schedule:Compact,
+    AirVelocitySchedule,     !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 0.137;     !- Field 4
+
+Schedule:Compact,
+    On 24/7,                 !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 1;         !- Field 4
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:CONSTANT ===========
+
+Schedule:Constant,Always 4,Control Type,4;
+
+!-   ===========  ALL OBJECTS IN CLASS: MATERIAL ===========
+
+
+Material,
+    10mm_carpet,             !- Name
+    Rough,                   !- Roughness
+    0.01,                    !- Thickness {m}
+    0.058,                   !- Conductivity {W/m-K}
+    20,                      !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.5,                     !- Solar Absorptance
+    0.5;                     !- Visible Absorptance
+
+Material,
+    25mm_gypsum_plasterboard,!- Name
+    Rough,                   !- Roughness
+    0.025,                   !- Thickness {m}
+    0.25,                    !- Conductivity {W/m-K}
+    900,                     !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.5,                     !- Solar Absorptance
+    0.5;                     !- Visible Absorptance
+
+Material,
+    105mm_brick_outer_leaf,  !- Name
+    Rough,                   !- Roughness
+    0.105,                   !- Thickness {m}
+    0.77,                    !- Conductivity {W/m-K}
+    1700,                    !- Density {kg/m3}
+    840,                     !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.7,                     !- Solar Absorptance
+    0.7;                     !- Visible Absorptance
+
+Material,
+    140mm_min_wool_quilt,    !- Name
+    Rough,                   !- Roughness
+    0.14,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    12,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    100mm_min_wool_quilt,    !- Name
+    Rough,                   !- Roughness
+    0.1,                     !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    12,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    75mm_min_wool_quilt,     !- Name
+    Rough,                   !- Roughness
+    0.075,                   !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    12,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    50mm_min_wool_quilt,     !- Name
+    Rough,                   !- Roughness
+    0.05,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    12,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    100mm_concrete_1800,     !- Name
+    Rough,                   !- Roughness
+    0.1,                     !- Thickness {m}
+    1.13,                    !- Conductivity {W/m-K}
+    1800,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    13mm_plasterboard_wallboard,  !- Name
+    Rough,                   !- Roughness
+    0.013,                   !- Thickness {m}
+    0.21,                    !- Conductivity {W/m-K}
+    900,                     !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    25mm_stone_chippings,    !- Name
+    Rough,                   !- Roughness
+    0.025,                   !- Thickness {m}
+    2,                       !- Conductivity {W/m-K}
+    2000,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.5,                     !- Solar Absorptance
+    0.5;                     !- Visible Absorptance
+
+Material,
+    150mm_concrete_dense,    !- Name
+    Rough,                   !- Roughness
+    0.15,                    !- Thickness {m}
+    1.93,                    !- Conductivity {W/m-K}
+    2400,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    40mm_flooring_screed,    !- Name
+    Rough,                   !- Roughness
+    0.04,                    !- Thickness {m}
+    0.41,                    !- Conductivity {W/m-K}
+    1200,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.73,                    !- Solar Absorptance
+    0.73;                    !- Visible Absorptance
+
+Material,
+    19mm_asphalt,            !- Name
+    Rough,                   !- Roughness
+    0.019,                   !- Thickness {m}
+    0.7,                     !- Conductivity {W/m-K}
+    2100,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.85,                    !- Solar Absorptance
+    0.85;                    !- Visible Absorptance
+
+Material,
+    240mm_mineral_wool_dense,!- Name
+    Rough,                   !- Roughness
+    0.24,                    !- Thickness {m}
+    0.036,                   !- Conductivity {W/m-K}
+    50,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    200mm_mineral_wool_dense,!- Name
+    Rough,                   !- Roughness
+    0.2,                     !- Thickness {m}
+    0.036,                   !- Conductivity {W/m-K}
+    50,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    100mm_mineral_wool_dense,!- Name
+    Rough,                   !- Roughness
+    0.1,                     !- Thickness {m}
+    0.036,                   !- Conductivity {W/m-K}
+    50,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    70mm_mineral_wool_dense, !- Name
+    Rough,                   !- Roughness
+    0.07,                    !- Thickness {m}
+    0.036,                   !- Conductivity {W/m-K}
+    50,                      !- Density {kg/m3}
+    1030,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    750mm_clay_underfloor,   !- Name
+    Rough,                   !- Roughness
+    0.75,                    !- Thickness {m}
+    1.5,                     !- Conductivity {W/m-K}
+    1500,                    !- Density {kg/m3}
+    2085,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    25mm_brick_slips,        !- Name
+    Rough,                   !- Roughness
+    0.025,                   !- Thickness {m}
+    0.77,                    !- Conductivity {W/m-K}
+    1700,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.7,                     !- Solar Absorptance
+    0.7;                     !- Visible Absorptance
+
+Material,
+    100mm_cast_concrete,     !- Name
+    Rough,                   !- Roughness
+    0.1,                     !- Thickness {m}
+    1.35,                    !- Conductivity {W/m-K}
+    2000,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    240mm_eps,               !- Name
+    Rough,                   !- Roughness
+    0.24,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    15,                      !- Density {kg/m3}
+    1300,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    120mm_eps,               !- Name
+    Rough,                   !- Roughness
+    0.12,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    15,                      !- Density {kg/m3}
+    1300,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    80mm_eps,                !- Name
+    Rough,                   !- Roughness
+    0.08,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    15,                      !- Density {kg/m3}
+    1300,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    10mm_eps,                !- Name
+    Rough,                   !- Roughness
+    0.01,                    !- Thickness {m}
+    0.04,                    !- Conductivity {W/m-K}
+    15,                      !- Density {kg/m3}
+    1300,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.6,                     !- Solar Absorptance
+    0.6;                     !- Visible Absorptance
+
+Material,
+    50mm_flooring_screed,    !- Name
+    Rough,                   !- Roughness
+    0.05,                    !- Thickness {m}
+    0.41,                    !- Conductivity {W/m-K}
+    1200,                    !- Density {kg/m3}
+    1000,                    !- Specific Heat {J/kg-K}
+    0.9,                     !- Thermal Absorptance
+    0.73,                    !- Solar Absorptance
+    0.73;                    !- Visible Absorptance
+
+
+!-   ===========  ALL OBJECTS IN CLASS: MATERIAL:NOMASS ===========
+
+Material:NoMass,
+    air_layer,               !- Name
+    Rough,                   !- Roughness
+    0.18,                    !- Thermal Resistance {m2-K/W}
+    0.9,                     !- Thermal Absorptance
+    0.7,                     !- Solar Absorptance
+    0.7;                     !- Visible Absorptance
+
+
+!-   ===========  ALL OBJECTS IN CLASS: WINDOWMATERIAL:GLAZING ===========
+
+WindowMaterial:Glazing,
+    4mm_clear,               !- Name
+    SpectralAverage,         !- Optical Data Type
+    ,                        !- Window Glass Spectral Data Set Name
+    0.004,                   !- Thickness {m}
+    0.816,                   !- Solar Transmittance at Normal Incidence
+    0.075,                   !- Front Side Solar Reflectance at Normal Incidence
+    0.075,                   !- Back Side Solar Reflectance at Normal Incidence
+    0.892,                   !- Visible Transmittance at Normal Incidence
+    0.081,                   !- Front Side Visible Reflectance at Normal Incidence
+    0.081,                   !- Back Side Visible Reflectance at Normal Incidence
+    0,                       !- Infrared Transmittance at Normal Incidence
+    0.84,                    !- Front Side Infrared Hemispherical Emissivity
+    0.84,                    !- Back Side Infrared Hemispherical Emissivity
+    1,                       !- Conductivity {W/m-K}
+    1,                       !- Dirt Correction Factor for Solar and Visible Transmittance
+    No;                      !- Solar Diffusing
+
+WindowMaterial:Glazing,
+    4mm_low_e_clear,         !- Name
+    SpectralAverage,         !- Optical Data Type
+    ,                        !- Window Glass Spectral Data Set Name
+    0.004,                   !- Thickness {m}
+    0.62,                    !- Solar Transmittance at Normal Incidence
+    0.075,                   !- Front Side Solar Reflectance at Normal Incidence
+    0.075,                   !- Back Side Solar Reflectance at Normal Incidence
+    0.847,                   !- Visible Transmittance at Normal Incidence
+    0.081,                   !- Front Side Visible Reflectance at Normal Incidence
+    0.081,                   !- Back Side Visible Reflectance at Normal Incidence
+    0,                       !- Infrared Transmittance at Normal Incidence
+    0.84,                    !- Front Side Infrared Hemispherical Emissivity
+    0.1,                     !- Back Side Infrared Hemispherical Emissivity
+    1,                       !- Conductivity {W/m-K}
+    1,                       !- Dirt Correction Factor for Solar and Visible Transmittance
+    No;                      !- Solar Diffusing
+
+
+!-   ===========  ALL OBJECTS IN CLASS: WINDOWMATERIAL:GAS ===========
+
+WindowMaterial:Gas,
+    6mm_air,                 !- Name
+    Air,                     !- Gas Type
+    0.006;                   !- Thickness {m}
+
+WindowMaterial:Gas,
+    12mm_air,                !- Name
+    Air,                     !- Gas Type
+    0.012;                   !- Thickness {m}
+
+WindowMaterial:Gas,
+    16mm_air,                !- Name
+    Air,                     !- Gas Type
+    0.016;                   !- Thickness {m}
+
+WindowMaterial:Gas,
+    16mm_xenon,              !- Name
+    Xenon,                   !- Gas Type
+    0.016;                   !- Thickness {m}
+
+
+!-   ===========  ALL OBJECTS IN CLASS: CONSTRUCTION ===========
+
+Construction,
+    best_glazing,            !- Name
+    4mm_clear,               !- Outside Layer
+    16mm_xenon,              !- Layer 2
+    4mm_low_e_clear;         !- Layer 3
+
+Construction,
+    2002_glazing,            !- Name
+    4mm_clear,               !- Outside Layer
+    16mm_air,                !- Layer 2
+    4mm_low_e_clear;         !- Layer 3
+
+Construction,
+    1995_glazing,            !- Name
+    4mm_clear,               !- Outside Layer
+    12mm_air,                !- Layer 2
+    4mm_clear;               !- Layer 3
+
+Construction,
+    1990_glazing,            !- Name
+    4mm_clear,               !- Outside Layer
+    6mm_air,                 !- Layer 2
+    4mm_clear;               !- Layer 3
+
+Construction,
+    uninsulated_glazing,     !- Name
+    4mm_clear;               !- Outside Layer
+
+Construction,
+    ceiling,                 !- Name
+    10mm_carpet,             !- Outside Layer
+    100mm_concrete_1800;     !- Layer 2
+
+Construction,
+    ceiling_inverse,         !- Name
+    100mm_concrete_1800,     !- Outside Layer
+    10mm_carpet;             !- Layer 2
+
+Construction,
+    partition,               !- Name
+    25mm_gypsum_plasterboard,!- Outside Layer
+    105mm_brick_outer_leaf,  !- Layer 2
+    25mm_gypsum_plasterboard;!- Layer 3
+
+Construction,
+    best_wall,               !- Name
+    105mm_brick_outer_leaf,  !- Outside Layer
+    140mm_min_wool_quilt,    !- Layer 2
+    100mm_concrete_1800,     !- Layer 3
+    air_layer,               !- Layer 4
+    13mm_plasterboard_wallboard;  !- Layer 5
+
+Construction,
+    2002_wall,               !- Name
+    105mm_brick_outer_leaf,  !- Outside Layer
+    100mm_min_wool_quilt,    !- Layer 2
+    100mm_concrete_1800,     !- Layer 3
+    air_layer,               !- Layer 4
+    13mm_plasterboard_wallboard;  !- Layer 5
+
+Construction,
+    1995_wall,               !- Name
+    105mm_brick_outer_leaf,  !- Outside Layer
+    75mm_min_wool_quilt,     !- Layer 2
+    100mm_concrete_1800,     !- Layer 3
+    air_layer,               !- Layer 4
+    13mm_plasterboard_wallboard;  !- Layer 5
+
+Construction,
+    1990_wall,               !- Name
+    105mm_brick_outer_leaf,  !- Outside Layer
+    50mm_min_wool_quilt,     !- Layer 2
+    100mm_concrete_1800,     !- Layer 3
+    air_layer,               !- Layer 4
+    13mm_plasterboard_wallboard;  !- Layer 5
+
+Construction,
+    uninsulated_wall,        !- Name
+    105mm_brick_outer_leaf,  !- Outside Layer
+    100mm_concrete_1800,     !- Layer 2
+    air_layer,               !- Layer 3
+    13mm_plasterboard_wallboard;  !- Layer 4
+
+Construction,
+    best_flat_roof,          !- Name
+    25mm_stone_chippings,    !- Outside Layer
+    19mm_asphalt,            !- Layer 2
+    240mm_mineral_wool_dense,!- Layer 3
+    40mm_flooring_screed,    !- Layer 4
+    150mm_concrete_dense;    !- Layer 5
+
+Construction,
+    2002_flat_roof,          !- Name
+    25mm_stone_chippings,    !- Outside Layer
+    19mm_asphalt,            !- Layer 2
+    200mm_mineral_wool_dense,!- Layer 3
+    40mm_flooring_screed,    !- Layer 4
+    150mm_concrete_dense;    !- Layer 5
+
+Construction,
+    1995_flat_roof,          !- Name
+    25mm_stone_chippings,    !- Outside Layer
+    19mm_asphalt,            !- Layer 2
+    100mm_mineral_wool_dense,!- Layer 3
+    40mm_flooring_screed,    !- Layer 4
+    150mm_concrete_dense;    !- Layer 5
+
+Construction,
+    1990_flat_roof,          !- Name
+    25mm_stone_chippings,    !- Outside Layer
+    19mm_asphalt,            !- Layer 2
+    70mm_mineral_wool_dense, !- Layer 3
+    40mm_flooring_screed,    !- Layer 4
+    150mm_concrete_dense;    !- Layer 5
+
+Construction,
+    uninsulated_flat_roof,   !- Name
+    25mm_stone_chippings,    !- Outside Layer
+    19mm_asphalt,            !- Layer 2
+    40mm_flooring_screed,    !- Layer 3
+    150mm_concrete_dense;    !- Layer 4
+
+Construction,
+    best_solid_ground_floor, !- Name
+    750mm_clay_underfloor,   !- Outside Layer
+    25mm_brick_slips,        !- Layer 2
+    100mm_cast_concrete,     !- Layer 3
+    240mm_eps,               !- Layer 4
+    50mm_flooring_screed;    !- Layer 5
+
+Construction,
+    2002_solid_ground_floor, !- Name
+    750mm_clay_underfloor,   !- Outside Layer
+    25mm_brick_slips,        !- Layer 2
+    100mm_cast_concrete,     !- Layer 3
+    120mm_eps,               !- Layer 4
+    50mm_flooring_screed;    !- Layer 5
+
+Construction,
+    1995_solid_ground_floor, !- Name
+    750mm_clay_underfloor,   !- Outside Layer
+    25mm_brick_slips,        !- Layer 2
+    100mm_cast_concrete,     !- Layer 3
+    80mm_eps,                !- Layer 4
+    50mm_flooring_screed;    !- Layer 5
+
+Construction,
+    1990_solid_ground_floor, !- Name
+    750mm_clay_underfloor,   !- Outside Layer
+    25mm_brick_slips,        !- Layer 2
+    100mm_cast_concrete,     !- Layer 3
+    10mm_eps,                !- Layer 4
+    50mm_flooring_screed;    !- Layer 5
+
+Construction,
+    uninsulated_solid_ground_floor,  !- Name
+    750mm_clay_underfloor,   !- Outside Layer
+    25mm_brick_slips,        !- Layer 2
+    100mm_cast_concrete,     !- Layer 3
+    50mm_flooring_screed;    !- Layer 4
+
+
+!-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
+
+GlobalGeometryRules,
+    UpperLeftCorner,         !- Starting Vertex Position
+    Counterclockwise,        !- Vertex Entry Direction
+    Relative;                !- Coordinate System
+
+
+!-   ===========  ALL OBJECTS IN CLASS: PEOPLE ===========
+
+People,
+    People Dwell,            !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Occ,               !- Number of People Schedule Name
+    Area/Person,             !- Number of People Calculation Method
+    ,                        !- Number of People
+    ,                        !- People per Zone Floor Area {person/m2}
+    4,                       !- Zone Floor Area per Person {m2/person}
+    0.3,                     !- Fraction Radiant
+    AutoCalculate,           !- Sensible Heat Fraction
+    Activity Schedule 98779, !- Activity Level Schedule Name
+    0.0000000382,            !- Carbon Dioxide Generation Rate {m3/s-W}
+    No,                      !- Enable ASHRAE 55 Comfort Warnings
+    ZoneAveraged,            !- Mean Radiant Temperature Calculation Type
+    ,                        !- Surface Name/Angle Factor List Name
+    Work efficiency,         !- Work Efficiency Schedule Name
+    ClothingInsulationSchedule,  !- Clothing Insulation Calculation Method
+    ,                        !- Clothing Insulation Calculation Method Schedule Name
+    Clothing Schedule 98779, !- Clothing Insulation Schedule Name
+    AirVelocitySchedule,     !- Air Velocity Schedule Name
+    Fanger;                  !- Thermal Comfort Model 1 Type
+
+
+!-   ===========  ALL OBJECTS IN CLASS: LIGHTS ===========
+
+Lights,
+    Dwell ,                  !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Light,             !- Schedule Name
+    Watts/Area,              !- Design Level Calculation Method
+    ,                        !- Lighting Level {W}
+    12,                      !- Watts per Zone Floor Area {W/m2}
+    ,                        !- Watts per Person {W/person}
+    0,                       !- Return Air Fraction
+    0.42,                    !- Fraction Radiant
+    0.18,                    !- Fraction Visible
+    1;                       !- Fraction Replaceable
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ELECTRICEQUIPMENT ===========
+
+ElectricEquipment,
+    Dwell,                   !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Equip,             !- Schedule Name
+    Watts/Area,              !- Design Level Calculation Method
+    ,                        !- Design Level {W}
+    25,                      !- Watts per Zone Floor Area {W/m2}
+    ,                        !- Watts per Person {W/person}
+    0,                       !- Fraction Latent
+    0.2,                     !- Fraction Radiant
+    0,                       !- Fraction Lost
+    ELECTRIC EQUIPMENT#Dwell;!- End-Use Subcategory
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONEINFILTRATION:DESIGNFLOWRATE ===========
+
+ZoneInfiltration:DesignFlowRate,
+    Dwell Infiltration,      !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    On 24/7,                 !- Schedule Name
+    AirChanges/Hour,         !- Design Flow Rate Calculation Method
+    ,                        !- Design Flow Rate {m3/s}
+    ,                        !- Flow per Zone Floor Area {m3/s-m2}
+    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
+    0.63554,                 !- Air Changes per Hour {1/hr}
+    1,                       !- Constant Term Coefficient
+    0,                       !- Temperature Term Coefficient
+    0,                       !- Velocity Term Coefficient
+    0;                       !- Velocity Squared Term Coefficient
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONEVENTILATION:DESIGNFLOWRATE ===========
+
+ZoneVentilation:DesignFlowRate,
+    Dwell Nat Vent,          !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Occ,               !- Schedule Name
+    Flow/Person,             !- Design Flow Rate Calculation Method
+    ,                        !- Design Flow Rate {m3/s}
+    ,                        !- Flow Rate per Zone Floor Area {m3/s-m2}
+    0.008,                   !- Flow Rate per Person {m3/s-person}
+    ,                        !- Air Changes per Hour {1/hr}
+    NATURAL,                 !- Ventilation Type
+    0,                       !- Fan Pressure Rise {Pa}
+    1,                       !- Fan Total Efficiency
+    1,                       !- Constant Term Coefficient
+    0,                       !- Temperature Term Coefficient
+    0,                       !- Velocity Term Coefficient
+    0,                       !- Velocity Squared Term Coefficient
+    40,                      !- Minimum Indoor Temperature {C}
+    ,                        !- Minimum Indoor Temperature Schedule Name
+    100,                     !- Maximum Indoor Temperature {C}
+    ,                        !- Maximum Indoor Temperature Schedule Name
+    0,                       !- Delta Temperature {deltaC}
+    ,                        !- Delta Temperature Schedule Name
+    -100,                    !- Minimum Outdoor Temperature {C}
+    ,                        !- Minimum Outdoor Temperature Schedule Name
+    100,                     !- Maximum Outdoor Temperature {C}
+    ,                        !- Maximum Outdoor Temperature Schedule Name
+    40;                      !- Maximum Wind Speed {m/s}
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONECONTROL:THERMOSTAT ===========
+
+! - Zone name
+! - Control type schedule name
+! - Dual SP control object type
+! - Dual SP control object name
+ZoneControl:Thermostat,
+    Dwell Thermostat,        !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Always 4,                !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
+    Dwell Dual SP;           !- Control 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: THERMOSTATSETPOINT:DUALSETPOINT ===========
+
+! - Name
+! - Heating setpoint temperature schedule name
+ThermostatSetpoint:DualSetpoint,
+    Dwell Dual SP,           !- Name
+    Dwell_Heat,              !- Heating Setpoint Temperature Schedule Name
+    Dwell_Cool;              !- Cooling Setpoint Temperature Schedule Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLEDICTIONARY ===========
+
+Output:VariableDictionary,IDF;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:TABLE:SUMMARYREPORTS ===========
+
+
+Output:Table:SummaryReports,
+    AllSummary;              !- Report 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUTCONTROL:TABLE:STYLE ===========
+
+OutputControl:Table:Style,
+    CommaAndHTML,            !- Column Separator
+    JtoKWH;                  !- Unit Conversion
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLE ===========
+
+Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
+Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
+
+
+Output:Diagnostics,
+    DoNotMirrorDetachedShading;  !- Key 1
+

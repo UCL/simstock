@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "simstock"
+version = "0.1.0"
+description = "Developmental core version of the simstock model"
+authors = [
+    "Olly Smith <olly.smith@ucl.ac.uk>",
+    "Ivan Korolija <i.korolija@ucl.ac.uk>",
+    "add others..."
+    ]
+readme = "README.md"
+packages = [{include = "simstock", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+shapely = "^2.0.1"
+eppy = "^0.5.63"
+pandas = "^1.5.3"
+numpy = "^1.24.2"
+fastparquet = "^2023.2.0"
+matplotlib = "^3.7.1"
+
+[tool.poetry.group.dev.dependencies]
+pdoc = "^13.0.0"
+pylint = "^2.16.4"
+ipykernel = "^6.22.0"
+poetry2conda = "^0.3.0"
+
+[tool.poetry2conda]
+name = "simstock"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
