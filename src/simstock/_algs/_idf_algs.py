@@ -14,6 +14,83 @@ from eppy.modeleditor import IDF
 from shapely.geometry import Polygon
 
 
+
+# def _new_thermal_zone(
+#         idf : IDF,
+#         zone_name : str,
+#         height : int | float,
+#         floor_const : str,
+#         roof_const : str,
+#         wall_const : str,
+#         floor_no : int,
+#         horiz_surf_coord : tuple[float, float],
+#         ext_surf_coord : tuple[float, float]
+#         ) -> None:
+#     zone_floor_h = 0
+#     space_below_floor = 'Ground'
+#     zone_ceiling_h = height
+#     space_above_floor = 'Outdoors'
+
+#     idf.newidfobject('ZONE', Name=zone_name)
+
+#     calgs._floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+#             zone_floor_h, floor_const)
+
+#     _roof_ceiling(idf, zone_name, space_above_floor,
+#                     horiz_surf_coord, zone_ceiling_h, roof_const)
+
+#     zone_height = zone_ceiling_h - zone_floor_h
+#     _external_walls(idf, zone_name, floor_no, ext_surf_coord,
+#                     zone_ceiling_h, zone_floor_h, zone_height,
+#                     min_avail_height, min_avail_width_for_window,
+#                     wall_const, glazing_const, glazing_ratio)
+
+#     # Partition walls where adjacent polygons exist
+#     if adj_osgb_list:
+#         # Surface type; no sun exposure; no wind exposure
+#         partition_const = 'partition'
+#         # Loop through the list of adjacent objects
+#         for adj_osgb in adj_osgb_list:
+#             opposite_zone = adj_osgb
+#             # Extract polygon from the adjacent objects DataFrame
+#             adj_polygon = df.loc[df['osgb'] == adj_osgb,
+#                                         'polygon'].values[0]
+#             adj_height = df.loc[df['osgb'] == adj_osgb,
+#                                 'height'].values[0]
+#             # Find the intersection between two polygons (it will be
+#             # LineString or MultiLineString) and position coordinates
+#             # relative to origin
+#             part_wall_polygon = polygon.intersection(adj_polygon)
+#             adj_wall_parti_surf_coord = palgs._surface_coordinates(
+#                 part_wall_polygon, origin)
+#             if zone_ceiling_h < adj_height + 1e-6:
+#                 _partition_walls(idf, zone_name, opposite_zone,
+#                                 adj_wall_parti_surf_coord,
+#                                 zone_ceiling_h, zone_floor_h,
+#                                 partition_const)
+#             else:
+#                 if zone_floor_h > adj_height - 1e-6:
+#                     _external_walls(idf, zone_name, floor_no,
+#                                     adj_wall_parti_surf_coord,
+#                                     zone_ceiling_h, zone_floor_h,
+#                                     zone_height, min_avail_height,
+#                                     min_avail_width_for_window,
+#                                     wall_const, glazing_const,
+#                                     glazing_ratio)
+#                 else:
+#                     _external_walls(idf, zone_name, floor_no,
+#                                     adj_wall_parti_surf_coord,
+#                                     zone_ceiling_h, adj_height,
+#                                     zone_height, min_avail_height,
+#                                     min_avail_width_for_window,
+#                                     wall_const, glazing_const,
+#                                     glazing_ratio)
+#                     _partition_walls(idf, zone_name, opposite_zone,
+#                                     adj_wall_parti_surf_coord,
+#                                     adj_height, zone_floor_h,
+#                                     partition_const)
+
+
 # This could be broken into two functions
 def _thermal_zones(row : Series,
                    df : DataFrame,
@@ -60,7 +137,7 @@ def _thermal_zones(row : Series,
         idf.newidfobject('ZONE', Name=zone_name)
 
         floor_const = f'{construction}_solid_ground_floor'
-        calgs._floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+        _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
               zone_floor_h, floor_const)
 
         roof_const = f'{construction}_flat_roof'
