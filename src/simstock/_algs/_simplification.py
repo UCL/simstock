@@ -59,7 +59,7 @@ def _simplification_affects_inner_ring(
             ) -> Polygon:
         """
         Function to perform simplification
-        on the interioir rings of a polygon.
+        on the interior rings of a polygon.
         """
         adjacent_inner_coords_list = list()
         for inner in adjacent_polygon.interiors:

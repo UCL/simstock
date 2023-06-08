@@ -13,110 +13,18 @@ from pandas.core.frame import DataFrame
 from eppy.modeleditor import IDF
 from shapely.geometry import Polygon
 
-
-
-# def _new_thermal_zone(
-#         idf : IDF,
-#         zone_name : str,
-#         height : int | float,
-#         floor_const : str,
-#         roof_const : str,
-#         wall_const : str,
-#         floor_no : int,
-#         horiz_surf_coord : tuple[float, float],
-#         ext_surf_coord : tuple[float, float]
-#         ) -> None:
-#     zone_floor_h = 0
-#     space_below_floor = 'Ground'
-#     zone_ceiling_h = height
-#     space_above_floor = 'Outdoors'
-
-#     idf.newidfobject('ZONE', Name=zone_name)
-
-#     calgs._floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-#             zone_floor_h, floor_const)
-
-#     _roof_ceiling(idf, zone_name, space_above_floor,
-#                     horiz_surf_coord, zone_ceiling_h, roof_const)
-
-#     zone_height = zone_ceiling_h - zone_floor_h
-#     _external_walls(idf, zone_name, floor_no, ext_surf_coord,
-#                     zone_ceiling_h, zone_floor_h, zone_height,
-#                     min_avail_height, min_avail_width_for_window,
-#                     wall_const, glazing_const, glazing_ratio)
-
-#     # Partition walls where adjacent polygons exist
-#     if adj_osgb_list:
-#         # Surface type; no sun exposure; no wind exposure
-#         partition_const = 'partition'
-#         # Loop through the list of adjacent objects
-#         for adj_osgb in adj_osgb_list:
-#             opposite_zone = adj_osgb
-#             # Extract polygon from the adjacent objects DataFrame
-#             adj_polygon = df.loc[df['osgb'] == adj_osgb,
-#                                         'polygon'].values[0]
-#             adj_height = df.loc[df['osgb'] == adj_osgb,
-#                                 'height'].values[0]
-#             # Find the intersection between two polygons (it will be
-#             # LineString or MultiLineString) and position coordinates
-#             # relative to origin
-#             part_wall_polygon = polygon.intersection(adj_polygon)
-#             adj_wall_parti_surf_coord = palgs._surface_coordinates(
-#                 part_wall_polygon, origin)
-#             if zone_ceiling_h < adj_height + 1e-6:
-#                 _partition_walls(idf, zone_name, opposite_zone,
-#                                 adj_wall_parti_surf_coord,
-#                                 zone_ceiling_h, zone_floor_h,
-#                                 partition_const)
-#             else:
-#                 if zone_floor_h > adj_height - 1e-6:
-#                     _external_walls(idf, zone_name, floor_no,
-#                                     adj_wall_parti_surf_coord,
-#                                     zone_ceiling_h, zone_floor_h,
-#                                     zone_height, min_avail_height,
-#                                     min_avail_width_for_window,
-#                                     wall_const, glazing_const,
-#                                     glazing_ratio)
-#                 else:
-#                     _external_walls(idf, zone_name, floor_no,
-#                                     adj_wall_parti_surf_coord,
-#                                     zone_ceiling_h, adj_height,
-#                                     zone_height, min_avail_height,
-#                                     min_avail_width_for_window,
-#                                     wall_const, glazing_const,
-#                                     glazing_ratio)
-#                     _partition_walls(idf, zone_name, opposite_zone,
-#                                     adj_wall_parti_surf_coord,
-#                                     adj_height, zone_floor_h,
-#                                     partition_const)
-
-
-# This could be broken into two functions
-def _thermal_zones(row : Series,
-                   df : DataFrame,
-                   idf : IDF,
-                   origin : list,
-                   min_avail_width_for_window : float | int,
-                   min_avail_height : float | int
-                   ) -> None:
-    """
-    Internal function to create thermal zone objects
-    for use by E+
-    """
+def _thermal_zones(row: Series,
+                         df: DataFrame,
+                         idf: IDF,
+                         origin: list,
+                         min_avail_width_for_window: float | int, min_avail_height: float | int
+                         ) -> None:
     polygon = row.polygon
-    # Polygon with removed collinear point to be used for ceiling/floor/roof
     hor_polygon = row.polygon_horizontal
-    # Convert polygon coordinates to dictionary of outer and inner (if any)
-    # coordinates
     hor_poly_coord_dict = palgs._polygon_coordinates_dictionary(hor_polygon)
-    # List of horizontal surfaces coordinates (roof/floor/ceiling)
-    horiz_surf_coord = calgs._horizontal_surface_coordinates(
-        hor_poly_coord_dict, origin)
-    # Load the polygon which defines only external surfaces
+    horiz_surf_coord = calgs._horizontal_surface_coordinates(hor_poly_coord_dict, origin)
     ext_surf_polygon = row.polygon_exposed_wall
-    # List of external surface only coordinates (ext_surf_polygon + in. rings)
     ext_surf_coord = palgs._surface_coordinates(ext_surf_polygon, origin)
-    # List of adjacent polygons
     adj_osgb_list = row.touching
 
     height = row.height
@@ -127,291 +35,472 @@ def _thermal_zones(row : Series,
     glazing_const = f'{construction}_glazing'
 
     if len(floors) == 1:
-        floor_no = int(1)
-        zone_name = f'{row.osbg}_floor_{floor_no}'
-        zone_floor_h = 0
-        space_below_floor = 'Ground'
-        zone_ceiling_h = height
-        space_above_floor = 'Outdoors'
+        _create_single_floor_zone(row, idf, horiz_surf_coord, ext_surf_coord, 
+                                 adj_osgb_list, height, glazing_ratio,
+                                 construction, glazing_const, min_avail_height,
+                                 min_avail_width_for_window, polygon, df, origin)
+    else:
+        _create_multi_floor_zones(row, idf, horiz_surf_coord, ext_surf_coord,
+                                 adj_osgb_list, height, glazing_ratio,
+                                 floors, construction, glazing_const,
+                                 min_avail_height, min_avail_width_for_window,
+                                 polygon, df, origin)
+
+
+
+def _create_single_floor_zone(row: Series,
+                             idf: IDF,
+                             horiz_surf_coord: list,
+                             ext_surf_coord: list,
+                             adj_osgb_list: list,
+                             height: float,
+                             glazing_ratio: float,
+                             construction: str,
+                             glazing_const: str,
+                             min_avail_height: float | int,
+                             min_avail_width_for_window: float | int,
+                             polygon: Polygon,
+                             df: DataFrame,
+                             origin: list
+                             ) -> None:
+    floor_no = int(1)
+    zone_name = f'{row.osgb}_floor_{floor_no}'
+    zone_floor_h = 0
+    space_below_floor = 'Ground'
+    zone_ceiling_h = height
+    space_above_floor = 'Outdoors'
+
+    idf.newidfobject('ZONE', Name=zone_name)
+
+    floor_const = f'{construction}_solid_ground_floor'
+    _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+           zone_floor_h, floor_const)
+
+    roof_const = f'{construction}_flat_roof'
+    _roof_ceiling(idf, zone_name, space_above_floor,
+                  horiz_surf_coord, zone_ceiling_h, roof_const)
+
+    zone_height = zone_ceiling_h - zone_floor_h
+    wall_const = f'{construction}_wall'
+    _external_walls(idf, zone_name, floor_no, ext_surf_coord,
+                    zone_ceiling_h, zone_floor_h, zone_height,
+                    min_avail_height, min_avail_width_for_window,
+                    wall_const, glazing_const, glazing_ratio)
+
+    if adj_osgb_list:
+        partition_const = 'partition'
+        for adj_osgb in adj_osgb_list:
+            opposite_zone = adj_osgb
+            adj_polygon = df.loc[df['osgb'] == adj_osgb, 'polygon'].values[0]
+            adj_height = df.loc[df['osgb'] == adj_osgb, 'height'].values[0]
+            part_wall_polygon = polygon.intersection(adj_polygon)
+            adj_wall_parti_surf_coord = palgs._surface_coordinates(part_wall_polygon, origin)
+            if zone_ceiling_h < adj_height:
+                zone_below_ceiling = True
+                _external_walls(idf, zone_name, opposite_zone, floor_no,
+                                adj_wall_parti_surf_coord, zone_ceiling_h,
+                                zone_below_ceiling, partition_const)
+            elif zone_floor_h > adj_height:
+                zone_below_ceiling = False
+                _external_walls(idf, zone_name, opposite_zone, floor_no,
+                                adj_wall_parti_surf_coord, zone_floor_h,
+                                zone_below_ceiling, partition_const)
+
+
+def _create_multi_floor_zones(row: Series,
+                             idf: IDF,
+                             horiz_surf_coord: list,
+                             ext_surf_coord: list,
+                             adj_osgb_list: list,
+                             height: float,
+                             glazing_ratio: float,
+                             floors: range,
+                             construction: str,
+                             glazing_const: str,
+                             min_avail_height: float | int,
+                             min_avail_width_for_window: float | int,
+                             polygon: Polygon,
+                             df: DataFrame,
+                             origin: list
+                             ) -> None:
+    for floor_no in floors:
+        zone_name = f'{row.osgb}_floor_{floor_no}'
+        zone_floor_h = height * (floor_no - 1)
+        space_below_floor = f'{row.osgb}_floor_{floor_no - 1}'
+        zone_ceiling_h = height * floor_no
+        space_above_floor = f'{row.osgb}_floor_{floor_no + 1}'
 
         idf.newidfobject('ZONE', Name=zone_name)
 
-        floor_const = f'{construction}_solid_ground_floor'
-        _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-              zone_floor_h, floor_const)
+        if floor_no == 1:
+            floor_const = f'{construction}_solid_ground_floor'
+            _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+                   zone_floor_h, floor_const)
+        else:
+            floor_const = f'{construction}_intermediate_floor'
+            _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+                   zone_floor_h, floor_const)
 
-        roof_const = f'{construction}_flat_roof'
-        _roof_ceiling(idf, zone_name, space_above_floor,
-                     horiz_surf_coord, zone_ceiling_h, roof_const)
+        if floor_no == floors[-1]:
+            roof_const = f'{construction}_roof'
+            _roof_ceiling(idf, zone_name, space_above_floor,
+                          horiz_surf_coord, zone_ceiling_h, roof_const)
+        else:
+            roof_const = f'{construction}_intermediate_ceiling'
+            _roof_ceiling(idf, zone_name, space_above_floor,
+                          horiz_surf_coord, zone_ceiling_h, roof_const)
 
         zone_height = zone_ceiling_h - zone_floor_h
         wall_const = f'{construction}_wall'
         _external_walls(idf, zone_name, floor_no, ext_surf_coord,
-                       zone_ceiling_h, zone_floor_h, zone_height,
-                       min_avail_height, min_avail_width_for_window,
-                       wall_const, glazing_const, glazing_ratio)
+                        zone_ceiling_h, zone_floor_h, zone_height,
+                        min_avail_height, min_avail_width_for_window,
+                        wall_const, glazing_const, glazing_ratio)
 
-        # Partition walls where adjacent polygons exist
         if adj_osgb_list:
-            # Surface type; no sun exposure; no wind exposure
             partition_const = 'partition'
-            # Loop through the list of adjacent objects
             for adj_osgb in adj_osgb_list:
                 opposite_zone = adj_osgb
-                # Extract polygon from the adjacent objects DataFrame
-                adj_polygon = df.loc[df['osgb'] == adj_osgb,
-                                           'polygon'].values[0]
-                adj_height = df.loc[df['osgb'] == adj_osgb,
-                                    'height'].values[0]
-                # Find the intersection between two polygons (it will be
-                # LineString or MultiLineString) and position coordinates
-                # relative to origin
+                adj_polygon = df.loc[df['osgb'] == adj_osgb, 'polygon'].values[0]
+                adj_height = df.loc[df['osgb'] == adj_osgb, 'height'].values[0]
                 part_wall_polygon = polygon.intersection(adj_polygon)
-                adj_wall_parti_surf_coord = palgs._surface_coordinates(
-                    part_wall_polygon, origin)
-                if zone_ceiling_h < adj_height + 1e-6:
-                    _partition_walls(idf, zone_name, opposite_zone,
-                                    adj_wall_parti_surf_coord,
-                                    zone_ceiling_h, zone_floor_h,
-                                    partition_const)
-                else:
-                    if zone_floor_h > adj_height - 1e-6:
-                        _external_walls(idf, zone_name, floor_no,
-                                       adj_wall_parti_surf_coord,
-                                       zone_ceiling_h, zone_floor_h,
-                                       zone_height, min_avail_height,
-                                       min_avail_width_for_window,
-                                       wall_const, glazing_const,
-                                       glazing_ratio)
-                    else:
-                        _external_walls(idf, zone_name, floor_no,
-                                       adj_wall_parti_surf_coord,
-                                       zone_ceiling_h, adj_height,
-                                       zone_height, min_avail_height,
-                                       min_avail_width_for_window,
-                                       wall_const, glazing_const,
-                                       glazing_ratio)
-                        _partition_walls(idf, zone_name, opposite_zone,
-                                        adj_wall_parti_surf_coord,
-                                        adj_height, zone_floor_h,
-                                        partition_const)
+                adj_wall_parti_surf_coord = palgs._surface_coordinates(part_wall_polygon, origin)
+                if zone_ceiling_h < adj_height:
+                    zone_below_ceiling = True
+                    _external_walls(idf, zone_name, opposite_zone, floor_no,
+                                    adj_wall_parti_surf_coord, zone_ceiling_h,
+                                    zone_below_ceiling, partition_const)
+                elif zone_floor_h > adj_height:
+                    zone_below_ceiling = False
+                    _external_walls(idf, zone_name, opposite_zone, floor_no,
+                                    adj_wall_parti_surf_coord, zone_floor_h,
+                                    zone_below_ceiling, partition_const)
 
-    else:
-        f2f = round(height / row.nofloors, 1)
-        for item in floors:
-            floor_no = item + 1
-            if item == 0:
-                zone_name = f'{row.osgb}_floor_{floor_no}'
-                zone_floor_h = item * f2f
-                space_below_floor = 'Ground'
-                zone_ceiling_h = floor_no * f2f
-                space_above_floor = f'{row.osgb}_floor_{floor_no + 1}'
 
-                idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = f'{construction}_solid_ground_floor'
-                _floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
-                _roof_ceiling(idf, zone_name, space_above_floor,
-                             horiz_surf_coord, zone_ceiling_h, roof_const)
 
-                zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = f'{construction}_wall'
-                _external_walls(
-                    idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
-                    zone_floor_h, zone_height, min_avail_height,
-                    min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+# # This could be broken into two functions
+# def _thermal_zones(row : Series,
+#                    df : DataFrame,
+#                    idf : IDF,
+#                    origin : list,
+#                    min_avail_width_for_window : float | int,
+#                    min_avail_height : float | int
+#                    ) -> None:
+#     """
+#     Internal function to create thermal zone objects
+#     for use by E+
+#     """
+#     polygon = row.polygon
+#     # Polygon with removed collinear point to be used for ceiling/floor/roof
+#     hor_polygon = row.polygon_horizontal
+#     # Convert polygon coordinates to dictionary of outer and inner (if any)
+#     # coordinates
+#     hor_poly_coord_dict = palgs._polygon_coordinates_dictionary(hor_polygon)
+#     # List of horizontal surfaces coordinates (roof/floor/ceiling)
+#     horiz_surf_coord = calgs._horizontal_surface_coordinates(
+#         hor_poly_coord_dict, origin)
+#     # Load the polygon which defines only external surfaces
+#     ext_surf_polygon = row.polygon_exposed_wall
+#     # List of external surface only coordinates (ext_surf_polygon + in. rings)
+#     ext_surf_coord = palgs._surface_coordinates(ext_surf_polygon, origin)
+#     # List of adjacent polygons
+#     adj_osgb_list = row.touching
 
-                # Partition walls where adjacent polygons exist
-                if adj_osgb_list:
-                    # Surface type; no sun exposure; no wind exposure
-                    partition_const = 'partition'
-                    # Loop through the list of adjacent objects
-                    for adj_osgb in adj_osgb_list:
-                        opposite_zone = adj_osgb
-                        # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0]
-                        adj_height = df.loc[df['osgb'] == adj_osgb,
-                                            'height'].values[0]
-                        # Find the intersection between two polygons (it will
-                        # be LineString or MultiLineString) and position
-                        # coordinates relative to origin
-                        part_wall_polygon = polygon.intersection(adj_polygon)
-                        adj_wall_parti_surf_coord = palgs._surface_coordinates(
-                            part_wall_polygon, origin)
-                        if zone_ceiling_h < adj_height + 1e-6:
-                            _partition_walls(idf, zone_name, opposite_zone,
-                                            adj_wall_parti_surf_coord,
-                                            zone_ceiling_h, zone_floor_h,
-                                            partition_const)
-                        else:
-                            if zone_floor_h > adj_height - 1e-6:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, zone_floor_h,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                            else:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, adj_height,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                                _partition_walls(idf, zone_name, opposite_zone,
-                                                adj_wall_parti_surf_coord,
-                                                adj_height, zone_floor_h,
-                                                partition_const)
+#     height = row.height
+#     glazing_ratio = row.wwr
+#     floors = range(int(row.nofloors))
 
-            elif item == row.nofloors - 1:
-                zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-                zone_floor_h = item * f2f
-                space_below_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no - 1))
-                zone_ceiling_h = height
-                space_above_floor = 'Outdoors'
+#     construction = row.construction
+#     glazing_const = f'{construction}_glazing'
 
-                idf.newidfobject('ZONE', Name=zone_name)
+#     if len(floors) == 1:
 
-                floor_const = 'ceiling_inverse'
-                _floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = f'{construction}_flat_roof'
-                _roof_ceiling(idf, zone_name, space_above_floor,
-                             horiz_surf_coord, zone_ceiling_h, roof_const)
+#         floor_no = int(1)
+#         zone_name = f'{row.osbg}_floor_{floor_no}'
+#         zone_floor_h = 0
+#         space_below_floor = 'Ground'
+#         zone_ceiling_h = height
+#         space_above_floor = 'Outdoors'
 
-                zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
-                _external_walls(
-                    idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
-                    zone_floor_h, zone_height, min_avail_height,
-                    min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+#         idf.newidfobject('ZONE', Name=zone_name)
 
-                # Partition walls where adjacent polygons exist
-                if adj_osgb_list:
-                    # Surface type; no sun exposure; no wind exposure
-                    partition_const = 'partition'
-                    # Loop through the list of adjacent objects
-                    for adj_osgb in adj_osgb_list:
-                        opposite_zone = adj_osgb
-                        # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0]
-                        adj_height = df.loc[df['osgb'] == adj_osgb,
-                                            'height'].values[0]
-                        # Find the intersection between two polygons (it will
-                        # be LineString or MultiLineString) and position
-                        # coordinates relative to origin
-                        part_wall_polygon = polygon.intersection(adj_polygon)
-                        adj_wall_parti_surf_coord = palgs._surface_coordinates(
-                            part_wall_polygon, origin)
-                        if zone_ceiling_h < adj_height + 1e-6:
-                            _partition_walls(idf, zone_name, opposite_zone,
-                                            adj_wall_parti_surf_coord,
-                                            zone_ceiling_h, zone_floor_h,
-                                            partition_const)
-                        else:
-                            if zone_floor_h > adj_height - 1e-6:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, zone_floor_h,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                            else:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, adj_height,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                                _partition_walls(idf, zone_name, opposite_zone,
-                                                adj_wall_parti_surf_coord,
-                                                adj_height, zone_floor_h,
-                                                partition_const)
+#         floor_const = f'{construction}_solid_ground_floor'
+#         _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
+#               zone_floor_h, floor_const)
 
-            else:
-                zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-                zone_floor_h = item * f2f
-                space_below_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no - 1))
-                zone_ceiling_h = floor_no * f2f
-                space_above_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no + 1))
+#         roof_const = f'{construction}_flat_roof'
+#         _roof_ceiling(idf, zone_name, space_above_floor,
+#                      horiz_surf_coord, zone_ceiling_h, roof_const)
 
-                idf.newidfobject('ZONE', Name=zone_name)
+#         zone_height = zone_ceiling_h - zone_floor_h
+#         wall_const = f'{construction}_wall'
+#         _external_walls(idf, zone_name, floor_no, ext_surf_coord,
+#                        zone_ceiling_h, zone_floor_h, zone_height,
+#                        min_avail_height, min_avail_width_for_window,
+#                        wall_const, glazing_const, glazing_ratio)
 
-                floor_const = 'ceiling_inverse'
-                _floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
-                _roof_ceiling(idf, zone_name, space_above_floor,
-                             horiz_surf_coord, zone_ceiling_h,
-                             roof_const)
+#         # Partition walls where adjacent polygons exist
+#         if adj_osgb_list:
+#             # Surface type; no sun exposure; no wind exposure
+#             partition_const = 'partition'
+#             # Loop through the list of adjacent objects
+#             for adj_osgb in adj_osgb_list:
+#                 opposite_zone = adj_osgb
+#                 # Extract polygon from the adjacent objects DataFrame
+#                 adj_polygon = df.loc[df['osgb'] == adj_osgb,
+#                                            'polygon'].values[0]
+#                 adj_height = df.loc[df['osgb'] == adj_osgb,
+#                                     'height'].values[0]
+#                 # Find the intersection between two polygons (it will be
+#                 # LineString or MultiLineString) and position coordinates
+#                 # relative to origin
+#                 part_wall_polygon = polygon.intersection(adj_polygon)
+#                 adj_wall_parti_surf_coord = palgs._surface_coordinates(
+#                     part_wall_polygon, origin)
+#                 if zone_ceiling_h < adj_height + 1e-6:
+#                     _partition_walls(idf, zone_name, opposite_zone,
+#                                     adj_wall_parti_surf_coord,
+#                                     zone_ceiling_h, zone_floor_h,
+#                                     partition_const)
+#                 else:
+#                     if zone_floor_h > adj_height - 1e-6:
+#                         _external_walls(idf, zone_name, floor_no,
+#                                        adj_wall_parti_surf_coord,
+#                                        zone_ceiling_h, zone_floor_h,
+#                                        zone_height, min_avail_height,
+#                                        min_avail_width_for_window,
+#                                        wall_const, glazing_const,
+#                                        glazing_ratio)
+#                     else:
+#                         _external_walls(idf, zone_name, floor_no,
+#                                        adj_wall_parti_surf_coord,
+#                                        zone_ceiling_h, adj_height,
+#                                        zone_height, min_avail_height,
+#                                        min_avail_width_for_window,
+#                                        wall_const, glazing_const,
+#                                        glazing_ratio)
+#                         _partition_walls(idf, zone_name, opposite_zone,
+#                                         adj_wall_parti_surf_coord,
+#                                         adj_height, zone_floor_h,
+#                                         partition_const)
 
-                zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
-                _external_walls(
-                    idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
-                    zone_floor_h, zone_height, min_avail_height,
-                    min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+#     else:
+#         f2f = round(height / row.nofloors, 1)
+#         for item in floors:
+#             floor_no = item + 1
+#             if item == 0:
+#                 zone_name = f'{row.osgb}_floor_{floor_no}'
+#                 zone_floor_h = item * f2f
+#                 space_below_floor = 'Ground'
+#                 zone_ceiling_h = floor_no * f2f
+#                 space_above_floor = f'{row.osgb}_floor_{floor_no + 1}'
 
-                # Partition walls where adjacent polygons exist
-                if adj_osgb_list:
-                    # Surface type; no sun exposure; no wind exposure
-                    partition_const = 'partition'
-                    # Loop through the list of adjacent objects
-                    for adj_osgb in adj_osgb_list:
-                        opposite_zone = adj_osgb
-                        # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0]
-                        adj_height = df.loc[df['osgb'] == adj_osgb,
-                                            'height'].values[0]
-                        # Find the intersection between two polygons (it will
-                        # be LineString or MultiLineString) and position
-                        # coordinates relative to origin
-                        part_wall_polygon = polygon.intersection(adj_polygon)
-                        adj_wall_parti_surf_coord = palgs._surface_coordinates(
-                            part_wall_polygon, origin)
-                        if zone_ceiling_h < adj_height + 1e-6:
-                            _partition_walls(idf, zone_name, opposite_zone,
-                                            adj_wall_parti_surf_coord,
-                                            zone_ceiling_h, zone_floor_h,
-                                            partition_const)
-                        else:
-                            if zone_floor_h > adj_height - 1e-6:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, zone_floor_h,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                            else:
-                                _external_walls(idf, zone_name, floor_no,
-                                               adj_wall_parti_surf_coord,
-                                               zone_ceiling_h, adj_height,
-                                               zone_height, min_avail_height,
-                                               min_avail_width_for_window,
-                                               wall_const, glazing_const,
-                                               glazing_ratio)
-                                _partition_walls(idf, zone_name, opposite_zone,
-                                                adj_wall_parti_surf_coord,
-                                                adj_height, zone_floor_h,
-                                                partition_const)
+#                 idf.newidfobject('ZONE', Name=zone_name)
 
-    return
+#                 floor_const = f'{construction}_solid_ground_floor'
+#                 _floor(idf, zone_name, space_below_floor,
+#                       horiz_surf_coord, zone_floor_h, floor_const)
+#                 roof_const = 'ceiling'
+#                 _roof_ceiling(idf, zone_name, space_above_floor,
+#                              horiz_surf_coord, zone_ceiling_h, roof_const)
+
+#                 zone_height = zone_ceiling_h - zone_floor_h
+#                 wall_const = f'{construction}_wall'
+#                 _external_walls(
+#                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
+#                     zone_floor_h, zone_height, min_avail_height,
+#                     min_avail_width_for_window, wall_const, glazing_const,
+#                     glazing_ratio)
+
+#                 # Partition walls where adjacent polygons exist
+#                 if adj_osgb_list:
+#                     # Surface type; no sun exposure; no wind exposure
+#                     partition_const = 'partition'
+#                     # Loop through the list of adjacent objects
+#                     for adj_osgb in adj_osgb_list:
+#                         opposite_zone = adj_osgb
+#                         # Extract polygon from the adjacent objects DataFrame
+#                         adj_polygon = df.loc[df['osgb'] == adj_osgb,
+#                                                    'polygon'].values[0]
+#                         adj_height = df.loc[df['osgb'] == adj_osgb,
+#                                             'height'].values[0]
+#                         # Find the intersection between two polygons (it will
+#                         # be LineString or MultiLineString) and position
+#                         # coordinates relative to origin
+#                         part_wall_polygon = polygon.intersection(adj_polygon)
+#                         adj_wall_parti_surf_coord = palgs._surface_coordinates(
+#                             part_wall_polygon, origin)
+#                         if zone_ceiling_h < adj_height + 1e-6:
+#                             _partition_walls(idf, zone_name, opposite_zone,
+#                                             adj_wall_parti_surf_coord,
+#                                             zone_ceiling_h, zone_floor_h,
+#                                             partition_const)
+#                         else:
+#                             if zone_floor_h > adj_height - 1e-6:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, zone_floor_h,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                             else:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, adj_height,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                                 _partition_walls(idf, zone_name, opposite_zone,
+#                                                 adj_wall_parti_surf_coord,
+#                                                 adj_height, zone_floor_h,
+#                                                 partition_const)
+
+#             elif item == row.nofloors - 1:
+#                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+#                 zone_floor_h = item * f2f
+#                 space_below_floor = '{}_floor_{}'.format(
+#                     row.osgb, (floor_no - 1))
+#                 zone_ceiling_h = height
+#                 space_above_floor = 'Outdoors'
+
+#                 idf.newidfobject('ZONE', Name=zone_name)
+
+#                 floor_const = 'ceiling_inverse'
+#                 _floor(idf, zone_name, space_below_floor,
+#                       horiz_surf_coord, zone_floor_h, floor_const)
+#                 roof_const = f'{construction}_flat_roof'
+#                 _roof_ceiling(idf, zone_name, space_above_floor,
+#                              horiz_surf_coord, zone_ceiling_h, roof_const)
+
+#                 zone_height = zone_ceiling_h - zone_floor_h
+#                 wall_const = '{}_wall'.format(construction)
+#                 _external_walls(
+#                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
+#                     zone_floor_h, zone_height, min_avail_height,
+#                     min_avail_width_for_window, wall_const, glazing_const,
+#                     glazing_ratio)
+
+#                 # Partition walls where adjacent polygons exist
+#                 if adj_osgb_list:
+#                     # Surface type; no sun exposure; no wind exposure
+#                     partition_const = 'partition'
+#                     # Loop through the list of adjacent objects
+#                     for adj_osgb in adj_osgb_list:
+#                         opposite_zone = adj_osgb
+#                         # Extract polygon from the adjacent objects DataFrame
+#                         adj_polygon = df.loc[df['osgb'] == adj_osgb,
+#                                                    'polygon'].values[0]
+#                         adj_height = df.loc[df['osgb'] == adj_osgb,
+#                                             'height'].values[0]
+#                         # Find the intersection between two polygons (it will
+#                         # be LineString or MultiLineString) and position
+#                         # coordinates relative to origin
+#                         part_wall_polygon = polygon.intersection(adj_polygon)
+#                         adj_wall_parti_surf_coord = palgs._surface_coordinates(
+#                             part_wall_polygon, origin)
+#                         if zone_ceiling_h < adj_height + 1e-6:
+#                             _partition_walls(idf, zone_name, opposite_zone,
+#                                             adj_wall_parti_surf_coord,
+#                                             zone_ceiling_h, zone_floor_h,
+#                                             partition_const)
+#                         else:
+#                             if zone_floor_h > adj_height - 1e-6:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, zone_floor_h,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                             else:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, adj_height,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                                 _partition_walls(idf, zone_name, opposite_zone,
+#                                                 adj_wall_parti_surf_coord,
+#                                                 adj_height, zone_floor_h,
+#                                                 partition_const)
+
+#             else:
+#                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+#                 zone_floor_h = item * f2f
+#                 space_below_floor = '{}_floor_{}'.format(
+#                     row.osgb, (floor_no - 1))
+#                 zone_ceiling_h = floor_no * f2f
+#                 space_above_floor = '{}_floor_{}'.format(
+#                     row.osgb, (floor_no + 1))
+
+#                 idf.newidfobject('ZONE', Name=zone_name)
+
+#                 floor_const = 'ceiling_inverse'
+#                 _floor(idf, zone_name, space_below_floor,
+#                       horiz_surf_coord, zone_floor_h, floor_const)
+#                 roof_const = 'ceiling'
+#                 _roof_ceiling(idf, zone_name, space_above_floor,
+#                              horiz_surf_coord, zone_ceiling_h,
+#                              roof_const)
+
+#                 zone_height = zone_ceiling_h - zone_floor_h
+#                 wall_const = '{}_wall'.format(construction)
+#                 _external_walls(
+#                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
+#                     zone_floor_h, zone_height, min_avail_height,
+#                     min_avail_width_for_window, wall_const, glazing_const,
+#                     glazing_ratio)
+
+#                 # Partition walls where adjacent polygons exist
+#                 if adj_osgb_list:
+#                     # Surface type; no sun exposure; no wind exposure
+#                     partition_const = 'partition'
+#                     # Loop through the list of adjacent objects
+#                     for adj_osgb in adj_osgb_list:
+#                         opposite_zone = adj_osgb
+#                         # Extract polygon from the adjacent objects DataFrame
+#                         adj_polygon = df.loc[df['osgb'] == adj_osgb,
+#                                                    'polygon'].values[0]
+#                         adj_height = df.loc[df['osgb'] == adj_osgb,
+#                                             'height'].values[0]
+#                         # Find the intersection between two polygons (it will
+#                         # be LineString or MultiLineString) and position
+#                         # coordinates relative to origin
+#                         part_wall_polygon = polygon.intersection(adj_polygon)
+#                         adj_wall_parti_surf_coord = palgs._surface_coordinates(
+#                             part_wall_polygon, origin)
+#                         if zone_ceiling_h < adj_height + 1e-6:
+#                             _partition_walls(idf, zone_name, opposite_zone,
+#                                             adj_wall_parti_surf_coord,
+#                                             zone_ceiling_h, zone_floor_h,
+#                                             partition_const)
+#                         else:
+#                             if zone_floor_h > adj_height - 1e-6:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, zone_floor_h,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                             else:
+#                                 _external_walls(idf, zone_name, floor_no,
+#                                                adj_wall_parti_surf_coord,
+#                                                zone_ceiling_h, adj_height,
+#                                                zone_height, min_avail_height,
+#                                                min_avail_width_for_window,
+#                                                wall_const, glazing_const,
+#                                                glazing_ratio)
+#                                 _partition_walls(idf, zone_name, opposite_zone,
+#                                                 adj_wall_parti_surf_coord,
+#                                                 adj_height, zone_floor_h,
+#                                                 partition_const)
+
+#     return
 
 
 def _idf_ceiling_coordinates_list(ceiling_coordinates_list : list) -> list:

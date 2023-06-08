@@ -469,7 +469,6 @@ class SimstockDataframe:
                 polygon = self._df.loc[
                     self._df['osgb'] == osgb, 'polygon'
                     ].values[0]
-                # Not sure if this if statement is necessary
                 if polygon:
                     # This could be done better: 
                     # no need to be passing around the osgb list
