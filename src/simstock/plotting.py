@@ -21,7 +21,11 @@ from pandas.core.frame import DataFrame
 from simstock.base import SimstockDataframe
 
 
-def plot(sdf : SimstockDataframe | Series | DataFrame, **kwargs) -> Axes:
+def plot(
+        sdf: SimstockDataframe | Series | DataFrame,
+        edgecolor: str = "k",
+        **kwargs
+        ) -> Axes:
     """
     Plot a SimstockDataframe's geometric data.
 
@@ -89,7 +93,7 @@ def plot(sdf : SimstockDataframe | Series | DataFrame, **kwargs) -> Axes:
     
     # Select the polygon data and feed into the
     # plotting function
-    return _plot_geometries(sdf.polygon, **kwargs)
+    return _plot_geometries(sdf.polygon, edgecolor=edgecolor, **kwargs)
 
 
 def _plot_geometries(geoms : list, **kwargs) -> Axes:

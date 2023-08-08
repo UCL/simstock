@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# User energy plus settings
+simulation_settings/
+
 # Distribution / packaging
 .Python
 build/

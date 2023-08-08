@@ -3,15 +3,19 @@ IO  module containing routines to read and write to
 various file types. Currently supported:
     - csv
     - parquet
+    - geopackage
     - json
 """
 
 import pandas as pd
+import sqlite3
 import fastparquet
 from simstock.base import SimstockDataframe
+import geopandas as gpd
+
 
 # Need to ensure index column is handled correctly.
-def read_csv(path : str, **kwargs) -> SimstockDataframe:
+def read_csv(path: str, **kwargs) -> SimstockDataframe:
     """
     Function to read in a ``csv`` file and return a ``SimstockDataframe,
     i.e. it must contain a ``polygon`` column or key or field containing
@@ -20,10 +24,10 @@ def read_csv(path : str, **kwargs) -> SimstockDataframe:
     Parameters
     ----------
 
-    ``path : str``
+    ``path: str``
         The file path including the ``csv`` file
 
-    ``kwargs : dict``
+    ``kwargs: dict``
         optional keyword argumetns to be passed to the
         SimstockDataframe initialiser. See SimstockDataframe
         docs for details of allowed arguments.
@@ -31,7 +35,7 @@ def read_csv(path : str, **kwargs) -> SimstockDataframe:
     Returns
     -------
 
-    ``sdf : SimstockDataframe``
+    ``sdf: SimstockDataframe``
         See SimstockDataframe docs for full list of attributes
         and methods.
 
@@ -54,6 +58,57 @@ def read_csv(path : str, **kwargs) -> SimstockDataframe:
     """
     df = pd.read_csv(path)
     return SimstockDataframe(df, **kwargs)
+
+
+def read_geopackage_layer(
+        path: str,
+        layer_name: str,
+        **kwargs
+        ) -> SimstockDataframe:
+    """
+    Read a layer from a GeoPackage file as a pandas DataFrame using only sqlite3 and pandas.
+
+    Parameters:
+        path (str): The path to the GeoPackage file.
+        layer_name (str): The name of the layer to read from the GeoPackage.
+
+    Returns:
+        SimstockDataframe
+    """
+    # Read the specific layer from the GeoPackage file as a GeoDataFrame
+    gdf = gpd.read_file(path, layer=layer_name)
+    cols = gdf.columns
+    df = pd.DataFrame(columns=cols)
+    for col in cols:
+        df[col] = gdf[col]
+    return SimstockDataframe(df, polygon_column_name="geometry", **kwargs)
+
+    
+
+
+def get_gpkg_layer_names(path: str) -> list:
+    connection = None
+    layer_names = []
+
+    try:
+        # Connect to the SQLite database
+        connection = sqlite3.connect(path)
+        cursor = connection.cursor()
+
+        # Execute the SQL query to get all layer names that do not start with 'rtree' or 'trigger'
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'rtree%' AND name NOT LIKE 'trigger%' AND name NOT LIKE 'gpkg_%' AND name NOT LIKE 'sqlite_%'")
+        rows = cursor.fetchall()
+
+        # Extract the layer names from the query results
+        layer_names = [row[0] for row in rows]
+
+    except sqlite3.Error as e:
+        print(f"Error accessing the database: {e}")
+    finally:
+        if connection:
+            connection.close()
+
+    return layer_names
 
 
 def read_parquet(path : str, **kwargs) -> SimstockDataframe:

@@ -1,0 +1,5 @@
+Name,Gas_Type,Thickness,Conductivity_Coefficient_A,Conductivity_Coefficient_B,Conductivity_Coefficient_C,Viscosity_Coefficient_A,Viscosity_Coefficient_B,Viscosity_Coefficient_C,Specific_Heat_Coefficient_A,Specific_Heat_Coefficient_B,Specific_Heat_Coefficient_C,Molecular_Weight,Specific_Heat_Ratio,Notes
+6mm_air,Air,0.006,,,,,,,,,,,,
+12mm_air,Air,0.012,,,,,,,,,,,,
+16mm_air,Air,0.016,,,,,,,,,,,,
+16mm_xenon,Xenon,0.016,,,,,,,,,,,,

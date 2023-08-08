@@ -63,7 +63,7 @@ def _geoserialise_pdseries(dat : pd.Series) -> pd.Series:
     """
     Check if pandas Series data is shapely-geometry type.
     """
-    return _shapely_loader(dat.values)
+    return dat.apply(_shapely_loader) #(dat.values)
 
 
 def _geoserialise_array(arr) -> list:

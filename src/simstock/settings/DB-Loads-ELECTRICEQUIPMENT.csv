@@ -1,0 +1,2 @@
+Name,Zone_or_ZoneList_Name,Schedule_Name,Design_Level_Calculation_Method,Design_Level,Watts_per_Zone_Floor_Area,Watts_per_Person,Fraction_Latent,Fraction_Radiant,Fraction_Lost,EndUse_Subcategory,Notes
+Dwell,Dwell,Dwell_Equip,Watts/Area,,25.0,,0.0,0.2,0.0,ELECTRIC EQUIPMENT#Dwell,

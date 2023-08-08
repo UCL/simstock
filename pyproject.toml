@@ -18,6 +18,7 @@ pandas = "^1.5.3"
 numpy = "^1.24.2"
 fastparquet = "^2023.2.0"
 matplotlib = "^3.7.1"
+geopandas = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 pdoc = "^13.0.0"

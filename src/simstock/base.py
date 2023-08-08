@@ -5,6 +5,7 @@ Module containing the base simstock objects:
 """
 
 import os
+import inspect
 import glob
 from typing import Any
 from functools import singledispatchmethod
@@ -25,6 +26,12 @@ from simstock._utils._exceptions import SimstockException
 import simstock._algs._polygon_algs as algs
 import simstock._algs._simplification as smpl
 import simstock._algs._idf_algs as ialgs
+from simstock._algs._idf_sim import _sim_main
+from simstock._utils._dirmanager import (
+    _copy_directory_contents,
+    _delete_directory_contents,
+    _compile_csvs_to_idf
+)
 
 
 
@@ -94,10 +101,27 @@ class SimstockDataframe:
     -------
     """
 
+    # Common locations for E+ idd files
+    common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
+    common_posix_paths = [
+        "/usr/local/EnergyPlus*/Energy+.idd",
+        "/Applications/EnergyPlus*/Energy+.idd"
+    ]
+    idd_file = None
+
+    # Necessary data
+    required_cols = [
+        "shading", "height", "wwr", "nofloors", "construction"
+        ]
+
     def __init__(
             self,
-            inputobject : Any,
-            tol : float = 0.1,
+            inputobject: Any,
+            polygon_column_name: str = None,
+            uid_column_name: str = None,
+            epw_file: str = None,
+            tol: float = 0.1,
+            use_base_idf: str = False,
             **kwargs
             ) -> None:
         """
@@ -123,6 +147,32 @@ class SimstockDataframe:
         # Set tolerance
         self.tol = tol
 
+        # Set idd file
+        if self.idd_file == None:
+            # Determine OS
+            opsys = platform.system().casefold()
+            if opsys not in ["windows", "darwin", "linux"]:
+                msg = f"OS: {opsys} not recognised."
+                raise SystemError(msg)
+            self._find_idd(opsys)
+
+        # Get simstock directory
+        current_file_path = inspect.getframeinfo(inspect.currentframe()).filename
+        absolute_file_path = os.path.abspath(current_file_path)
+        self.simstock_directory = os.path.dirname(absolute_file_path)
+
+        # Set default settings
+        IDF.setiddname(self.idd_file)
+        if use_base_idf:
+            self.settings = IDF(
+            os.path.join(self.simstock_directory, "settings", "base.idf")
+        )
+        else:
+            self.settings = IDF(
+                os.path.join(self.simstock_directory, "settings", "settings.idf")
+            )
+        self.settings_csv_path = None
+        
         # If it is already a valid simstock dataframe
         # then nothing further needs to be done
         if isinstance(inputobject, SimstockDataframe):
@@ -143,17 +193,31 @@ class SimstockDataframe:
         else:
             self._df = inputobject.copy()
 
+        # Rename polygon and osgb columns is user has specified
+        if uid_column_name:
+            self._df.rename(columns={uid_column_name: "osgb"}, inplace=True)
+        if polygon_column_name:
+            self._df.rename(columns={polygon_column_name: "polygon"}, inplace=True)
+        
         # Check that an osgb column exists
         self._validate_osgb_column()
 
         # Check that the polygon column exists
         self._validate_polygon_column() 
 
-        # Add additional columns
-        self._add_interiors_column()
+        # Add any missing columns
+        self._add_missing_cols()
 
+        # Has pre-processing occured?
+        self.processed = False
 
-    def __getattr__(self, attr : str) -> Any:
+        # Set weather file
+        if epw_file:
+            self.epw = epw_file
+        else:
+            self.epw = os.path.join(self.simstock_directory, "settings", "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+
+    def __getattr__(self, attr: str) -> Any:
         """
         Required function to allow user to interface
         with underlying dataframe.
@@ -162,14 +226,14 @@ class SimstockDataframe:
             return getattr(self, attr)
         return getattr(self._df, attr)
 
-    def __getitem__(self, item : Any) -> Any:
+    def __getitem__(self, item: Any) -> Any:
         """
         Required function to allow user to interface
         with underlying dataframe.
         """
         return self._df[item]
 
-    def __setitem__(self, item : Any, data : Any) -> None:
+    def __setitem__(self, item: Any, data: Any) -> None:
         """
         Required function to allow user to interface
         with underlying dataframe.
@@ -189,6 +253,55 @@ class SimstockDataframe:
         """
         return "SimstockDataframe()"
     
+    def _find_idd(self, system: str) -> None:
+        if system == "windows":
+            paths = self.common_windows_paths
+        else:
+            paths = self.common_posix_paths
+        for path in paths:
+            # Use glob to handle pattern matching for version number
+            matches = glob.glob(path)
+            if matches:
+                self.idd_file = matches[0]
+                break
+        if self.idd_file == None:
+            raise FileNotFoundError("Could not find EnergyPlus IDD file")
+        
+
+    def create_csv_folder(
+            self,
+            dirname: str = "simulation_settings"
+            ) -> None:
+        
+        # Check if the direcotry already exists and delete
+        # its contents if it does, otherwise make it
+        self.settings_csv_path = os.path.join(".", dirname)
+        if os.path.exists(self.settings_csv_path):
+            _delete_directory_contents(self.settings_csv_path)
+        else:
+            os.makedirs(self.settings_csv_path)
+
+        # Copy defaults from internal database into new settings directory
+        _copy_directory_contents(
+            os.path.join(self.simstock_directory, "settings"),
+            os.path.join(self.settings_csv_path)
+        )
+
+
+    def override_settings_with_csv(self) -> None:
+        if self.settings_csv_path == None:
+            msg = "No csv folder found. Call create_csv_folder() first."
+            raise AttributeError(msg)
+        _compile_csvs_to_idf(self.settings, self.settings_csv_path)
+
+    def add_to_base(self) -> None:
+
+        cols = [col for col in self._df.columns]
+        print(cols)
+
+        return
+        
+    
     def _validate_osgb_column(self) -> None:
         """
         Function to check the existance of a column named ``osgb``.
@@ -197,7 +310,7 @@ class SimstockDataframe:
         """
         cols = [e for e in self._df.columns if e.casefold() == "osgb"]
         if len(cols) == 0:
-            raise KeyError("No \"osgb\" column dectected!\n")
+            raise KeyError("No \"osgb\" column dectected!")
         self._df = self._df.rename(columns={cols[0] : "osgb"})
 
     def _validate_polygon_column(self) -> None:
@@ -214,15 +327,26 @@ class SimstockDataframe:
         """
         cols = [e for e in self._df.columns if e.casefold() == "polygon"]
         if len(cols) == 0:
-            raise KeyError("No \"polygon\" column dectected!\n")
+            raise KeyError("No \"polygon\" column dectected!")
         try:
             self._df[cols[0]] = _series_serialiser(self._df[cols[0]])
             self._df = self._df.rename(columns={cols[0] : "polygon"})
             return 
         except TypeError as exc:
-            errmsg = "Unable to find valid shapely data in \"polygon\"\n"
+            errmsg = "Unable to find valid shapely data in \"polygon\""
             raise TypeError(errmsg) from exc
-        
+
+    def _add_missing_cols(self) -> None:
+        missing = []
+        for col in self.required_cols:
+            if col not in self._df.columns:
+                missing.append(col)
+                print(f"Adding missing {col} column.")
+                self._df[col] = float('nan')
+        if len(missing) > 0:
+            print(f"Please populate the following columsn with data:")
+            print(missing)
+    
     def _add_interiors_column(self) -> None:
         self._df['interiors'] = self._df['polygon'].map(algs._has_interior)
     
@@ -261,6 +385,117 @@ class SimstockDataframe:
         """
         return self._df.__len__()
     
+    def print_settings(self) -> None:
+        self.settings.printidf()
+    
+    @property
+    def materials(self) -> list:
+        return self.settings.idfobjects["MATERIAL"]
+    
+    @property
+    def constructions(self) -> list:
+        return self.settings.idfobjects["CONSTRUCTION"]
+    
+    @property
+    def schedules(self) -> list:
+        return self.settings.idfobjects["SCHEDULE:COMPACT"]
+    
+    @property
+    def simulation_control(self) -> list:
+        return self.settings.idfobjects["SIMULATIONCONTROL"]
+    
+    @property
+    def building(self) -> list:
+        return self.settings.idfobjects["BUILDING"]
+    
+    @property
+    def shadow_calculation(self) -> list:
+        return self.settings.idfobjects["SHADOWCALCULATION"]
+    
+    @property
+    def inside_convection_algorith(self) -> list:
+        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:INSIDE"]
+    
+    @property
+    def outside_convection_algorith(self) -> list:
+        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:OUTSIDE"]
+    
+    @property
+    def heat_balance_algorith(self) -> list:
+        return self.settings.idfobjects["HEATBALANCEALGORITHM"]
+    
+    @property
+    def timestep(self) -> list:
+        return self.settings.idfobjects["TIMESTEP"]
+    
+    @property
+    def run_period(self) -> list:
+        return self.settings.idfobjects["RUNPERIOD"]
+    
+    @property
+    def schedule_type_limits(self) -> list:
+        return self.settings.idfobjects["SCHEDULETYPELIMITS"]
+    
+    @property
+    def schedule_constant(self) -> list:
+        return self.settings.idfobjects["SCHEDULE:CONSTANT"]
+    
+    @property
+    def material_nomass(self) -> list:
+        return self.settings.idfobjects["MATERIAL:NOMASS"]
+    
+    @property
+    def window_material_glazing(self) -> list:
+        return self.settings.idfobjects["WINDOWMATERIAL:GLAZING"]
+    
+    @property
+    def window_material_gas(self) -> list:
+        return self.settings.idfobjects["WINDOWMATERIAL:GAS"]
+    
+    @property
+    def global_geometry_rules(self) -> list:
+        return self.settings.idfobjects["GLOBALGEOMETRYRULES"]
+    
+    @property
+    def people(self) -> list:
+        return self.settings.idfobjects["PEOPLE"]
+    
+    @property
+    def lights(self) -> list:
+        return self.settings.idfobjects["LIGHTS"]
+    
+    @property
+    def electric_equipment(self) -> list:
+        return self.settings.idfobjects["ELECTRICEQUIPMENT"]
+    
+    @property
+    def infiltration(self) -> list:
+        return self.settings.idfobjects["ZONEINFILTRATION:DESIGNFLOWRATE"]
+    
+    @property
+    def ventilation(self) -> list:
+        return self.settings.idfobjects["ZONEVENTILATION:DESIGNFLOWRATE"]
+    
+    @property
+    def thermostat(self) -> list:
+        return self.settings.idfobjects["ZONECONTROL:THERMOSTAT"]
+    
+    @property
+    def thermostat_dual_setpoint(self) -> list:
+        return self.settings.idfobjects["THERMOSTATSETPOINT:DUALSETPOINT"]
+    
+    @property
+    def output_variable_dictionaryt(self) -> list:
+        return self.settings.idfobjects["OUTPUT:VARIABLEDICTIONARY"]
+    
+    @property
+    def output_variable(self) -> list:
+        return self.settings.idfobjects["OUTPUT:VARIABLE"]
+    
+    @property
+    def output_diagnostics(self) -> list:
+        return self.settings.idfobjects["OUTPUT:DIAGNOSTICS"]
+    
     def orientate_polygons(self, **kwargs) -> None:
         """
         Function to ensure that polygon exteriors and interiors 
@@ -273,6 +508,7 @@ class SimstockDataframe:
             Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
         """
         self.__dict__.update(kwargs)
+        self._add_interiors_column()
         self._df['polygon'] = self._df['polygon'].map(algs._orientate)
 
     def remove_duplicate_coords(self, **kwargs) -> None:
@@ -442,9 +678,12 @@ class SimstockDataframe:
                             ] = algs._buffered_polygon(t_poly, new_coords, removed_coords)
 
     # This function seems redundant                   
-    def _touching_poly(self, osgb : str, polygon : Polygon, 
+    def _touching_poly(self,
+                       osgb: str,
+                       polygon: Polygon, 
                        osgb_list : list[str], 
-                       osgb_touching : list[str]) -> list[str]:
+                       osgb_touching : list[str]
+                       ) -> list[str]:
         for t in osgb_list:
             if t != osgb:
                 # Not sure this if is necessary
@@ -501,7 +740,10 @@ class SimstockDataframe:
                 ].reset_index(drop=True)
             self._polygon_buffer()
             self.polygon_tolerance()
-        self._df = self._df.drop(['simplify', 'poly_within_hole'], axis=1)
+        try:
+            self._df = self._df.drop(['simplify', 'poly_within_hole'], axis=1)
+        except KeyError:
+            pass
 
     # This could be refactored as a map
     def collinear_exterior(self, **kwargs) -> None:
@@ -591,6 +833,42 @@ class SimstockDataframe:
             self._df.loc[
                 self._df['osgb'] == osgb, 'polygon_horizontal'
                 ] = horizontal
+        self.processed = True
+
+    def bi_adj(self) -> None:
+
+        polygon_union = unary_union(self._df.polygon)
+
+        if polygon_union.geom_type == "MultiPolygon":
+            for bi in polygon_union.geoms:
+                # Get a unique name for the BI which is based on a point
+                # within the BI so that it doesn't change if new areas are lassoed
+                rep_point = bi.representative_point()
+                bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
+                bi_name = bi_name.replace(".", "-") #replace dots with dashes for filename compatibility
+                for row in self._df.itertuples():
+                    if row.polygon.within(bi):
+                        self._df.at[row.Index, 'bi'] = bi_name
+        else:
+            # If there is only one BI
+            rep_point = polygon_union.representative_point()
+            bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
+            bi_name = bi_name.replace(".", "-")
+            for row in self._df.itertuples():
+                self._df.at[row.Index, 'bi'] = bi_name
+        
+        if len(self._df["bi"]) != len(self._df["bi"].dropna()):
+            raise Exception("Simstock was unable to resolve all built islands. "
+                            "It is likely that intersections are present.")
+
+        try:
+            non_shading_gdf = self._df[self._df["shading"] == False]["bi"]
+            modal_bi = non_shading_gdf.mode().values
+            modal_bi_num = sum(non_shading_gdf.isin([modal_bi[0]]).values)
+            print("The BI(s) with the most buildings: %s with %s thermally simulated buildings" % (modal_bi, modal_bi_num))
+        except:
+            pass
+
             
     def preprocessing(self, **kwargs) -> None:
         """
@@ -611,7 +889,6 @@ class SimstockDataframe:
             If polygons cannot be simplified without causing intersection.
         """
         self.__dict__.update(kwargs)
-
         # Perform all of the steps,
         # one after the other
         self.orientate_polygons()
@@ -622,13 +899,12 @@ class SimstockDataframe:
         self.polygon_topology()
         self.collinear_exterior()
         self.polygon_topology()
+        self.bi_adj()
 
 
-
-
-class IDFcreator:
+class IDFmanager:
     """
-    An ``IDFcreator`` is a container object used to create elements
+    An ``IDFmanager`` is a container object used to create elements
     for an EnergyPlus simulation. The object contains functions to
     take geometric and contextual data in the form of a 
     SimstockDataframe, and create an IDF file or Eppy IDF
@@ -706,19 +982,19 @@ class IDFcreator:
     -------
     """
 
-    # File locations
-    root = os.path.join(os.path.dirname(__file__))
-    idd_file = ""
-    ep_basic_settings = os.path.join(root, "settings", "basic_settings.idf")
+    # # File locations
+    # root = os.path.join(os.path.dirname(__file__))
+    # idd_file = ""
+    # ep_basic_settings = os.path.join(root, "settings", "settings.idf")
 
-    # Common locations for E+ idd files
-    common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
-    common_posix_paths = [
-        "/usr/local/EnergyPlus*/Energy+.idd",
-        "/Applications/EnergyPlus*/Energy+.idd"
-    ]
+    # # Common locations for E+ idd files
+    # common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
+    # common_posix_paths = [
+    #     "/usr/local/EnergyPlus*/Energy+.idd",
+    #     "/Applications/EnergyPlus*/Energy+.idd"
+    # ]
 
-    building_name = "test"
+    # building_name = "test"
 
     # Do not place window if the wall width is less than this number
     min_avail_width_for_window = 1
@@ -732,8 +1008,7 @@ class IDFcreator:
 
 
     def __init__(self,
-                 data : SimstockDataframe | DataFrame | str,
-                 idd_file : str = None,
+                 data: SimstockDataframe | DataFrame | str,
                  **kwargs
                  ) -> None:
         """
@@ -804,41 +1079,18 @@ class IDFcreator:
             )
             raise SimstockException(msg)
 
-        # If idd_file == None, then try looking in standard places
-        if idd_file == None:
-            # Determine OS
-            opsys = platform.system().casefold()
-            if opsys not in ["windows", "darwin", "linux"]:
-                msg = f"OS: {opsys} not recognise."
-                raise SystemError(msg)
-            self._find_idd(opsys)
+        self.idf = data.settings.copyidf()
+        self.epw = data.epw
 
-        # If silicon mac, ensure rosetta is installed
-        if platform.processor().casefold() == "arm":
-            try:
-                if not os.path.isdir("/usr/libexec/rosetta"):
-                    raise Warning
-                if len(os.listdir("/usr/libexec/rosetta")) == 0:
-                    raise Warning
-            except Warning as warn:
-                msg = (
-                    "This appears to be a Silicone Mac." 
-                    "Please ensure Rosetta is installed to enable EnergyPlus functionality."
-                )
-                raise Warning(msg) from warn
-            
-        IDF.setiddname(self.idd_file)
-        self.idf = IDF(self.ep_basic_settings)
 
-        # Change the name filed of the building object
-        building_object = self.idf.idfobjects['BUILDING'][0]
-        building_object.Name = self.building_name
+    def create_model_idf_with_bi(self) -> None:
+        _sim_main(self.idf, self.df)
+
             
     
     def __str__(self) -> str:
         msg = (
-            "This is an IDFobject, it's function is to create IDF files."
-            f"This object uses E+ files located in {self.idd_file}."
+            "This is an IDFmanager, it's function is to create and handle IDF files."
         )
         return msg
 
@@ -846,7 +1098,7 @@ class IDFcreator:
         return "IDFobject()"
 
     @singledispatchmethod
-    def get_df(self, data : Any) -> None:
+    def get_df(self, data: Any) -> None:
         """
         Function to extract the simstock or pandas
         data frame from `data` and store it in 
@@ -869,15 +1121,15 @@ class IDFcreator:
         raise TypeError(msg)
     
     @get_df.register
-    def _(self, data : SimstockDataframe) -> None:
+    def _(self, data: SimstockDataframe) -> None:
         self.df = data._df.copy()
 
     @get_df.register
-    def _(self, data : DataFrame) -> None:
+    def _(self, data: DataFrame) -> None:
         self.df = data.copy()
 
     @get_df.register
-    def _(self, data : str) -> None:
+    def _(self, data: str) -> None:
         if not os.path.exists(data):
             raise FileNotFoundError
         try:
@@ -905,24 +1157,27 @@ class IDFcreator:
         Necessary column names that are missing from the data
         """
         return list(set(self.col_names).difference(set(self.df.columns)))
+    
 
-    def _find_idd(self, system : str) -> None:
-        """
-        Function to find IDD file within user's system
-        """
-        self.idd_file = None
-        if system == "windows":
-            paths = self.common_windows_paths
-        else:
-            paths = self.common_posix_paths
-        for path in paths:
-            # Use glob to handle pattern matching for version number
-            matches = glob.glob(path)
-            if matches:
-                self.idd_file = matches[0]
-                break
-        if self.idd_file == None:
-            raise FileNotFoundError("Could not find EnergyPlus IDD file")
+    # def _find_idd(self,
+    #               system: str
+    #               ) -> None:
+    #     """
+    #     Function to find IDD file within user's system
+    #     """
+    #     self.idd_file = None
+    #     if system == "windows":
+    #         paths = self.common_windows_paths
+    #     else:
+    #         paths = self.common_posix_paths
+    #     for path in paths:
+    #         # Use glob to handle pattern matching for version number
+    #         matches = glob.glob(path)
+    #         if matches:
+    #             self.idd_file = matches[0]
+    #             break
+    #     if self.idd_file == None:
+    #         raise FileNotFoundError("Could not find EnergyPlus IDD file")
     
     def move_towards_origin(self, **kwargs) -> None:
         """
@@ -1025,7 +1280,7 @@ class IDFcreator:
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
     
-    def save_to_file(self, fname : str) -> None:
+    def save_to_file(self, fname: str) -> None:
         """
         Function to save the E+ objects to an idf file
 
@@ -1037,7 +1292,7 @@ class IDFcreator:
         self.idf.saveas(fname)
 
 
-    def create_idf_file(self, fname : str, **kwargs) -> None:
+    def create_model_idf_file(self, fname: str, **kwargs) -> None:
         """
         Function to automatically create the IDF file from the
         data in IDFcreator. This uses default settings.
@@ -1077,48 +1332,45 @@ class IDFcreator:
         self.save_to_file(fname) 
 
 
-def create_idf(sdf : SimstockDataframe, fname : str, **kwargs) -> None:
-    """
-    Function to automatically create the IDF file from a 
-    SimstockDataframe. This uses default settings. 
+    def create_model_idf(self, **kwargs) -> None:
+        """
+        Function to automatically create an IDF object from the
+        data in IDFcreator. This uses default settings.
 
-    Parameters
-    ----------
-    ``sdf : SimstockDataframe``
-        The pre-processed SimstockDataframe
+        Parameters
+        ----------
+        ``fname : str``
+            File name to save the IDF file to
+        
+        ``kwargs``
+            Keyword arguments. See IDFcreator initialisation
+            docs for full list of acceptable keywords.
 
-    ``fname : str``
-        File name to save the IDF file to
-    
-    ``kwargs``
-        Keyword arguments. See IDFcreator initialisation
-        docs for full list of acceptable keywords.
+        Usage example
+        -------------
+        ```python
+        import simstock as sim
 
-    Usage example
-    -------------
-    ```python
-    import simstock as sim
+        # Read in data and create SimstockDataframe
+        sdf = sim.read_csv("tests/data/test_data.csv")
 
-    # Read in data and create SimstockDataframe
-    sdf = sim.read_csv("tests/data/test_data.csv")
+        # Process it
+        sdf.preprocessing()
 
-    # Process it
-    sdf.preprocessing()
+        # Instantiate IDF creator object
+        ob = sim.IDFcreator(sdf)
 
-    # Create and save the IDF object
-    sim.create_idf(sdf, "tests/data/test.idf")
-    ```
+        # Create and save the IDF object
+        ob.create_idf_file("tests/data/test.idf")
+        ```
+        """
+        self.__dict__.update(kwargs)
+        self.move_towards_origin()
+        self.create_shading_objects()
+        self.create_thermal_zones()
+        self.create_load_systems()
 
-    See also
-    --------
-    ``IDFcreator`` object
-        The IDFcreator object provides finer grained
-        control over the IDF file creation process
-        by using the object's API. Refer to 
-        ``IDFcreator`` docs for more info.
-    """
-    ob = IDFcreator(sdf, **kwargs)
-    ob.create_idf_file(fname)
+
 
 
     
