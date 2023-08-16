@@ -1,6 +1,7 @@
 import os
 import math
 import random
+import numpy as np
 import platform
 import pandas as pd
 from ast import literal_eval
@@ -11,141 +12,175 @@ from shapely.geometry import LineString, MultiLineString
 from shapely.ops import unary_union
 import json
 
-
 # Do not place window if the wall width is less than this number
 min_avail_width_for_window = 1
 # Do not place window if partially exposed external wall is less than this number % of zone height
 min_avail_height = 80
 
 
-def _sim_main(idf, df, buffer_radius = 50):
+def _sim_main(idf,
+              df,
+              buffer_radius = 50,
+              out_dir = "outs"):
+        
+        # If the dataframe contains a built island column
+        if 'bi' in df.columns:
     
-    # Function which creates the idf(s)
-    def createidfs(bi_df, df):
+            # Iterate over unique building islands
+            for j, bi in enumerate(df['bi'].unique().tolist()):
+
+                # Revert idf to settings idf
+                temp_idf = idf.copyidf()
+                
+
+                # Change the name field of the building object
+                building_object = temp_idf.idfobjects['BUILDING'][0]
+                building_object.Name = bi
+                
+                # Get the data for the BI
+                bi_df = df[df['bi'] == bi]
+
+                # Get the data for other BIs to use as shading
+                rest  = df[df['bi'] != bi]
+
+                # Buffer the BI geometry to specified radius
+                bi_geom = list(bi_df.polygon)
+                buffer = unary_union(bi_geom).convex_hull.buffer(buffer_radius)
+
+                # Find polygons in the rest which are within 
+                # this buffer and create mask
+                lst = []
+                index = []
+                for row in rest.itertuples():
+                    poly = row.polygon
+                    # The following is True if poly intersects 
+                    # the buffer and False if not
+                    lst.append(poly.intersects(buffer))
+                    index.append(row.Index)
+                mask = pd.Series(lst, index=index)
+
+                # Get data for the polygons within the buffer
+                within_buffer = rest.loc[mask].copy()
+
+
+                # Set them to be shading
+                within_buffer["shading"] = True
+
+                # Include them in the idf for the BI
+                bi_df = pd.concat([bi_df, within_buffer])
+                
+                # Only create idf if the BI is 
+                # not entirely composed of shading blocks
+                shading_vals_temp = bi_df['shading'].to_numpy()
+                shading_vals = [_assert_bool(v) for v in shading_vals_temp]
+                if not np.asarray(shading_vals).all():
+                    createidfs(temp_idf, bi_df, df)
+                else:
+                    continue
+                
+                fname = os.path.join(out_dir, f"built_island_{j}.idf")
+                temp_idf.saveas(fname)
+
+
+def _assert_bool(val):
+    """
+    Function to ensure that a bool value that has been
+    wrongly encoded as a string is re-encoded back as a bool.
+    """
+    if type(val) == bool:
+        return val
+    if val == "false" or val == "False":
+        return False
+    if val == "true" or val == "True":
+        return True
+
+def get_osgb_value(val_name, zones_df, zone):
+    """Gets the value of a specified attribute for the zone"""
+    try:
+        osgb_from_zone = "_".join(zone.split("_")[:-2])
+        value = zones_df[zones_df["osgb"]==osgb_from_zone][val_name]
+        return value.to_numpy()[0]
+    except KeyError:
+        return 0.0
+
+
+# Function which creates the idf(s)
+def createidfs(idf, bi_df, df):
     
-        # Move all objects towards origins
-        origin = bi_df['polygon'].iloc[0]
-        origin = list(origin.exterior.coords[0])
-        origin.append(0)
+    # Move all objects towards origins
+    origin = bi_df['polygon'].iloc[0]
+    origin = list(origin.exterior.coords[0])
+    origin.append(0)
 
-        # Shading volumes converted to shading objects
-        shading_df = bi_df.loc[bi_df['shading'] == True]
-        shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
+    bi_df['shading'] = bi_df['shading'].apply(_assert_bool)
+    
+    # Shading volumes converted to shading objects
+    shading_df = bi_df.loc[bi_df['shading'] == True]
+    shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
 
-        # Polygons with zones converted to thermal zones based on floor number
-        zones_df = bi_df.loc[bi_df['shading'] == False]
-        zone_use_dict = {} 
-        zones_df.apply(thermal_zones, args=(bi_df, idf, origin, zone_use_dict,), axis=1)
+    # Polygons with zones converted to thermal zones based on floor number
+    zones_df = bi_df.loc[bi_df['shading'] == False]
+    zone_use_dict = {} 
+    zones_df.apply(thermal_zones, args=(bi_df, idf, origin, zone_use_dict,), axis=1)
 
-        # Extract names of thermal zones:
-        zones = idf.idfobjects['ZONE']
-        zone_names = list()
-        for zone in zones:
-            zone_names.append(zone.Name)
-        
+    # Extract names of thermal zones:
+    zones = idf.idfobjects['ZONE']
+    zone_names = list()
+    for zone in zones:
+        zone_names.append(zone.Name)
 
-        # Plugin feature: mixed-use
-        mixed_use(idf, zone_use_dict)
+    # Plugin feature: mixed-use
+    mixed_use(idf, zone_use_dict)
 
-        # Ideal loads system
-        for zone in zone_names:
-            system_name = '{}_HVAC'.format(zone)
-            eq_name = '{}_Eq'.format(zone)
-            supp_air_node = '{}_supply'.format(zone)
-            air_node = '{}_air_node'.format(zone)
-            ret_air_node = '{}_return'.format(zone)
+    # Ideal loads system
+    for zone in zone_names:
+        system_name = f"{zone}_HVAC"
+        eq_name = f"{zone}_Eq"
+        supp_air_node = f"{zone}_supply"
+        air_node = f"{zone}_air_node"
+        ret_air_node = f"{zone}_return"
 
-            idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                                Name=system_name,
-                                Zone_Supply_Air_Node_Name=supp_air_node,
-                                Dehumidification_Control_Type='None')
+        idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                            Name=system_name,
+                            Zone_Supply_Air_Node_Name=supp_air_node,
+                            Dehumidification_Control_Type='None')
 
-            idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
-                                Name=eq_name,
-                                Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                                Zone_Equipment_1_Name=system_name,
-                                Zone_Equipment_1_Cooling_Sequence=1,
-                                Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
+        idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
+                            Name=eq_name,
+                            Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                            Zone_Equipment_1_Name=system_name,
+                            Zone_Equipment_1_Cooling_Sequence=1,
+                            Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
 
-            idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
-                                Zone_Name=zone,
-                                Zone_Conditioning_Equipment_List_Name=eq_name,
-                                Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
-                                Zone_Air_Node_Name=air_node,
-                                Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
-       
+        idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
+                            Zone_Name=zone,
+                            Zone_Conditioning_Equipment_List_Name=eq_name,
+                            Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
+                            Zone_Air_Node_Name=air_node,
+                            Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+    
+        # Get specified inputs for zone
+        ventilation_rate = get_osgb_value("ventilation_rate", zones_df, zone)
+        infiltration_rate = get_osgb_value("infiltration_rate", zones_df, zone)
 
-            def get_osgb_value(val_name, zones_df, zone):
-                """Gets the value of a specified attribute for the zone"""
-                osgb_from_zone = "_".join(zone.split("_")[:-2])
-                return zones_df[zones_df["osgb"]==osgb_from_zone][val_name].to_numpy()[0]
+        # Get the rest of the default obj values from dict
+        zone_ventilation_dict = ventilation_dict
+        zone_infiltration_dict = infiltration_dict
 
-            # Get specified inputs for zone
-            ventilation_rate = get_osgb_value("ventilation_rate", zones_df, zone)
-            infiltration_rate = get_osgb_value("infiltration_rate", zones_df, zone)
+        # Set the name, zone name and ventilation rate
+        zone_ventilation_dict["Name"] = zone + "_ventilation"
+        zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
+        zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
+        zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
 
-            # Get the rest of the default obj values from dict
-            zone_ventilation_dict = ventilation_dict
-            zone_infiltration_dict = infiltration_dict
+        # Same for infiltration
+        zone_infiltration_dict["Name"] = zone + "_infiltration"
+        zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone
+        zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
 
-            # Set the name, zone name and ventilation rate
-            zone_ventilation_dict["Name"] = zone + "_ventilation"
-            zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
-            zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
-            zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
-
-            # Same for infiltration
-            zone_infiltration_dict["Name"] = zone + "_infiltration"
-            zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone
-            zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
-
-            # Add the ventilation idf object
-            idf.newidfobject(**zone_ventilation_dict)
-            idf.newidfobject(**zone_infiltration_dict)
-
-    bi_list = df['bi'].unique().tolist()
-        
-    for bi in bi_list:
-        # Change the name field of the building object
-        building_object = idf.idfobjects['BUILDING'][0]
-        building_object.Name = bi
-        
-        # Get the data for the BI
-        bi_df = df[df['bi'] == bi]
-
-        # Get the data for other BIs to use as shading
-        rest  = df[df['bi'] != bi]
-
-        # Buffer the BI geometry to specified radius
-        bi_geom = list(bi_df.polygon)
-        buffer = unary_union(bi_geom).convex_hull.buffer(buffer_radius)
-
-        # Find polygons which are within this buffer and create mask
-        lst = []
-        index = []
-        for row in rest.itertuples():
-            poly = row.polygon
-            # The following is True if poly intersects buffer and False if not
-            lst.append(poly.intersects(buffer))
-            index.append(row.Index)
-        mask = pd.Series(lst, index=index)
-
-        # Get data for the polygons within the buffer
-        within_buffer = rest.loc[mask].copy()
-
-        # Set them to be shading
-        within_buffer["shading"] = True
-
-        # Include them in the idf for the BI
-        bi_df = pd.concat([bi_df, within_buffer])
-        
-        # Only create idf if the BI is not entirely composed of shading blocks
-        shading_vals = bi_df['shading'].to_numpy()
-        # print(shading_vals)
-        # if not shading_vals.all():
-        createidfs(bi_df, df)
-        # else:
-        #     continue
+        # Add the ventilation idf object
+        idf.newidfobject(**zone_ventilation_dict)
+        idf.newidfobject(**zone_infiltration_dict)
 
 
 def mixed_use(idf, zone_use_dict):
@@ -225,7 +260,6 @@ def polygon_coordinates_dictionary(polygon):
     Data are in the shape Polygon(exterior[, interiors=None])
    '''
     # Load the polygon data by using shapely
-    polygon = polygon
     # Empty dictionary
     polygon_coordinates_dict = dict()
     # Outer ring (exterior) coordinates
@@ -233,9 +267,11 @@ def polygon_coordinates_dictionary(polygon):
     # If there are inner rings (holes in polygon) than loop through then and
     # store them in the list
     if polygon.interiors:
+        
         polygon_coordinates_dict['inner_rings'] = list()  # empty list
         for item in polygon.interiors:
             polygon_coordinates_dict['inner_rings'].append(item.coords)
+
     # Return the dictionary
     return polygon_coordinates_dict
 
@@ -721,22 +757,28 @@ def idf_wall_coordinates(i, ceiling_coordinates, floor_coordinates):
 
 
 def thermal_zones(row, df, idf, origin, zone_use_dict):
-    polygon = loads(row.polygon)
+    
+    
+    polygon = row.polygon
     # Polygon with removed collinear point to be used for ceiling/floor/roof
     hor_polygon = row.polygon_horizontal
+    
     # Convert polygon coordinates to dictionary of outer and inner (if any)
     # coordinates
     hor_poly_coord_dict = polygon_coordinates_dictionary(hor_polygon)
+    # print(hor_poly_coord_dict)
+
     # List of horizontal surfaces coordinates (roof/floor/ceiling)
     horiz_surf_coord = horizontal_surface_coordinates(
         hor_poly_coord_dict, origin)
     # Load the polygon which defines only external surfaces
-    ext_surf_polygon = loads(row.polygon_exposed_wall)
+    ext_surf_polygon = row.polygon_exposed_wall
     # List of external surface only coordinates (ext_surf_polygon + in. rings)
     ext_surf_coord = surface_coordinates(ext_surf_polygon, origin)
     # List of adjacent polygons
-    adj_osgb_list = literal_eval(row.touching)
-
+    adj_osgb_list = row.touching
+    
+    
     height = row.height
     glazing_ratio = row.wwr
     floors = range(int(row.nofloors))
@@ -745,12 +787,18 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     glazing_const = '{}_glazing'.format(construction)
 
     ########### Added features for Simstock QGIS plugin ########################
-    overhang_depth = row.overhang_depth
+    try:
+        overhang_depth = row.overhang_depth
+    except AttributeError:
+        overhang_depth = 0.0
     #for i in floors:
     #    print(row["FLOOR_{}: use".format(i)])
 
     # Select constructions
     #glazing_const = "glazing"
+
+    
+    
     def set_construction(construction, element):
         # TODO: generalise this
         """
@@ -773,7 +821,9 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
     ############################################################################
 
+    
     if len(floors) == 1:
+        
         floor_no = int(1)
         zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
         try:
@@ -810,8 +860,8 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
             for adj_osgb in adj_osgb_list:
                 opposite_zone = adj_osgb
                 # Extract polygon from the adjacent objects DataFrame
-                adj_polygon = loads(df.loc[df['osgb'] == adj_osgb,
-                                           'polygon'].values[0])
+                adj_polygon = df.loc[df['osgb'] == adj_osgb,
+                                           'polygon'].values[0]
                 adj_height = df.loc[df['osgb'] == adj_osgb,
                                     'height'].values[0]
                 # Find the intersection between two polygons (it will be
@@ -888,8 +938,8 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
                     for adj_osgb in adj_osgb_list:
                         opposite_zone = adj_osgb
                         # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = loads(df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0])
+                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
+                                                   'polygon'].values[0]
                         adj_height = df.loc[df['osgb'] == adj_osgb,
                                             'height'].values[0]
                         # Find the intersection between two polygons (it will
@@ -962,8 +1012,8 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
                     for adj_osgb in adj_osgb_list:
                         opposite_zone = adj_osgb
                         # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = loads(df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0])
+                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
+                                                   'polygon'].values[0]
                         adj_height = df.loc[df['osgb'] == adj_osgb,
                                             'height'].values[0]
                         # Find the intersection between two polygons (it will
@@ -1038,8 +1088,8 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
                     for adj_osgb in adj_osgb_list:
                         opposite_zone = adj_osgb
                         # Extract polygon from the adjacent objects DataFrame
-                        adj_polygon = loads(df.loc[df['osgb'] == adj_osgb,
-                                                   'polygon'].values[0])
+                        adj_polygon = df.loc[df['osgb'] == adj_osgb,
+                                                   'polygon'].values[0]
                         adj_height = df.loc[df['osgb'] == adj_osgb,
                                             'height'].values[0]
                         # Find the intersection between two polygons (it will

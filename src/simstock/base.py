@@ -193,7 +193,7 @@ class SimstockDataframe:
         else:
             self._df = inputobject.copy()
 
-        # Rename polygon and osgb columns is user has specified
+        # Rename polygon and osgb columns if user has specified
         if uid_column_name:
             self._df.rename(columns={uid_column_name: "osgb"}, inplace=True)
         if polygon_column_name:
@@ -294,12 +294,12 @@ class SimstockDataframe:
             raise AttributeError(msg)
         _compile_csvs_to_idf(self.settings, self.settings_csv_path)
 
-    def add_to_base(self) -> None:
+    # def add_to_base(self) -> None:
 
-        cols = [col for col in self._df.columns]
-        print(cols)
+    #     cols = [col for col in self._df.columns]
+    #     print(cols)
 
-        return
+    #     return
         
     
     def _validate_osgb_column(self) -> None:
@@ -982,20 +982,6 @@ class IDFmanager:
     -------
     """
 
-    # # File locations
-    # root = os.path.join(os.path.dirname(__file__))
-    # idd_file = ""
-    # ep_basic_settings = os.path.join(root, "settings", "settings.idf")
-
-    # # Common locations for E+ idd files
-    # common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
-    # common_posix_paths = [
-    #     "/usr/local/EnergyPlus*/Energy+.idd",
-    #     "/Applications/EnergyPlus*/Energy+.idd"
-    # ]
-
-    # building_name = "test"
-
     # Do not place window if the wall width is less than this number
     min_avail_width_for_window = 1
     # Do not place window if partially exposed external wall is less than this number % of zone height
@@ -1083,11 +1069,9 @@ class IDFmanager:
         self.epw = data.epw
 
 
-    def create_model_idf_with_bi(self) -> None:
-        _sim_main(self.idf, self.df)
+    def create_model_idf_with_bi(self, **kwargs) -> None:
+        _sim_main(self.idf, self.df, **kwargs)
 
-            
-    
     def __str__(self) -> str:
         msg = (
             "This is an IDFmanager, it's function is to create and handle IDF files."
@@ -1157,27 +1141,6 @@ class IDFmanager:
         Necessary column names that are missing from the data
         """
         return list(set(self.col_names).difference(set(self.df.columns)))
-    
-
-    # def _find_idd(self,
-    #               system: str
-    #               ) -> None:
-    #     """
-    #     Function to find IDD file within user's system
-    #     """
-    #     self.idd_file = None
-    #     if system == "windows":
-    #         paths = self.common_windows_paths
-    #     else:
-    #         paths = self.common_posix_paths
-    #     for path in paths:
-    #         # Use glob to handle pattern matching for version number
-    #         matches = glob.glob(path)
-    #         if matches:
-    #             self.idd_file = matches[0]
-    #             break
-    #     if self.idd_file == None:
-    #         raise FileNotFoundError("Could not find EnergyPlus IDD file")
     
     def move_towards_origin(self, **kwargs) -> None:
         """

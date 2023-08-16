@@ -8,6 +8,7 @@ __pycache__/
 
 # User energy plus settings
 simulation_settings/
+outs/
 
 # Distribution / packaging
 .Python
