@@ -288,7 +288,8 @@ class SimstockDataframe:
         )
 
 
-    def override_settings_with_csv(self) -> None:
+    def override_settings_with_csv(self, **kwargs) -> None:
+        self.__dict__.update(kwargs)
         if self.settings_csv_path == None:
             msg = "No csv folder found. Call create_csv_folder() first."
             raise AttributeError(msg)

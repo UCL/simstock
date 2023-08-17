@@ -13,9 +13,8 @@ sdf.preprocessing()
 
 simulation = sim.IDFmanager(sdf)
 simulation.create_model_idf_with_bi()
-print(sdf.materials)
 
-# # Have a look at it
-# idf = IDF("built_island_2.idf")
-# idf.epw = sdf.epw
-# idf.run(output_directory="outs")
+# Have a look at it
+idf = IDF("outs/built_island_2.idf")
+idf.epw = sdf.epw
+idf.run(output_directory="outs")

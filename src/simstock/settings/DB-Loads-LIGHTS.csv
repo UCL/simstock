@@ -1,2 +1,5 @@
 Name,Zone_or_ZoneList_Name,Schedule_Name,Design_Level_Calculation_Method,Lighting_Level,Watts_per_Zone_Floor_Area,Watts_per_Person,Return_Air_Fraction,Fraction_Radiant,Fraction_Visible,Fraction_Replaceable,EndUse_Subcategory,Return_Air_Fraction_Calculated_from_Plenum_Temperature,Return_Air_Fraction_Function_of_Plenum_Temperature_Coefficient_1,Return_Air_Fraction_Function_of_Plenum_Temperature_Coefficient_2,Return_Air_Heat_Gain_Node_Name,Notes
 Dwell,Dwell,Dwell_Light,Watts/Area,,12.0,,0.0,0.42,0.18,1.0,,,,,,
+Commercial,Commercial,Commercial_Light,Watts/Area,,6,,0,0.42,0.18,1,,,,,,
+Use3,Use3,Use3_Light,Watts/Area,,3,,0,0.42,0.18,1,,,,,,
+Use4,Use4,Use4_Light,Watts/Area,,3,,0,0.42,0.18,1,,,,,,
