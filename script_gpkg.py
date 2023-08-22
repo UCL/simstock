@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import simstock as sim
 from eppy.modeleditor import IDF
 
-
 # Path to test data
 s7data = os.path.join("tests", "data", "S7_data.gpkg")
 

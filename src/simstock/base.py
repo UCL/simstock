@@ -34,7 +34,6 @@ from simstock._utils._dirmanager import (
 )
 
 
-
 class SimstockDataframe:
     """
     A ``SimstockDataframe`` is an object used by simstock to represent all input data. It behaves the in the same way as a Pandas data frame, but with some key additional methods to perform geometric-based pre-processing.
@@ -295,13 +294,6 @@ class SimstockDataframe:
             raise AttributeError(msg)
         _compile_csvs_to_idf(self.settings, self.settings_csv_path)
 
-    # def add_to_base(self) -> None:
-
-    #     cols = [col for col in self._df.columns]
-    #     print(cols)
-
-    #     return
-        
     
     def _validate_osgb_column(self) -> None:
         """
@@ -1068,7 +1060,6 @@ class IDFmanager:
 
         self.idf = data.settings.copyidf()
         self.epw = data.epw
-
 
     def create_model_idf_with_bi(self, **kwargs) -> None:
         _sim_main(self.idf, self.df, **kwargs)

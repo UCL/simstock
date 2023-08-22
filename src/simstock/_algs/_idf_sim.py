@@ -1,16 +1,12 @@
 import os
+import datetime
 import math
 import random
 import numpy as np
-import platform
 import pandas as pd
+import geopandas as gpd
 from ast import literal_eval
-from shapely.wkt import loads
-from eppy.modeleditor import IDF, IDDAlreadySetError
-from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
-from shapely.ops import unary_union
-import json
 
 # Do not place window if the wall width is less than this number
 min_avail_width_for_window = 1
@@ -21,65 +17,106 @@ min_avail_height = 80
 def _sim_main(idf,
               df,
               buffer_radius = 50,
-              out_dir = "outs"):
-        
-        # If the dataframe contains a built island column
-        if 'bi' in df.columns:
+              out_dir = "outs",
+              bi_mode = True,
+              data_fname = None
+              ):
     
-            # Iterate over unique building islands
-            for j, bi in enumerate(df['bi'].unique().tolist()):
+    # Ensure unique data file name
+    if not data_fname:
+        data_fname = generate_unique_string()
+        
+    # If the dataframe contains a built island column
+    if bi_mode:
 
-                # Revert idf to settings idf
-                temp_idf = idf.copyidf()
-                
+        # Calculate how many thermally simulated buildings are in each BI and output info as csv
+        bi_bldg_count = df[df["shading"]!=True]["bi"].value_counts()
+        bi_bldg_count.to_csv(
+            os.path.join(out_dir, f"{data_fname}_bi_bldg_count.csv")
+            )
 
-                # Change the name field of the building object
-                building_object = temp_idf.idfobjects['BUILDING'][0]
-                building_object.Name = bi
-                
-                # Get the data for the BI
-                bi_df = df[df['bi'] == bi]
+        # Iterate over unique building islands
+        for j, bi in enumerate(df['bi'].unique().tolist()):
 
-                # Get the data for other BIs to use as shading
-                rest  = df[df['bi'] != bi]
+            # Revert idf to settings idf
+            temp_idf = idf.copyidf()
+        
+            # Change the name field of the building object
+            building_object = temp_idf.idfobjects['BUILDING'][0]
+            building_object.Name = bi
+            
+            # Get the data for the BI
+            bi_df = df[df['bi'] == bi]
 
-                # Buffer the BI geometry to specified radius
-                bi_geom = list(bi_df.polygon)
-                buffer = unary_union(bi_geom).convex_hull.buffer(buffer_radius)
+            # Get the data for other BIs to use as shading
+            rest  = df[df['bi'] != bi]
 
-                # Find polygons in the rest which are within 
-                # this buffer and create mask
-                lst = []
-                index = []
-                for row in rest.itertuples():
-                    poly = row.polygon
-                    # The following is True if poly intersects 
-                    # the buffer and False if not
-                    lst.append(poly.intersects(buffer))
-                    index.append(row.Index)
-                mask = pd.Series(lst, index=index)
+            # Include other polygons which fall under the specified shading buffer radius
+            bi_df = pd.concat(
+                [bi_df, shading_buffer(buffer_radius, bi_df, rest)]
+                )
+            
+            # Only create idf if the BI is 
+            # not entirely composed of shading blocks
+            shading_vals_temp = bi_df['shading'].to_numpy()
+            shading_vals = [_assert_bool(v) for v in shading_vals_temp]
+            if not np.asarray(shading_vals).all():
+                createidfs(temp_idf, bi_df, df)
+            else:
+                continue
+            
+            fname = os.path.join(out_dir, f"built_island_{j}.idf")
+            temp_idf.saveas(fname)
 
-                # Get data for the polygons within the buffer
-                within_buffer = rest.loc[mask].copy()
+    else:
 
+        # Change the name field of the building object
+        building_object = idf.idfobjects['BUILDING'][0]
+        building_object.Name = data_fname
 
-                # Set them to be shading
-                within_buffer["shading"] = True
+        # Get non-shading data
+        df1 = df[df['shading'] == False]
+        bi_list = df1["bi"].unique()
+        
+        # Get the data for other BIs to use as shading
+        rest = df[df['shading'] == True]
 
-                # Include them in the idf for the BI
-                bi_df = pd.concat([bi_df, within_buffer])
-                
-                # Only create idf if the BI is 
-                # not entirely composed of shading blocks
-                shading_vals_temp = bi_df['shading'].to_numpy()
-                shading_vals = [_assert_bool(v) for v in shading_vals_temp]
-                if not np.asarray(shading_vals).all():
-                    createidfs(temp_idf, bi_df, df)
-                else:
-                    continue
-                
-                fname = os.path.join(out_dir, f"built_island_{j}.idf")
-                temp_idf.saveas(fname)
+        # Include other polygons which fall under the specified shading buffer radius
+        shading_dfs = []
+        for bi in bi_list:
+            # Get the data for the BI
+            bi_df = df[df['bi'] == bi]
+
+            # Buffer each BI to specified radius and include shading which falls within this
+            shading_dfs.append(shading_buffer(buffer_radius, bi_df, rest))
+
+        # Combine these separate shading DataFrames and drop duplicate rows
+        shading_df = pd.concat(shading_dfs)
+        shading_df = shading_df.drop_duplicates()
+
+        # Append the shading to the main DataFrame
+        if buffer_radius != 0:
+            df1 = pd.concat([df1, shading_df]).drop_duplicates(subset = "osgb", keep = "first")
+
+        # If shading radius is zero, i.e. no shading is to be included
+        elif buffer_radius == 0:
+            # Overwrite touching column with empty data to avoid errors
+            df1.loc[:, "touching"] = ["[]"] * len(df1)
+
+        # Only create idf if it is not entirely composed of shading blocks
+        shading_vals_temp = df1['shading'].to_numpy()
+        shading_vals = [_assert_bool(v) for v in shading_vals_temp]
+        if not np.asarray(shading_vals).all():
+
+            # If requested, output csv which excludes any buildings not within the shading buffer
+            df1.to_csv(os.path.join(out_dir, f"{data_fname}_final.csv"))
+
+            # Generate the idf file
+            createidfs(df1, "single", original_df = df)
+
+        else:
+            raise Exception("There are no thermal zones to create! All zones are shading.")
+
 
 
 def _assert_bool(val):
@@ -93,6 +130,10 @@ def _assert_bool(val):
         return False
     if val == "true" or val == "True":
         return True
+    
+def generate_unique_string():
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    return f"{timestamp}"
 
 def get_osgb_value(val_name, zones_df, zone):
     """Gets the value of a specified attribute for the zone"""
@@ -181,6 +222,48 @@ def createidfs(idf, bi_df, df):
         # Add the ventilation idf object
         idf.newidfobject(**zone_ventilation_dict)
         idf.newidfobject(**zone_infiltration_dict)
+
+
+def load_gdf(df):
+    gdf = df.copy(deep=True)
+    return gpd.GeoDataFrame(gdf, geometry="polygon")
+
+
+def shading_buffer(shading_buffer_radius, df, rest):
+    """
+    Includes polygons which fall within a specified shading buffer radius in the main DataFrame.
+
+    Inputs:
+        - shading_buffer_radius: Radius in metres within which other polygons are included. An
+            empty string is interpreted as an infinite radius.
+        - df: The main DataFrame containing the thermal zones of interest
+        - rest: DataFrame containing all other polygons (i.e. shading and those from other BIs)
+    """
+    gdf = load_gdf(df)
+    rest_gdf = load_gdf(rest)
+    if shading_buffer_radius != '':
+    
+        # Buffer the df geometry to specified radius for shading
+        dissolved = gdf.dissolve().geometry.convex_hull.buffer(shading_buffer_radius)
+
+        # Find polygons which are within this buffer and create mask
+        mask = rest_gdf.intersects(dissolved[0])
+        
+        # Get data for the polygons within the buffer
+        within_buffer = rest.loc[mask].copy()
+
+        # Set them to be shading
+        within_buffer["shading"] = True
+    
+    else:
+        # All other buildings are to be included as shading
+        within_buffer = rest.copy()
+        within_buffer["shading"] = True
+
+    # Include them in the idf
+    #df = pd.concat([df, within_buffer])
+
+    return within_buffer
 
 
 def mixed_use(idf, zone_use_dict):
