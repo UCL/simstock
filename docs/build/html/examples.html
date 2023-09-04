@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage and examples &mdash; Simstock 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Simstock API docs" href="simstock.html" />
+    <link rel="prev" title="Instructions for developers" href="devinstructions.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Simstock
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview of Simstock methodology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage and examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview-reading-in-data-and-running-a-simulation">Overview: reading in data and running a simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-requirements">Data requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reading-different-data-formats">Reading different data formats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#csv-files">csv files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parquet-files">Parquet files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#geopackage-files">Geopackage files</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#plotting-data">Plotting data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-weather-data">Specifying weather data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-schedules-materials-and-constructions">Specifying schedules, materials, and constructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-simulation">Running the simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#finer-grained-control">Finer grained control</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-built-island-mode">Using built island mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-problems">Common problems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Simstock</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Usage and examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/examples.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="usage-and-examples">
+<h1>Usage and examples<a class="headerlink" href="#usage-and-examples" title="Permalink to this heading"></a></h1>
+<section id="overview-reading-in-data-and-running-a-simulation">
+<h2>Overview: reading in data and running a simulation<a class="headerlink" href="#overview-reading-in-data-and-running-a-simulation" title="Permalink to this heading"></a></h2>
+<p>Simstock reads in geographical data, performs some geometric simplification steps, creates EnergyPlus idf objects, and then finally runs an EnergyPlus simulation. Simstock also provides a convenient interface to modify EnergyPlus settings such as materials, constructions, and schedules.</p>
+<p>Simstock is structured around two objects: the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> and the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code>. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> is an extension of a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. It allows data to be read in from a variety of formats. It also performs geometruc simplification on the data. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> also contains the EnergyPlus settings, allowing easy manipulation of materials etc. Once these settings have been set, and any geometrical simplification perfomed, the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> then creates the necessary thermal zones from the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code>. The <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> can also be used to run an EnergyPlus simulation.</p>
+<p>Below is an example of a typical Simstock work flow.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the simstock package</span>
+<span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+
+<span class="c1"># Let&#39;s say we have some test data stored in a file called test.csv.</span>
+<span class="c1"># We can read it in as a SimstockDataframe:</span>
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># We now perform geometrical pre-processing:</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">preprocessing</span><span class="p">()</span>
+
+<span class="c1"># Now create an new instance of an IDFmanager object that takes the</span>
+<span class="c1"># processed SimstockDataframe as an argument:</span>
+<span class="n">simulation</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">IDFmanager</span><span class="p">(</span><span class="n">sdf</span><span class="p">)</span>
+
+<span class="c1"># Create the thermal zones necessary for EnergyPlus</span>
+<span class="n">simulation</span><span class="o">.</span><span class="n">create_model_idf</span><span class="p">()</span>
+
+<span class="c1"># Run the energy plus simulation</span>
+<span class="n">simulation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>By default this will create all the EnergyPlus output files and save them into a directory call <code class="docutils literal notranslate"><span class="pre">outs</span></code>.</p>
+</section>
+<section id="data-requirements">
+<h2>Data requirements<a class="headerlink" href="#data-requirements" title="Permalink to this heading"></a></h2>
+<p>The input data may be in csv, geopackage, or parquet formats. The rows of the data should represent different buildings or premises. Simstock requires the following fields for each building or premises:</p>
+<div class="admonition-required-fields admonition">
+<p class="admonition-title">Required fields </p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">polygon</span></code> The geometric data for the building/premises. Allowable formats:</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p>Shapely geometries</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wkb</span></code> strings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wkt</span></code> strings</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">osgb</span></code> A unique ID. Allowable formats:</p></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><p>String</p></li>
+<li><p>Integer</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">shading</span></code> - <code class="docutils literal notranslate"><span class="pre">bool</span></code> (whether or not the building is purely a shading object)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> - <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (height of building)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wwr</span></code>- <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (window to wall ratio)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nofloors</span></code> - <code class="docutils literal notranslate"><span class="pre">integer</span></code> (number of floors)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">construction</span></code> - <code class="docutils literal notranslate"><span class="pre">string</span></code> (the type of contrucion)</p></li>
+</ul>
+</div>
+<p>If your geometry and unique ID columns are named something other than <code class="docutils literal notranslate"><span class="pre">polygon</span></code> or <code class="docutils literal notranslate"><span class="pre">osgb</span></code>, then you must specify their names during the creation of a SimstockDataframe. This is done using the <code class="docutils literal notranslate"><span class="pre">polygon_column_name</span></code> and <code class="docutils literal notranslate"><span class="pre">uid_columm_name</span></code> parameters. E.g., if you have a data file called <code class="docutils literal notranslate"><span class="pre">test_data.csv</span></code>, whereing your geometry column is named <code class="docutils literal notranslate"><span class="pre">building_geom</span></code> and your osgb unique ID is called <code class="docutils literal notranslate"><span class="pre">building_ID</span></code>, then:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+    <span class="s2">&quot;test_data.csv&quot;</span><span class="p">,</span>
+    <span class="n">polygon_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_geom&quot;</span>
+    <span class="n">uid_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_ID&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p></p>
+<p>You can input data that contains only the <code class="docutils literal notranslate"><span class="pre">osgb</span></code> and <code class="docutils literal notranslate"><span class="pre">polygon</span></code> fields, without the rest of the required fields. If you do this, Simstock will append empty columns with the required names and raise a message telling you to fill them in.</p>
+</div>
+</section>
+<section id="reading-different-data-formats">
+<h2>Reading different data formats<a class="headerlink" href="#reading-different-data-formats" title="Permalink to this heading"></a></h2>
+<p>SimstockDataframes can be instatiated from an already <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the <code class="docutils literal notranslate"><span class="pre">read</span></code> functions. Below is a summary of reading different formats.</p>
+<section id="csv-files">
+<h3>csv files<a class="headerlink" href="#csv-files" title="Permalink to this heading"></a></h3>
+<p>SimstockDataframes can be instatiated from csv files using the <code class="docutils literal notranslate"><span class="pre">read_csv</span></code> function. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test_data.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The input csv must conform to the standard outlined above in the data requirements section.</p>
+</section>
+<section id="parquet-files">
+<h3>Parquet files<a class="headerlink" href="#parquet-files" title="Permalink to this heading"></a></h3>
+<p>SimstockDataframes can be instatiated from parquet files using the <code class="docutils literal notranslate"><span class="pre">read_parquet</span></code> function. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;test_data.parquet&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The input parquet file must conform to the standard outlined above in the data requirements section.</p>
+</section>
+<section id="geopackage-files">
+<h3>Geopackage files<a class="headerlink" href="#geopackage-files" title="Permalink to this heading"></a></h3>
+<p>A layer of a geopackage can be read in and turned into a SimstockDataframe using the <code class="docutils literal notranslate"><span class="pre">read_geopackage_layer</span></code> function, while specifying the layer name in the <code class="docutils literal notranslate"><span class="pre">layer_name</span></code> parameter. E.g., if you have a geopackage named <code class="docutils literal notranslate"><span class="pre">london.gpkg</span></code> containing a layer called <code class="docutils literal notranslate"><span class="pre">croydon</span></code>, then you can read in this layer via the command</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;croydon&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that when reading in a geopackage, you do not need to explicitly set the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> column or field in the data. Once the geopackage has been read, the resulting SimstockDataframe will contain the extracted geometries in a column calledd polygon. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Read in geopackage layer</span>
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;croydon&quot;</span><span class="p">)</span>
+
+<span class="c1"># Print the extracted geomtric data from the geopackage</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="p">[</span><span class="s1">&#39;polygon&#39;</span><span class="p">])</span>
+
+<span class="c1"># Equivalently</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">polygon</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you wish to see the names of the layers in your geopackage before creating a SimstockDataframe you can use the function <code class="docutils literal notranslate"><span class="pre">get_gpkg_layer_names</span></code>. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Print the names of layers in the geopackage</span>
+<span class="n">layers</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_gpkg_layer_names</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You could then, for example, read all the layers in as a list of SimstockDataframes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create empty list</span>
+<span class="n">sdf_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># Iteraate over all layers in the geopackage</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_gpkg_layer_names</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">):</span>
+
+    <span class="c1"># Read in the layer as a SimstockDataframe and add to list</span>
+    <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="n">layer</span><span class="p">)</span>
+    <span class="n">sdf_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sdf</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="plotting-data">
+<h2>Plotting data<a class="headerlink" href="#plotting-data" title="Permalink to this heading"></a></h2>
+<p>Simstock comes with some basic options for visualising the geographic data stored in the SimstockDataframe, utilising <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>.</p>
+<p>E.g. the following code</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;lightblue&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>would produce the figure below.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="_images/plotoutput.png"><img alt="alternate text" src="_images/plotoutput.png" style="width: 375.0px; height: 250.0px;" /></a>
+</figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+</section>
+<section id="specifying-weather-data">
+<h2>Specifying weather data<a class="headerlink" href="#specifying-weather-data" title="Permalink to this heading"></a></h2>
+<p>This can be done by setting the epw. By default, this or that will happen.</p>
+</section>
+<section id="specifying-schedules-materials-and-constructions">
+<h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
+<p>This can be done programmatically or via csvs.</p>
+</section>
+<section id="running-the-simulation">
+<h2>Running the simulation<a class="headerlink" href="#running-the-simulation" title="Permalink to this heading"></a></h2>
+<p>This can be run by running <code class="docutils literal notranslate"><span class="pre">.run</span></code>.</p>
+</section>
+<section id="finer-grained-control">
+<h2>Finer grained control<a class="headerlink" href="#finer-grained-control" title="Permalink to this heading"></a></h2>
+<p>This can be done like this.</p>
+</section>
+<section id="using-built-island-mode">
+<h2>Using built island mode<a class="headerlink" href="#using-built-island-mode" title="Permalink to this heading"></a></h2>
+<p>That can be switched on or off like this.</p>
+</section>
+<section id="common-problems">
+<h2>Common problems<a class="headerlink" href="#common-problems" title="Permalink to this heading"></a></h2>
+<p>Specifiy this here.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="devinstructions.html" class="btn btn-neutral float-left" title="Instructions for developers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="simstock.html" class="btn btn-neutral float-right" title="Simstock API docs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Oliver Smith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
