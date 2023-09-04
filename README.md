@@ -79,39 +79,32 @@ import simstock as sim
 
 ----
 
-## Running tests (dev notes)
+Running unit tests
+------------------
 
-This version of simstock has a testing suite. To run tests, type into the command line:
-```bash
-# If using poetry
-poetry run python -m unittest -b -v
-```
-or
-```bash
-# If using conda
-python -m unittest -b -v
-```
+This version of simstock comes with a unit test suite, located within the ``tests/`` subdirectory. To run these tests, ensure you are in the base of the Simstock directory and run the following command: 
 
-> **NOTE:** If using Conda, you must first ensure that unittest is installed on your system.
+.. code-block:: bash
 
-----
+    poetry run python -m unittest -b -v
 
-## Regenerating docs (dev notes)
+If you are using Conda instead of Poetry, then omit the ``poetry run`` command. For more information on modifying and adding tests, consult the ``unittest`` `documentation <https://docs.python.org/3/library/unittest.html>`_.
 
-To generate html docs, type into the command line:
-```bash
-# If using poetry
-poetry run python -m pdoc simstock/src -o docs
-```
-or
-```bash
-# If using conda
-python -m pdoc simstock/src -o docs
-```
+Generating and modifying the docs
+---------------------------------
 
-> **NOTE:** If using Conda, you must first ensure that pdoc is installed on your system. Ensure you are using pdoc and NOT pdoc3.
+HTML docs are automatically generated from the docstrings within the Simstock source code. You can also include additional pages (such as this one) giving tutorials etc. 
 
+To compile the docs into html, navigate into the ``docs`` subdirectory and run 
 
+.. code-block:: bash
 
+    poetry run make clean
+    poetry run make html
 
+If not using Poetry, then omit the ``poetry run`` directives.
+
+All pages and docstrings within the documentation must be written in ``.rst`` format. This is similar to markdown. Refer to the `rst cheatsheet <https://bashtage.github.io/sphinx-material/rst-cheatsheet/rst-cheatsheet.html>`_ for a quick guide. All documentation .rst files are contained within ``docs/source/``. To add a new page to the documentation, create a new .rst file within ``docs/source/`` and then add the file name (minus the .rst extension)  into toctree list within ``docs/source/index.rst``.
+
+Once compiled, the html documents can be found within ``docs/build/html``.
 

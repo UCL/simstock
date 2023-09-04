@@ -49,6 +49,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Instructions for developers</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#running-unit-tests">Running unit tests</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#generating-and-modifying-the-docs">Generating and modifying the docs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#updating-the-yaml-file-from-poetry">Updating the yaml file from poetry</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and examples</a></li>
@@ -109,6 +110,14 @@ poetry<span class="w"> </span>run<span class="w"> </span>make<span class="w"> </
 <p class="admonition-title">Note</p>
 <p></p>
 <p>After public release, the unittests will be run and the docs regenerated upon each push to Github using  <a class="reference external" href="https://github.com/features/actions">Github Actions</a>.</p>
+</div>
+</section>
+<section id="updating-the-yaml-file-from-poetry">
+<h2>Updating the yaml file from poetry<a class="headerlink" href="#updating-the-yaml-file-from-poetry" title="Permalink to this heading"></a></h2>
+<p>Simstock has been largely developed using the poetry environment manager. However, support is also offered to conda users by compiling the poetry .toml file into a yaml file. This can be done automaically using the package <a class="reference external" href="https://github.com/dojeda/poetry2conda">poetry2conda</a>.</p>
+<p>If you add a new dependency via poetry and want this to be reflected in the yaml file, run the command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>run<span class="w"> </span>poetry2conda<span class="w"> </span>pyproject.toml<span class="w"> </span>environment.yaml
+</pre></div>
 </div>
 </section>
 </section>

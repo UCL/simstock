@@ -39,3 +39,14 @@ Once compiled, the html documents can be found within ``docs/build/html``.
 
     After public release, the unittests will be run and the docs regenerated upon each push to Github using  `Github Actions <https://github.com/features/actions>`_.
 
+
+Updating the yaml file from poetry
+----------------------------------
+
+Simstock has been largely developed using the poetry environment manager. However, support is also offered to conda users by compiling the poetry .toml file into a yaml file. This can be done automaically using the package `poetry2conda <https://github.com/dojeda/poetry2conda>`_. 
+
+If you add a new dependency via poetry and want this to be reflected in the yaml file, run the command 
+
+.. code-block:: bash
+
+    poetry run poetry2conda pyproject.toml environment.yaml

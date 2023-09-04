@@ -181,41 +181,41 @@ would produce the figure below.
 |
 |
 
-Specifying weather data
------------------------
+.. Specifying weather data
+.. -----------------------
 
-This can be done by setting the epw. By default, this or that will happen.
-
-
-Specifying schedules, materials, and constructions
---------------------------------------------------
-
-This can be done programmatically or via csvs.
+.. This can be done by setting the epw. By default, this or that will happen.
 
 
-Running the simulation
-----------------------
+.. Specifying schedules, materials, and constructions
+.. --------------------------------------------------
 
-This can be run by running ``.run``.
-
-
-Finer grained control
----------------------
-
-This can be done like this. 
+.. This can be done programmatically or via csvs.
 
 
-Using built island mode
------------------------
+.. Running the simulation
+.. ----------------------
 
-That can be switched on or off like this.
+.. This can be run by running ``.run``.
 
 
-Common problems
----------------
+.. Finer grained control
+.. ---------------------
 
-.idd file not found
-*******************
+.. This can be done like this. 
 
-Specifiy this here.
+
+.. Using built island mode
+.. -----------------------
+
+.. That can be switched on or off like this.
+
+
+.. Common problems
+.. ---------------
+
+.. .idd file not found
+.. *******************
+
+.. Specifiy this here.
 
