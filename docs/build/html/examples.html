@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usage and examples &mdash; Simstock 0.0.1 documentation</title>
+  <title>Usage and basic examples &mdash; Simstock 0.0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -47,22 +47,30 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview of Simstock methodology</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage and examples</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage and basic examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview-reading-in-data-and-running-a-simulation">Overview: reading in data and running a simulation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#data-requirements">Data requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#reading-different-data-formats">Reading different data formats</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#csv-files">csv files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#parquet-files">Parquet files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#json-files">json files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#geopackage-files">Geopackage files</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#working-with-the-simstockdataframe">Working with the SimstockDataframe</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#accessing-data">Accessing data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performing-calculations">Performing calculations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#saving-data">Saving data</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#plotting-data">Plotting data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#specifying-weather-data">Specifying weather data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#specifying-schedules-materials-and-constructions">Specifying schedules, materials, and constructions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-the-simulation">Running the simulation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#finer-grained-control">Finer grained control</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#using-built-island-mode">Using built island mode</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#common-problems">Common problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#specifying-schedules-materials-and-constructions">Specifying schedules, materials, and constructions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#editing-settings-programmatically">Editing settings programmatically</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#editing-settings-using-csv-files">Editing settings using csv files</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#running-a-simulation">Running a simulation</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
@@ -82,7 +90,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Usage and examples</li>
+      <li class="breadcrumb-item active">Usage and basic examples</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/examples.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -92,10 +100,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="usage-and-examples">
-<h1>Usage and examples<a class="headerlink" href="#usage-and-examples" title="Permalink to this heading"></a></h1>
+  <section id="usage-and-basic-examples">
+<h1>Usage and basic examples<a class="headerlink" href="#usage-and-basic-examples" title="Permalink to this heading"></a></h1>
 <section id="overview-reading-in-data-and-running-a-simulation">
-<h2>Overview: reading in data and running a simulation<a class="headerlink" href="#overview-reading-in-data-and-running-a-simulation" title="Permalink to this heading"></a></h2>
+<span id="overview"></span><h2>Overview: reading in data and running a simulation<a class="headerlink" href="#overview-reading-in-data-and-running-a-simulation" title="Permalink to this heading"></a></h2>
 <p>Simstock reads in geographical data, performs some geometric simplification steps, creates EnergyPlus idf objects, and then finally runs an EnergyPlus simulation. Simstock also provides a convenient interface to modify EnergyPlus settings such as materials, constructions, and schedules.</p>
 <p>Simstock is structured around two objects: the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> and the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code>. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> is an extension of a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. It allows data to be read in from a variety of formats. It also performs geometruc simplification on the data. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> also contains the EnergyPlus settings, allowing easy manipulation of materials etc. Once these settings have been set, and any geometrical simplification perfomed, the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> then creates the necessary thermal zones from the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code>. The <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> can also be used to run an EnergyPlus simulation.</p>
 <p>Below is an example of a typical Simstock work flow.</p>
@@ -121,10 +129,11 @@
 </pre></div>
 </div>
 <p>By default this will create all the EnergyPlus output files and save them into a directory call <code class="docutils literal notranslate"><span class="pre">outs</span></code>.</p>
+<hr class="docutils" />
 </section>
 <section id="data-requirements">
-<h2>Data requirements<a class="headerlink" href="#data-requirements" title="Permalink to this heading"></a></h2>
-<p>The input data may be in csv, geopackage, or parquet formats. The rows of the data should represent different buildings or premises. Simstock requires the following fields for each building or premises:</p>
+<span id="id1"></span><h2>Data requirements<a class="headerlink" href="#data-requirements" title="Permalink to this heading"></a></h2>
+<p>The input data may be in csv, json, geopackage, or parquet formats. The rows of the data should represent different buildings or premises. Simstock requires the following fields for each building or premises:</p>
 <div class="admonition-required-fields admonition">
 <p class="admonition-title">Required fields </p>
 <ul class="simple">
@@ -138,27 +147,19 @@
 </ul>
 </div></blockquote>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">osgb</span></code> A unique ID. Allowable formats:</p></li>
-</ul>
-<blockquote>
-<div><ul class="simple">
-<li><p>String</p></li>
-<li><p>Integer</p></li>
-</ul>
-</div></blockquote>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">shading</span></code> - <code class="docutils literal notranslate"><span class="pre">bool</span></code> (whether or not the building is purely a shading object)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> - <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (height of building)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">wwr</span></code>- <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (window to wall ratio)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">nofloors</span></code> - <code class="docutils literal notranslate"><span class="pre">integer</span></code> (number of floors)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">construction</span></code> - <code class="docutils literal notranslate"><span class="pre">string</span></code> (the type of contrucion)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">osgb</span></code> :: <code class="docutils literal notranslate"><span class="pre">string</span></code> or <code class="docutils literal notranslate"><span class="pre">integer</span></code> (unique ID)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">shading</span></code> :: <code class="docutils literal notranslate"><span class="pre">bool</span></code> (whether or not the building is purely a shading object)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> :: <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (height of building)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wwr</span></code> :: <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (window to wall ratio)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nofloors</span></code> :: <code class="docutils literal notranslate"><span class="pre">integer</span></code> (number of floors)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">construction</span></code> :: <code class="docutils literal notranslate"><span class="pre">string</span></code> (the type of contrucion)</p></li>
 </ul>
 </div>
 <p>If your geometry and unique ID columns are named something other than <code class="docutils literal notranslate"><span class="pre">polygon</span></code> or <code class="docutils literal notranslate"><span class="pre">osgb</span></code>, then you must specify their names during the creation of a SimstockDataframe. This is done using the <code class="docutils literal notranslate"><span class="pre">polygon_column_name</span></code> and <code class="docutils literal notranslate"><span class="pre">uid_columm_name</span></code> parameters. E.g., if you have a data file called <code class="docutils literal notranslate"><span class="pre">test_data.csv</span></code>, whereing your geometry column is named <code class="docutils literal notranslate"><span class="pre">building_geom</span></code> and your osgb unique ID is called <code class="docutils literal notranslate"><span class="pre">building_ID</span></code>, then:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
-    <span class="s2">&quot;test_data.csv&quot;</span><span class="p">,</span>
-    <span class="n">polygon_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_geom&quot;</span>
-    <span class="n">uid_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_ID&quot;</span>
+        <span class="s2">&quot;test_data.csv&quot;</span><span class="p">,</span>
+        <span class="n">polygon_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_geom&quot;</span>
+        <span class="n">uid_column_name</span> <span class="o">=</span> <span class="s2">&quot;building_ID&quot;</span>
     <span class="p">)</span>
 </pre></div>
 </div>
@@ -168,6 +169,7 @@
 <p>You can input data that contains only the <code class="docutils literal notranslate"><span class="pre">osgb</span></code> and <code class="docutils literal notranslate"><span class="pre">polygon</span></code> fields, without the rest of the required fields. If you do this, Simstock will append empty columns with the required names and raise a message telling you to fill them in.</p>
 </div>
 </section>
+<hr class="docutils" />
 <section id="reading-different-data-formats">
 <h2>Reading different data formats<a class="headerlink" href="#reading-different-data-formats" title="Permalink to this heading"></a></h2>
 <p>SimstockDataframes can be instatiated from an already <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the <code class="docutils literal notranslate"><span class="pre">read</span></code> functions. Below is a summary of reading different formats.</p>
@@ -187,13 +189,21 @@
 </div>
 <p>The input parquet file must conform to the standard outlined above in the data requirements section.</p>
 </section>
+<section id="json-files">
+<h3>json files<a class="headerlink" href="#json-files" title="Permalink to this heading"></a></h3>
+<p>SimstockDataframes can be instatiated from json files using the <code class="docutils literal notranslate"><span class="pre">read_json</span></code> function. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s2">&quot;test_data.json&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The input json file must conform to the standard outlined above in the data requirements section.</p>
+</section>
 <section id="geopackage-files">
 <h3>Geopackage files<a class="headerlink" href="#geopackage-files" title="Permalink to this heading"></a></h3>
 <p>A layer of a geopackage can be read in and turned into a SimstockDataframe using the <code class="docutils literal notranslate"><span class="pre">read_geopackage_layer</span></code> function, while specifying the layer name in the <code class="docutils literal notranslate"><span class="pre">layer_name</span></code> parameter. E.g., if you have a geopackage named <code class="docutils literal notranslate"><span class="pre">london.gpkg</span></code> containing a layer called <code class="docutils literal notranslate"><span class="pre">croydon</span></code>, then you can read in this layer via the command</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;croydon&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Note that when reading in a geopackage, you do not need to explicitly set the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> column or field in the data. Once the geopackage has been read, the resulting SimstockDataframe will contain the extracted geometries in a column calledd polygon. E.g.:</p>
+<p>Note that when reading in a geopackage, you do not need to explicitly set the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> column or field in the data. Once the geopackage has been read, the resulting SimstockDataframe will contain the extracted geometries in a column called polygon. E.g.:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Read in geopackage layer</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;london.gpkg&quot;</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;croydon&quot;</span><span class="p">)</span>
 
@@ -223,12 +233,67 @@
 </div>
 </section>
 </section>
+<hr class="docutils" />
+<section id="working-with-the-simstockdataframe">
+<h2>Working with the SimstockDataframe<a class="headerlink" href="#working-with-the-simstockdataframe" title="Permalink to this heading"></a></h2>
+<p>The purpose of the SimstockDataframe is to process geographic information into a form that is valid for an EnergyPlus simulation. It also allows an interface to adjust various settings like materials and schedules.</p>
+<p>The geographic and contextual data, such as the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> data or the <code class="docutils literal notranslate"><span class="pre">height</span></code> data (see the <a class="reference internal" href="#data-requirements"><span class="std std-ref">Data requirements</span></a> section), can be accessed in exactly the same way as the data in a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. Indexing works in the same way, and all other pandas-like functionality is supported, such as filtering and mapping. The section provides some examples of this functionality.</p>
+<section id="accessing-data">
+<h3>Accessing data<a class="headerlink" href="#accessing-data" title="Permalink to this heading"></a></h3>
+<p>The data stored in a SimstockDataframe can be accessed using the standard Pandas method. For example, the SimstockDataframe contains a column called <code class="docutils literal notranslate"><span class="pre">Height</span></code>; this can accessed like</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">height_column</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>You could select the first value in the <code class="docutils literal notranslate"><span class="pre">Height</span></code> column using the <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.iloc.html">iloc accessor</a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_height</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>You can iterate over the rows using via</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">sdf</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can also perform filtering. E.g. to select all rows with a height of less than 10m:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">short_buildings</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="performing-calculations">
+<h3>Performing calculations<a class="headerlink" href="#performing-calculations" title="Permalink to this heading"></a></h3>
+<p>You can you Panda’s <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.apply.html">apply</a> method to manipulate columns. E.g., to square all of the values in the <code class="docutils literal notranslate"><span class="pre">Height</span></code> column (for some reason):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or perhaps create a new column containing <code class="docutils literal notranslate"><span class="pre">Height</span> <span class="pre">squared</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height squared&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You could make this conditional. E.g., only square the values if their height is less than 10:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height squared&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">10</span> <span class="k">else</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can also perform arithmetic on the columns. E.g., let’s say we can to calculate the approximate floor to ceiling height by dividing the the height of the building by the number of floors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Floor to Ceiling&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;Height&quot;</span><span class="p">]</span><span class="o">/</span><span class="n">sdf</span><span class="p">[</span><span class="s2">&quot;nofloors&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="saving-data">
+<h3>Saving data<a class="headerlink" href="#saving-data" title="Permalink to this heading"></a></h3>
+<p>SimstockDataframes can be easily saved to either <code class="docutils literal notranslate"><span class="pre">csv</span></code>, <code class="docutils literal notranslate"><span class="pre">parquet</span></code>, or <code class="docutils literal notranslate"><span class="pre">json</span></code> using the <code class="docutils literal notranslate"><span class="pre">to_csv</span></code>, <code class="docutils literal notranslate"><span class="pre">to_parquet</span></code> and <code class="docutils literal notranslate"><span class="pre">to_json</span></code> functions, respectively. E.g., to save to a csv:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># To save a SimstockDataframe called sdf to a csv file</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="s2">&quot;output_file_name.csv&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
 <section id="plotting-data">
 <h2>Plotting data<a class="headerlink" href="#plotting-data" title="Permalink to this heading"></a></h2>
 <p>Simstock comes with some basic options for visualising the geographic data stored in the SimstockDataframe, utilising <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>.</p>
 <p>E.g. the following code</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 
+<span class="c1"># Assuming we have previously instantiated a SimstockDataframe called sdf</span>
 <span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;lightblue&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
@@ -250,30 +315,236 @@
 <div class="line"><br /></div>
 <div class="line"><br /></div>
 </div>
+<hr class="docutils" />
 </section>
 <section id="specifying-weather-data">
-<h2>Specifying weather data<a class="headerlink" href="#specifying-weather-data" title="Permalink to this heading"></a></h2>
-<p>This can be done by setting the epw. By default, this or that will happen.</p>
+<span id="id4"></span><h2>Specifying weather data<a class="headerlink" href="#specifying-weather-data" title="Permalink to this heading"></a></h2>
+<p>In addition to containing the geographic and contextual data outlined in the  <a class="reference internal" href="#data-requirements"><span class="std std-ref">Data requirements</span></a> section, SimstockDataframes also contain the settings and weather data, in <code class="docutils literal notranslate"><span class="pre">epw</span></code> format, to be used in the EnergyPlus simulation. This weather data can be accessed via</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assuming we have previously instantiated a SimstockDataframe called sdf</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">epw</span>
+</pre></div>
+</div>
+<p>By default, Simstock will use the weather data for St. James’s Park, London. To specifiy a different epw file, you can either point the epw attribute to your some other epw file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="o">.</span><span class="n">epw</span> <span class="o">=</span> <span class="s2">&quot;some_other_epw_file_of_your_choosing.epw&quot;</span>
+</pre></div>
+</div>
+<p>or specifiy the weather file when you first instantiate the SimstockDataframe; e.g.,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="s2">&quot;your_data.csv&quot;</span><span class="p">,</span>
+        <span class="n">epw_file</span><span class="o">=</span><span class="s2">&quot;some_other_epw_file_of_your_choosing.epw&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<hr class="docutils" />
 </section>
 <section id="specifying-schedules-materials-and-constructions">
-<h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
-<p>This can be done programmatically or via csvs.</p>
+<span id="specifying-settings"></span><h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
+<p>As mentioned in the <a class="reference internal" href="#specifying-weather-data"><span class="std std-ref">Specifying weather data</span></a> section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an <code class="docutils literal notranslate"><span class="pre">IDF</span></code> object.</p>
+<p>Each of these settings can be viewed as attributes of the SimstockDataframe. E.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># To view materials</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span>
+
+<span class="c1"># To view constructions</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">constructions</span><span class="p">)</span>
+
+<span class="c1"># To view schedule information</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">schedules</span><span class="p">)</span>
+
+<span class="c1"># To iterate over materials:</span>
+<span class="k">for</span> <span class="n">material</span> <span class="ow">in</span> <span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">:</span>
+
+    <span class="c1"># The properties of each material (e.g. name) can be accessed like</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">material</span><span class="o">.</span><span class="n">Name</span><span class="p">)</span>
+
+<span class="c1"># To iterate over constructions:</span>
+<span class="k">for</span> <span class="n">construction</span> <span class="ow">in</span> <span class="n">sdf</span><span class="o">.</span><span class="n">constructions</span><span class="p">:</span>
+
+    <span class="c1"># The properties of each construction (e.g. name) can be accessed like</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">construction</span><span class="o">.</span><span class="n">Name</span><span class="p">)</span>
+
+<span class="c1"># To print the entire settings IDF:</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">print_settings</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>By default, the SimstockDataframes contain some useful constructions and materials. These can be viewed as shown above. You may want to edit or delete some of these, or add your own. Simstock provides two ways of doing this: either programmatically or via csv files. The two methods are described below.</p>
+<section id="editing-settings-programmatically">
+<h3>Editing settings programmatically<a class="headerlink" href="#editing-settings-programmatically" title="Permalink to this heading"></a></h3>
+<p>Let’s say you want to edit one of the materials contained within the SimstockDataframe’s materials list. In this example, we will access the first material in the materials list and change its name.</p>
+<p>First let’s view this material</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Let&#39;s say we have a SimstockDataframe instantiated from a csv file</span>
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test_data.csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># We can view the first material in the default list of materials:</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>This will show the following information:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>MATERIAL,
+10mm_carpet,              !- Name
+Rough,                    !- Roughness
+0.01,                     !- Thickness
+0.058,                    !- Conductivity
+20,                       !- Density
+1000,                     !- Specific Heat
+0.9,                      !- Thermal Absorptance
+0.5,                      !- Solar Absorptance
+0.5;                      !- Visible Absorptance
+</pre></div>
+</div>
+<p>To change this material’s name from 10mm_carpet to 10mm_persian_rug, we simply do:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Access its name and change it</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Name</span> <span class="o">=</span> <span class="s2">&quot;10mm_persian_rug&quot;</span>
+
+<span class="c1"># Now print the material again to see the change</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>This will now produce</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>MATERIAL,
+    10mm_persian_rug,         !- Name
+    Rough,                    !- Roughness
+    0.01,                     !- Thickness
+    0.058,                    !- Conductivity
+    20,                       !- Density
+    1000,                     !- Specific Heat
+    0.9,                      !- Thermal Absorptance
+    0.5,                      !- Solar Absorptance
+    0.5;                      !- Visible Absorptance
+</pre></div>
+</div>
+<p>Similarly any of the other attributes like Roughness and Thickness etc. can be changed in the same fashion.</p>
+<p>We can also create an entirely new material and add it to the settings. To do, use the <code class="docutils literal notranslate"><span class="pre">settings.newidfobject</span></code> function. The example below adds a new material, called 20_mm_frieze_carpet.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The first paramter of the function specifies</span>
+<span class="c1"># the type of setting. In this case, material</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+        <span class="s2">&quot;MATERIAL&quot;</span><span class="p">,</span>
+        <span class="n">Name</span><span class="o">=</span><span class="s2">&quot;20_mm_frieze_carpet&quot;</span><span class="p">,</span>
+        <span class="n">Roughness</span><span class="o">=</span><span class="s2">&quot;Rough&quot;</span><span class="p">,</span>
+        <span class="n">Thickness</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span>
+        <span class="n">Conductivity</span><span class="o">=</span><span class="mf">0.058</span><span class="p">,</span>
+        <span class="n">Density</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">Specific_Heat</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">Thermal_Absorptance</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+        <span class="n">Solar_Absorptance</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">Visible_Absorptance</span><span class="o">=</span><span class="mf">0.5</span>
+    <span class="p">)</span>
+
+<span class="c1"># This will now have been appended to the end of the</span>
+<span class="c1"># list of materials. We can check this by printing</span>
+<span class="c1"># the last element of the list</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The above code would print the new material:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>MATERIAL,
+    20_mm_frieze_carpet,      !- Name
+    Rough,                    !- Roughness
+    0.02,                     !- Thickness
+    0.058,                    !- Conductivity
+    20,                       !- Density
+    1000,                     !- Specific Heat
+    0.9,                      !- Thermal Absorptance
+    0.5,                      !- Solar Absorptance
+    0.5;                      !- Visible Absorptance
+</pre></div>
+</div>
+<p>You might find it more convenient to first bundle the properties of the material into a dictionary, and then pass the dictionary to the <code class="docutils literal notranslate"><span class="pre">settings.newidfobject</span></code> function. This is equivalent to the above method. An example if shown in the code below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a dictionary containing the material&#39;s parameters</span>
+<span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Name&quot;</span><span class="p">:</span><span class="s2">&quot;20_mm_frieze_carpet&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Roughness&quot;</span><span class="p">:</span><span class="s2">&quot;Rough&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Thickness&quot;</span><span class="p">:</span><span class="mf">0.02</span><span class="p">,</span>
+    <span class="s2">&quot;Conductivity&quot;</span><span class="p">:</span><span class="mf">0.058</span><span class="p">,</span>
+    <span class="s2">&quot;Density&quot;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;Specific_Heat&quot;</span><span class="p">:</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="s2">&quot;Thermal_Absorptance&quot;</span><span class="p">:</span><span class="mf">0.9</span><span class="p">,</span>
+    <span class="s2">&quot;Solar_Absorptance&quot;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="s2">&quot;Visible_Absorptance&quot;</span><span class="p">:</span><span class="mf">0.5</span>
+<span class="p">}</span>
+
+<span class="c1"># Pass this to the newidffunction to add this material to the list</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span><span class="s2">&quot;MATERIAL&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Material and construction attributes that are named with two or more words such as “Specific Heat” and “Thermal Absorptance” must use an underscore to denote the space; e.g., “Specific_Heat” and “Thermal_Absorptance”.</p>
+</div>
 </section>
-<section id="running-the-simulation">
-<h2>Running the simulation<a class="headerlink" href="#running-the-simulation" title="Permalink to this heading"></a></h2>
-<p>This can be run by running <code class="docutils literal notranslate"><span class="pre">.run</span></code>.</p>
+<section id="editing-settings-using-csv-files">
+<h3>Editing settings using csv files<a class="headerlink" href="#editing-settings-using-csv-files" title="Permalink to this heading"></a></h3>
+<p>You may prefer to specify the settings using csv files containing your materials etc. and their properties. To do this Simstock allows the option of creating a SimstockDataframe containing a blank settings attribute. From this clean slate, you may then add settings by telling Simstock to read in csv files.</p>
+<p>Here is a worked example. We start by creating a SimsstockDataframe as normal, but this time specify the option <code class="docutils literal notranslate"><span class="pre">use_base_idf</span></code> to be <code class="docutils literal notranslate"><span class="pre">True</span></code>. This will force the SimstockDataframe to load in an empty settings object, allowing us to work with a blank slate:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Start by instantiating a SimstockDataframe,</span>
+<span class="c1"># and specificy use_base_idf</span>
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">,</span> <span class="n">use_base_idf</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can check that the sdf has a blank settings object by trying to print its constructions and materials. If we do, it will return nothing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># This returns nothing</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sdf</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We now want to ask Simstock to give us a directory in which to enter our information. Simstock will also populate the diectory with correctly formatted csv files that we can use. To do this, we call the <code class="docutils literal notranslate"><span class="pre">create_csv_folder</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="o">.</span><span class="n">create_csv_folder</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>By default, this creates a new directory inside your working directory called <code class="docutils literal notranslate"><span class="pre">simulation_settings</span></code>. It has the contents:</p>
+<div class="line-block">
+<div class="line">simulation_settings/</div>
+<div class="line">├── DB-Fabric-CONSTRUCTION.csv</div>
+<div class="line">├── DB-Fabric-MATERIAL_NOMASS.csv</div>
+<div class="line">├── DB-Fabric-MATERIAL.csv</div>
+<div class="line">├── DB-Fabric-WINDOWMATERIAL_GAS.csv</div>
+<div class="line">├── DB-Fabric-WINDOWMATERIAL_GLAZING.csv</div>
+<div class="line">├── DB-HeatingCooling-OnOff.csv</div>
+<div class="line">├── DB-Loads-ELECTRICEQUIPMENT.csv</div>
+<div class="line">├── DB-Loads-LIGHTS.csv</div>
+<div class="line">├── DB-Loads-PEOPLE.csv</div>
+<div class="line">├── DB-Schedules-SCHEDULE_COMPACT.csv</div>
+<div class="line">├── infiltration_dict.json</div>
+<div class="line">└── ventilation_dict.json</div>
+</div>
+<p>You can specify a directory name other that <code class="docutils literal notranslate"><span class="pre">simulation_settings</span></code> using the <code class="docutils literal notranslate"><span class="pre">dirname</span></code> option; e.g.,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># To place the csv files in some other directory</span>
+<span class="n">sdf</span><span class="o">.</span><span class="n">create_csv_folder</span><span class="p">(</span><span class="n">dirname</span><span class="o">=</span><span class="s2">&quot;some_other_directory_name&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You may now edit the csv files as you wih to modify, add and remove settings. By default the csv files will already contain some usefule materials and constructions. You may also replace the csv files with your own files, but they must adhere to the names above; i.e., <code class="docutils literal notranslate"><span class="pre">DF-Fabric-CONSTRUCTION.csv</span></code> etc.</p>
+<p>Once you are satisifed, you can register your csv files back into Simstock with the command</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span><span class="o">.</span><span class="n">override_settings_with_csv</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This will read in all of the settings from the csv directory into your SimstockDataframe. They can then be inspected as usual using the <code class="docutils literal notranslate"><span class="pre">sdf.materials</span></code> commands etc.</p>
 </section>
-<section id="finer-grained-control">
-<h2>Finer grained control<a class="headerlink" href="#finer-grained-control" title="Permalink to this heading"></a></h2>
-<p>This can be done like this.</p>
 </section>
-<section id="using-built-island-mode">
-<h2>Using built island mode<a class="headerlink" href="#using-built-island-mode" title="Permalink to this heading"></a></h2>
-<p>That can be switched on or off like this.</p>
-</section>
-<section id="common-problems">
-<h2>Common problems<a class="headerlink" href="#common-problems" title="Permalink to this heading"></a></h2>
-<p>Specifiy this here.</p>
+<hr class="docutils" />
+<section id="running-a-simulation">
+<h2>Running a simulation<a class="headerlink" href="#running-a-simulation" title="Permalink to this heading"></a></h2>
+<p>Once you have read in your data, set your settings (as detailed the <a class="reference internal" href="#specifying-settings"><span class="std std-ref">Specifying schedules, materials, and constructions</span></a> section), and performed your preprocessing step, you are ready to create and run an EnergyPlus simulation. This is handled using the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> object, which uses the processed SimstockDataframe to create EnergyPlus thermal zones and then run a simulation.</p>
+<p>Here is an example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Say we have a processed SimstockDataframe sdf</span>
+<span class="c1"># We now use it to create an IDFmanager:</span>
+<span class="n">simulation</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">IDFmanager</span><span class="p">(</span><span class="n">sdf</span><span class="p">)</span>
+
+<span class="c1"># Now create the thermal zones necessary for EnergyPlus</span>
+<span class="n">simulation</span><span class="o">.</span><span class="n">create_model_idf</span><span class="p">()</span>
+
+<span class="c1"># Finally, run the energy plus simulation</span>
+<span class="n">simulation</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This will save EnergyPlus output files into a directory called <code class="docutils literal notranslate"><span class="pre">outs/</span></code> in your working directory. To save to another location, use the <code class="docutils literal notranslate"><span class="pre">out_dir</span></code> option with instantiating the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code>; e.g.,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># To save EnergyPlus output files into some other directory:</span>
+<span class="n">simulation</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">IDFmanager</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;some_other_directory&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </section>
 </section>
 
