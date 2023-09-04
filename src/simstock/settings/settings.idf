@@ -1051,6 +1051,12 @@ CONSTRUCTION,
     4mm_clear;                !- Layer 3
 
 CONSTRUCTION,
+    low_glazing,              !- Name
+    4mm_clear,                !- Outside Layer
+    6mm_air,                  !- Layer 2
+    4mm_clear;                !- Layer 3
+
+CONSTRUCTION,
     medlow_solid_ground_floor,    !- Name
     750mm_clay_underfloor,    !- Outside Layer
     25mm_brick_slips,         !- Layer 2

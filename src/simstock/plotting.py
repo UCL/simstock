@@ -4,7 +4,7 @@ basic geometries.
 """
 
 from functools import singledispatch
-from typing import Any
+from typing import Any, Union
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
@@ -22,7 +22,7 @@ from simstock.base import SimstockDataframe
 
 
 def plot(
-        sdf: SimstockDataframe | Series | DataFrame,
+        sdf: Union[SimstockDataframe, Series, DataFrame],
         edgecolor: str = "k",
         **kwargs
         ) -> Axes:
@@ -96,7 +96,7 @@ def plot(
     return _plot_geometries(sdf.polygon, edgecolor=edgecolor, **kwargs)
 
 
-def _plot_geometries(geoms : list, **kwargs) -> Axes:
+def _plot_geometries(geoms: list, **kwargs) -> Axes:
     """
     Function that takes a list of shapely geometries, 
     and plots each of them togther in a single plot.

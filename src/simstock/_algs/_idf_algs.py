@@ -3,7 +3,7 @@ Module containing routines for generating
 objects for E+
 """
 
-from typing import Any
+from typing import Any, Union
 import math
 from shapely.geometry import LineString
 import simstock._algs._coords_algs as calgs
@@ -13,180 +13,66 @@ from pandas.core.frame import DataFrame
 from eppy.modeleditor import IDF
 from shapely.geometry import Polygon
 
-# def _thermal_zones(row: Series,
-#                          df: DataFrame,
-#                          idf: IDF,
-#                          origin: list,
-#                          min_avail_width_for_window: float | int, min_avail_height: float | int
-#                          ) -> None:
-#     polygon = row.polygon
-#     hor_polygon = row.polygon_horizontal
-#     hor_poly_coord_dict = palgs._polygon_coordinates_dictionary(hor_polygon)
-#     horiz_surf_coord = calgs._horizontal_surface_coordinates(hor_poly_coord_dict, origin)
-#     ext_surf_polygon = row.polygon_exposed_wall
-#     ext_surf_coord = palgs._surface_coordinates(ext_surf_polygon, origin)
-#     adj_osgb_list = row.touching
 
-#     height = row.height
-#     glazing_ratio = row.wwr
-#     floors = range(int(row.nofloors))
+def _set_construction(construction: str, element: str) -> str:
+    """
+    Returns the relevant name of the building surface depending on the 
+    construction name.
+    """
+    if element == "ground_floor":
+        return f"{construction}_solid_ground_floor"
+    if element == "wall":
+        return f"{construction}_wall"
+    if element == "roof":
+        return f"{construction}_flat_roof"
+    if element == "ceiling":
+        return "ceiling"
+    if element == "ceiling_inverse":
+        return "ceiling_inverse"
+    
 
-#     construction = row.construction
-#     glazing_const = f'{construction}_glazing'
-#     print(f"glazing_const = {glazing_const}")
+def _mixed_use(idf: IDF, zone_use_dict: dict) -> None:
 
-#     if len(floors) == 1:
-#         _create_single_floor_zone(row, idf, horiz_surf_coord, ext_surf_coord, 
-#                                  adj_osgb_list, height, glazing_ratio,
-#                                  construction, glazing_const, min_avail_height,
-#                                  min_avail_width_for_window, polygon, df, origin)
-#     else:
-#         _create_multi_floor_zones(row, idf, horiz_surf_coord, ext_surf_coord,
-#                                  adj_osgb_list, height, glazing_ratio,
-#                                  floors, construction, glazing_const,
-#                                  min_avail_height, min_avail_width_for_window,
-#                                  polygon, df, origin)
+    # Check for missing values
+    for key, value in zone_use_dict.items():
+        if not isinstance(value, str) and math.isnan(value):
+            raise ValueError(f"{key} has no value for 'use'.")
 
+    # Create a zonelist for each use
+    use_list = list(zone_use_dict.values())
+    use_list = list(map(str.lower, use_list)) #remove case-sensitivity
+    use_list = list(set(use_list))
+    for use in use_list:
+        zone_list = list()
+        for key, value in zone_use_dict.items():
+            if value.lower() == use:
+                zone_list.append(key)
+        idf.newidfobject('ZONELIST', Name=use)
+        objects = idf.idfobjects['ZONELIST'][-1]
+        for i, zone in enumerate(zone_list):
+            exec('objects.Zone_%s_Name = zone' % (i + 1))
+    
+    objects_to_delete = list()
+    for obj in ['PEOPLE', 'LIGHTS', 'ELECTRICEQUIPMENT',
+                'ZONEINFILTRATION:DESIGNFLOWRATE',
+                'ZONECONTROL:THERMOSTAT']:
+        objects = idf.idfobjects[obj]
+        for item in objects:
+            if item.Zone_or_ZoneList_Name.lower() not in use_list:
+                objects_to_delete.append(item)
 
-
-def _create_single_floor_zone(row: Series,
-                             idf: IDF,
-                             horiz_surf_coord: list,
-                             ext_surf_coord: list,
-                             adj_osgb_list: list,
-                             height: float,
-                             glazing_ratio: float,
-                             construction: str,
-                             glazing_const: str,
-                             min_avail_height: float | int,
-                             min_avail_width_for_window: float | int,
-                             polygon: Polygon,
-                             df: DataFrame,
-                             origin: list
-                             ) -> None:
-    floor_no = int(1)
-    zone_name = f'{row.osgb}_floor_{floor_no}'
-    zone_floor_h = 0
-    space_below_floor = 'Ground'
-    zone_ceiling_h = height
-    space_above_floor = 'Outdoors'
-
-    idf.newidfobject('ZONE', Name=zone_name)
-
-    floor_const = f'{construction}_solid_ground_floor'
-    _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-           zone_floor_h, floor_const)
-
-    roof_const = f'{construction}_flat_roof'
-    _roof_ceiling(idf, zone_name, space_above_floor,
-                  horiz_surf_coord, zone_ceiling_h, roof_const)
-
-    zone_height = zone_ceiling_h - zone_floor_h
-    wall_const = f'{construction}_wall'
-    _external_walls(idf, zone_name, floor_no, ext_surf_coord,
-                    zone_ceiling_h, zone_floor_h, zone_height,
-                    min_avail_height, min_avail_width_for_window,
-                    wall_const, glazing_const, glazing_ratio)
-
-    if adj_osgb_list:
-        partition_const = 'partition'
-        for adj_osgb in adj_osgb_list:
-            opposite_zone = adj_osgb
-            adj_polygon = df.loc[df['osgb'] == adj_osgb, 'polygon'].values[0]
-            adj_height = df.loc[df['osgb'] == adj_osgb, 'height'].values[0]
-            part_wall_polygon = polygon.intersection(adj_polygon)
-            adj_wall_parti_surf_coord = palgs._surface_coordinates(part_wall_polygon, origin)
-            if zone_ceiling_h < adj_height:
-                zone_below_ceiling = True
-                _external_walls(idf, zone_name, opposite_zone, floor_no,
-                                adj_wall_parti_surf_coord, zone_ceiling_h,
-                                zone_below_ceiling, partition_const)
-            elif zone_floor_h > adj_height:
-                zone_below_ceiling = False
-                _external_walls(idf, zone_name, opposite_zone, floor_no,
-                                adj_wall_parti_surf_coord, zone_floor_h,
-                                zone_below_ceiling, partition_const)
+    for item in objects_to_delete:
+        idf.removeidfobject(item)
 
 
-def _create_multi_floor_zones(row: Series,
-                             idf: IDF,
-                             horiz_surf_coord: list,
-                             ext_surf_coord: list,
-                             adj_osgb_list: list,
-                             height: float,
-                             glazing_ratio: float,
-                             floors: range,
-                             construction: str,
-                             glazing_const: str,
-                             min_avail_height: float | int,
-                             min_avail_width_for_window: float | int,
-                             polygon: Polygon,
-                             df: DataFrame,
-                             origin: list
-                             ) -> None:
-    for floor_no in floors:
-        zone_name = f'{row.osgb}_floor_{floor_no}'
-        zone_floor_h = height * (floor_no - 1)
-        space_below_floor = f'{row.osgb}_floor_{floor_no - 1}'
-        zone_ceiling_h = height * floor_no
-        space_above_floor = f'{row.osgb}_floor_{floor_no + 1}'
-
-        idf.newidfobject('ZONE', Name=zone_name)
-
-        if floor_no == 1:
-            floor_const = f'{construction}_solid_ground_floor'
-            _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-                   zone_floor_h, floor_const)
-        else:
-            floor_const = f'{construction}_intermediate_floor'
-            _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-                   zone_floor_h, floor_const)
-
-        if floor_no == floors[-1]:
-            roof_const = f'{construction}_roof'
-            _roof_ceiling(idf, zone_name, space_above_floor,
-                          horiz_surf_coord, zone_ceiling_h, roof_const)
-        else:
-            roof_const = f'{construction}_intermediate_ceiling'
-            _roof_ceiling(idf, zone_name, space_above_floor,
-                          horiz_surf_coord, zone_ceiling_h, roof_const)
-
-        zone_height = zone_ceiling_h - zone_floor_h
-        wall_const = f'{construction}_wall'
-        _external_walls(idf, zone_name, floor_no, ext_surf_coord,
-                        zone_ceiling_h, zone_floor_h, zone_height,
-                        min_avail_height, min_avail_width_for_window,
-                        wall_const, glazing_const, glazing_ratio)
-
-        if adj_osgb_list:
-            partition_const = 'partition'
-            for adj_osgb in adj_osgb_list:
-                opposite_zone = adj_osgb
-                adj_polygon = df.loc[df['osgb'] == adj_osgb, 'polygon'].values[0]
-                adj_height = df.loc[df['osgb'] == adj_osgb, 'height'].values[0]
-                part_wall_polygon = polygon.intersection(adj_polygon)
-                adj_wall_parti_surf_coord = palgs._surface_coordinates(part_wall_polygon, origin)
-                if zone_ceiling_h < adj_height:
-                    zone_below_ceiling = True
-                    _external_walls(idf, zone_name, opposite_zone, floor_no,
-                                    adj_wall_parti_surf_coord, zone_ceiling_h,
-                                    zone_below_ceiling, partition_const)
-                elif zone_floor_h > adj_height:
-                    zone_below_ceiling = False
-                    _external_walls(idf, zone_name, opposite_zone, floor_no,
-                                    adj_wall_parti_surf_coord, zone_floor_h,
-                                    zone_below_ceiling, partition_const)
-
-
-
-
-# # This could be broken into two functions
-def _thermal_zones(row : Series,
-                   df : DataFrame,
-                   idf : IDF,
-                   origin : list,
-                   min_avail_width_for_window : float | int,
-                   min_avail_height : float | int
+# This could be broken into two functions
+def _thermal_zones(row: Series,
+                   df: DataFrame,
+                   idf: IDF,
+                   origin: list,
+                   min_avail_width_for_window: Union[float, int],
+                   min_avail_height: Union[float, int],
+                   zone_use_dict: dict
                    ) -> None:
     """
     Internal function to create thermal zone objects
@@ -215,10 +101,20 @@ def _thermal_zones(row : Series,
     construction = row.construction
     glazing_const = f'{construction}_glazing'
 
+    try:
+        overhang_depth = row.overhang_depth
+    except AttributeError:
+        overhang_depth = 0.0
+
     if len(floors) == 1:
 
         floor_no = int(1)
-        zone_name = f'{row.osbg}_floor_{floor_no}'
+        x = row.osgb
+        zone_name = f'{x}_floor_{floor_no}'
+        try:
+            zone_use_dict[zone_name] = row["FLOOR_1: use"]
+        except KeyError:
+            zone_use_dict[zone_name] = "Dwell"
         zone_floor_h = 0
         space_below_floor = 'Ground'
         zone_ceiling_h = height
@@ -226,20 +122,21 @@ def _thermal_zones(row : Series,
 
         idf.newidfobject('ZONE', Name=zone_name)
 
-        floor_const = f'{construction}_solid_ground_floor'
+        floor_const = _set_construction(construction, "ground_floor")
         _floor(idf, zone_name, space_below_floor, horiz_surf_coord,
               zone_floor_h, floor_const)
 
-        roof_const = f'{construction}_flat_roof'
+        roof_const = _set_construction(construction, "roof")
         _roof_ceiling(idf, zone_name, space_above_floor,
                      horiz_surf_coord, zone_ceiling_h, roof_const)
 
         zone_height = zone_ceiling_h - zone_floor_h
-        wall_const = f'{construction}_wall'
+        wall_const = _set_construction(construction, "wall")
         _external_walls(idf, zone_name, floor_no, ext_surf_coord,
                        zone_ceiling_h, zone_floor_h, zone_height,
                        min_avail_height, min_avail_width_for_window,
-                       wall_const, glazing_const, glazing_ratio)
+                       wall_const, glazing_const, glazing_ratio,
+                       overhang_depth)
 
         # Partition walls where adjacent polygons exist
         if adj_osgb_list:
@@ -272,7 +169,7 @@ def _thermal_zones(row : Series,
                                        zone_height, min_avail_height,
                                        min_avail_width_for_window,
                                        wall_const, glazing_const,
-                                       glazing_ratio)
+                                       glazing_ratio, overhang_depth)
                     else:
                         _external_walls(idf, zone_name, floor_no,
                                        adj_wall_parti_surf_coord,
@@ -280,18 +177,24 @@ def _thermal_zones(row : Series,
                                        zone_height, min_avail_height,
                                        min_avail_width_for_window,
                                        wall_const, glazing_const,
-                                       glazing_ratio)
+                                       glazing_ratio, overhang_depth)
                         _partition_walls(idf, zone_name, opposite_zone,
                                         adj_wall_parti_surf_coord,
                                         adj_height, zone_floor_h,
                                         partition_const)
+
 
     else:
         f2f = round(height / row.nofloors, 1)
         for item in floors:
             floor_no = item + 1
             if item == 0:
-                zone_name = f'{row.osgb}_floor_{floor_no}'
+                x = row.osgb
+                zone_name = f'{x}_floor_{floor_no}'
+                try:
+                    zone_use_dict[zone_name] = row[f"FLOOR_{floor_no}: use"]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
                 space_below_floor = 'Ground'
                 zone_ceiling_h = floor_no * f2f
@@ -299,20 +202,20 @@ def _thermal_zones(row : Series,
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = f'{construction}_solid_ground_floor'
+                floor_const = _set_construction(construction, "ground_floor")
                 _floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
+                roof_const = _set_construction(construction, "ceiling")
                 _roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = f'{construction}_wall'
+                wall_const = _set_construction(construction, "wall")
                 _external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -345,7 +248,7 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 _external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -353,36 +256,39 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 _partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
                                                 partition_const)
 
             elif item == row.nofloors - 1:
-                zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                zone_name = f'{row.osgb}_floor_{floor_no}'
+                try:
+                    zone_use_dict[zone_name] = row[f"FLOOR_{floor_no}: use"]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
-                space_below_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no - 1))
+                space_below_floor = f'{row.osgb}_floor_{floor_no-1}'
                 zone_ceiling_h = height
                 space_above_floor = 'Outdoors'
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = 'ceiling_inverse'
+                floor_const = _set_construction(construction, "ceiling_inverse")
                 _floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = f'{construction}_flat_roof'
+                roof_const = _set_construction(construction, "roof")
                 _roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
+                wall_const = _set_construction(construction, "wall")
                 _external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -415,7 +321,7 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 _external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -423,38 +329,40 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 _partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
                                                 partition_const)
 
             else:
-                zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                zone_name = f'{row.osgb}_floor_{floor_no}'
+                try:
+                    zone_use_dict[zone_name] = row[f"FLOOR_{floor_no}: use"]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
-                space_below_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no - 1))
+                space_below_floor = f'{row.osgb}_floor_{floor_no-1}'
                 zone_ceiling_h = floor_no * f2f
-                space_above_floor = '{}_floor_{}'.format(
-                    row.osgb, (floor_no + 1))
+                space_above_floor = f'{row.osgb}_floor_{floor_no+1}'
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = 'ceiling_inverse'
+                floor_const = _set_construction(construction, "ceiling_inverse")
                 _floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
+                roof_const = _set_construction(construction, "ceiling")
                 _roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h,
                              roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
+                wall_const = _set_construction(construction, "wall")
                 _external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -487,7 +395,7 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 _external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -495,16 +403,17 @@ def _thermal_zones(row : Series,
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 _partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
                                                 partition_const)
 
+
     return
 
 
-def _idf_ceiling_coordinates_list(ceiling_coordinates_list : list) -> list:
+def _idf_ceiling_coordinates_list(ceiling_coordinates_list: list) -> list:
     '''
     Function which converts ceiling coordinates list into format used by E+
     '''
@@ -524,9 +433,9 @@ def _idf_ceiling_coordinates_list(ceiling_coordinates_list : list) -> list:
 
 
 def _wall_centre_coordinate(
-        ceil_1 : str,
-        ceil_0 : str,
-        floor_0 : str
+        ceil_1: str,
+        ceil_0: str,
+        floor_0: str
         ) -> str:
     '''
     Function which calculates centre point of the wall. Return the
@@ -555,9 +464,9 @@ def _wall_centre_coordinate(
 
 
 def _idf_wall_coordinates(
-        i : int,
-        ceiling_coordinates : list,
-        floor_coordinates : list
+        i: int,
+        ceiling_coordinates: list,
+        floor_coordinates: list
         ) -> list:
     '''
     Function which converts wall coordinates into format used by E+
@@ -572,10 +481,10 @@ def _idf_wall_coordinates(
 
 
 def _adiabatic_roof(
-        idf : IDF,
-        polygon_name : str,
-        horizontal_surface_coordinates : list,
-        ceiling_height : float | int
+        idf: IDF,
+        polygon_name: str,
+        horizontal_surface_coordinates: list,
+        ceiling_height: Union[float, int]
         ) -> None:
     ceiling_coordinates_list = calgs._coordinates_add_height(
         ceiling_height, horizontal_surface_coordinates)
@@ -587,9 +496,9 @@ def _adiabatic_roof(
 
 
 def _shading_building_detailed(
-        idf : IDF,
-        surface_name : str,
-        coordinates : list
+        idf: IDF,
+        surface_name: str,
+        coordinates: list
         ) -> None:
     '''
     Function which creates ShadingBuilding:Detailed energyplus object
@@ -609,12 +518,12 @@ def _shading_building_detailed(
 
 
 def adiabatic_walls(
-        idf : IDF,
-        polygon_name : str,
-        perimeter_surface_coordinates : list,
-        ceiling_height : float | int,
-        floor_height : float | int,
-        wall_name : str
+        idf: IDF,
+        polygon_name: str,
+        perimeter_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        floor_height: Union[float, int],
+        wall_name: str
         ) -> None:
     '''
     Internal function which creates energyplus object for adiabatic
@@ -654,9 +563,9 @@ def adiabatic_walls(
 
 
 def _wall_width_height(
-        i : int,
-        ceil_coord : list,
-        floor_coord : list
+        i: int,
+        ceil_coord: list,
+        floor_coord: list
         ) -> tuple[float, float]:
     '''
     Internal function which calculates wall width and height
@@ -678,7 +587,7 @@ def _wall_width_height(
     return w, h
 
 
-def _idf_floor_coordinates_list(floor_coordinates_list : list) -> list:
+def _idf_floor_coordinates_list(floor_coordinates_list: list) -> list:
     '''
     Internal function which converts list of floor coordinates into format
     used by E+
@@ -697,12 +606,12 @@ def _idf_floor_coordinates_list(floor_coordinates_list : list) -> list:
 
 
 def _floor(
-        idf : IDF,
-        zone_name : str,
-        space_below_floor : str,
-        horizontal_surface_coordinates : list,
-        floor_height : float | int,
-        ground_floor_const : str
+        idf: IDF,
+        zone_name: str,
+        space_below_floor: str,
+        horizontal_surface_coordinates: list,
+        floor_height: Union[float, int],
+        ground_floor_const: str
         ) -> None:
     '''
     Function which generates floor energyplus object
@@ -743,16 +652,16 @@ def _floor(
 
 
 def _building_surface_detailed(
-        idf : IDF,
-        surface_name : str,
-        surface_type : str,
-        construction_name : str,
-        zone_name : str,
-        outside_boundary_condition : str,
-        outside_boundary_condition_object : Any,
-        sun_exposure : Any,
-        wind_exposure : Any,
-        coordinates : list
+        idf: IDF,
+        surface_name: str,
+        surface_type: str,
+        construction_name: str,
+        zone_name: str,
+        outside_boundary_condition: str,
+        outside_boundary_condition_object: Any,
+        sun_exposure: Any,
+        wind_exposure: Any,
+        coordinates: list
         ) -> None:
     '''
     Function which creates BuildingSurface:Detailed energyplus object
@@ -779,12 +688,12 @@ def _building_surface_detailed(
 
 
 def floor(
-        idf : IDF,
-        zone_name : str,
-        space_below_floor : str,
-        horizontal_surface_coordinates : list,
-        floor_height : float | int,
-        ground_floor_const : str
+        idf: IDF,
+        zone_name: str,
+        space_below_floor: str,
+        horizontal_surface_coordinates: list,
+        floor_height: Union[float, int],
+        ground_floor_const: str
         ) -> None:
     '''
     Function which generates floor energyplus object
@@ -825,12 +734,12 @@ def floor(
 
 
 def _roof_ceiling(
-        idf : IDF,
-        zone_name : str,
-        space_above_floor : str,
-        horizontal_surface_coordinates : list,
-        ceiling_height : float | int,
-        roof_const : str
+        idf: IDF,
+        zone_name: str,
+        space_above_floor: str,
+        horizontal_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        roof_const: str
         ) -> None:
     '''
     Function which generates roof/ceiling energyplus object
@@ -876,14 +785,14 @@ def _roof_ceiling(
 
 
 def _window(
-        idf : IDF,
-        surface_name : str,
-        construction_name : str,
-        building_surface_name : str,
-        starting_x_coordinate : list,
-        starting_z_coordinate : list,
-        length : float | int,
-        height : float | int
+        idf: IDF,
+        surface_name: str,
+        construction_name: str,
+        building_surface_name: str,
+        starting_x_coordinate: list,
+        starting_z_coordinate: list,
+        length: Union[float, int],
+        height: Union[float, int]
         ) -> None:
     '''
     Function which creates Window energyplus object
@@ -897,21 +806,41 @@ def _window(
         Starting_Z_Coordinate=starting_z_coordinate,
         Length=length,
         Height=height)
+    
+
+def _overhang(
+        idf: IDF,
+        window_name: str,
+        depth: Union[float, int]
+        ) -> None:
+    """Adds a shading overhang to window with the specified depth. 
+    Used in the Simstock QGIS plugin."""
+    if isinstance(depth, float) or isinstance(depth, int):
+        if depth > 0:
+            idf.newidfobject('SHADING:OVERHANG',
+                            Name=window_name+"_Overhang",
+                            Window_or_Door_Name=window_name,
+                            Height_above_Window_or_Door=0.0,
+                            Tilt_Angle_from_WindowDoor=90.0,
+                            Left_extension_from_WindowDoor_Width=0.0,
+                            Right_extension_from_WindowDoor_Width=0.0,
+                            Depth=depth)
 
 
 def _external_walls(
-        idf : IDF,
-        zone_name : str,
-        floor_number : int,
-        vertical_surface_coordinates : list,
-        ceiling_height : float | int,
-        floor_height : float | int,
-        zone_height : float | int,
-        min_avail_height : float | int,
-        min_window_width : float | int,
-        wall_const : str,
-        glazing_const : str,
-        glazing_ratio : float | int
+        idf: IDF,
+        zone_name: str,
+        floor_number: int,
+        vertical_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        floor_height: Union[float, int],
+        zone_height: Union[float, int],
+        min_avail_height: Union[float, int],
+        min_window_width: Union[float, int],
+        wall_const: str,
+        glazing_const: str,
+        glazing_ratio: Union[float, int],
+        overhang_depth: Union[float, int]
         ) -> None:
     '''
     Function which generates external wall energyplus object and return exposed
@@ -977,16 +906,19 @@ def _external_walls(
                 _window(idf, win_surface_name, glazing_const,
                        building_surface_name, starting_x_coordinate,
                        starting_z_coordinate, win_length, win_height)
+                
+                # Add overhang to each window of custom depth
+                _overhang(idf, win_surface_name, overhang_depth)
 
 
 def _partition_walls(
-        idf : IDF,
-        zone_name : str,
-        adj_osgb : str,
-        vertical_surface_coordinates : list,
-        ceiling_height : float | int,
-        floor_height : float | int,
-        partition_const : str
+        idf: IDF,
+        zone_name: str,
+        adj_osgb: str,
+        vertical_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        floor_height: Union[float, int],
+        partition_const: str
         ) -> None:
     '''
     Function which creates partition walls
@@ -1026,10 +958,10 @@ def _partition_walls(
             
 
 def _shading_volumes(
-        row : Series,
-        df : DataFrame,
-        idf : IDF,
-        origin : list
+        row: Series,
+        df: DataFrame,
+        idf: IDF,
+        origin: list
         ) -> None:
     '''
     Function which generates idf geometry for surrounding Build Blocks. All
@@ -1066,16 +998,16 @@ def _shading_volumes(
 
 
 def adiabatic_external_walls(
-        idf : IDF,
-        polygon_name : str,
-        perimeter_surface_coordinates : list,
-        ceiling_height : float | int,
-        floor_height : float | int,
-        wall_name : str,
-        adjacent_polygons_list : list,
-        df : DataFrame,
-        polygon_shapely : Polygon,
-        origin : list
+        idf: IDF,
+        polygon_name: str,
+        perimeter_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        floor_height: Union[float, int],
+        wall_name: str,
+        adjacent_polygons_list: list,
+        df: DataFrame,
+        polygon_shapely: Polygon,
+        origin: list
         ) -> None:
     '''
     Function which generates energyplus object for adiabatic external walls. It
@@ -1124,57 +1056,20 @@ def adiabatic_external_walls(
     return
 
 
-def _shading_volumes(
-        row : Series,
-        df : DataFrame,
-        idf : IDF,
-        origin : list
-        ) -> None:
-    '''
-    Function which generates idf geometry for surrounding Build Blocks. All
-    elements are converted to shading objects
-    '''
-    # Polygon name and coordinates
-    osgb, polygon = row.osgb, row.polygon
-    # Polygon with removed collinear point to be used for ceiling/floor/roof
-    hor_polygon = row.polygon_horizontal
-    # Convert polygon coordinates to dictionary of outer and inner
-    # (if any) coordinates
-    hor_poly_coord_dict = palgs._polygon_coordinates_dictionary(hor_polygon)
-    # List of adjacent polygons
-    adj_osgb_list = row.touching
-    # Load the polygon which defines only external surfaces
-    ext_surf_polygon = row.polygon_exposed_wall
-    # List of external surface only coordinates (ext_surf_polygon +
-    # inner rings)
-    ext_surf_coord = palgs._surface_coordinates(ext_surf_polygon, origin)
-    # # List of horizontal surfaces coordinates (roof/floor/ceiling)
-    horiz_surf_coord = calgs._horizontal_surface_coordinates(
-        hor_poly_coord_dict, origin)
-    # Zone bottom/top vertical vertex
-    zone_floor_h = 0
-    zone_ceiling_h = row.height
-    # Include adiabatic roof
-    _adiabatic_roof(idf, osgb, horiz_surf_coord, zone_ceiling_h)
-    adiabatic_wall_name = 'AdiabaticWall'
-    # Create external walls
-    adiabatic_external_walls(idf, osgb, ext_surf_coord, zone_ceiling_h,
-                             zone_floor_h, adiabatic_wall_name,
-                             adj_osgb_list, df, polygon, origin)
-    return
+
 
 
 def adiabatic_external_walls(
-        idf : IDF,
-        polygon_name : str,
-        perimeter_surface_coordinates : list,
-        ceiling_height : float | int,
-        floor_height : float | int,
-        wall_name : str,
-        adjacent_polygons_list : list,
-        df : DataFrame,
-        polygon_shapely : Polygon,
-        origin : list
+        idf: IDF,
+        polygon_name: str,
+        perimeter_surface_coordinates: list,
+        ceiling_height: Union[float, int],
+        floor_height: Union[float, int],
+        wall_name: str,
+        adjacent_polygons_list: list,
+        df: DataFrame,
+        polygon_shapely: Polygon,
+        origin: list
         ) -> None:
     '''
     Function which generates energyplus object for adiabatic external walls. It

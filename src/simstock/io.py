@@ -85,7 +85,6 @@ def read_geopackage_layer(
 
     
 
-
 def get_gpkg_layer_names(path: str) -> list:
     connection = None
     layer_names = []
@@ -111,7 +110,7 @@ def get_gpkg_layer_names(path: str) -> list:
     return layer_names
 
 
-def read_parquet(path : str, **kwargs) -> SimstockDataframe:
+def read_parquet(path: str, **kwargs) -> SimstockDataframe:
     """
     Function to read in a ``parquet`` file and return a ``SimstockDataframe,
     i.e. it must contain a ``polygon`` column or key or field containing
@@ -156,7 +155,7 @@ def read_parquet(path : str, **kwargs) -> SimstockDataframe:
     return SimstockDataframe(df, **kwargs)
 
 
-def read_json(path : str, **kwargs) -> SimstockDataframe:
+def read_json(path: str, **kwargs) -> SimstockDataframe:
     """
     Function to read in a ``json`` file and return a ``SimstockDataframe,
     i.e. it must contain a ``polygon`` column or key or field containing
@@ -201,7 +200,7 @@ def read_json(path : str, **kwargs) -> SimstockDataframe:
     return SimstockDataframe(df, **kwargs)
 
 
-def to_csv(sdf : SimstockDataframe, path : str, **kwargs) -> None:
+def to_csv(sdf: SimstockDataframe, path: str, **kwargs) -> None:
     """
     Function to save a SimstockDataframe object to a csv file
 
@@ -229,7 +228,7 @@ def to_csv(sdf : SimstockDataframe, path : str, **kwargs) -> None:
     sdf._df.to_csv(path, **kwargs)
 
 
-def to_parquet(sdf : SimstockDataframe, path : str) -> None:
+def to_parquet(sdf: SimstockDataframe, path: str) -> None:
     """
     Function to save a SimstockDataframe object to a parquet file
 
@@ -252,7 +251,7 @@ def to_parquet(sdf : SimstockDataframe, path : str) -> None:
     sdf._df.to_parquet(path, engine="fastparquet")
 
 
-def to_json(sdf : SimstockDataframe, path : str) -> None:
+def to_json(sdf: SimstockDataframe, path: str) -> None:
     """
     Function to save a SimstockDataframe object to a json file
 

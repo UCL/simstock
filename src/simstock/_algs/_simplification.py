@@ -20,9 +20,9 @@ from pandas.core.frame import DataFrame
 tolerance = 0.1
 
 def _simplified_coords(
-        polygon : Polygon,
-        ring_position : str,
-        remove_leave_pairs : list
+        polygon: Polygon,
+        ring_position: str,
+        remove_leave_pairs: list
         ) -> tuple[list, list]:
         """
         Function that simplifies either the outer
@@ -53,9 +53,9 @@ def _simplified_coords(
         
 
 def _simplification_affects_inner_ring(
-            adjacent_polygon : Polygon,
-            polygon : Polygon,
-            remove_leave_pairs : list
+            adjacent_polygon: Polygon,
+            polygon: Polygon,
+            remove_leave_pairs: list
             ) -> Polygon:
         """
         Function to perform simplification
@@ -75,9 +75,9 @@ def _simplification_affects_inner_ring(
 
 
 def _remove_hole_if_inner_is_removed(
-                df : DataFrame,
-                inner_polygon : Polygon,
-                polygon_within_hole : list[Polygon]
+                df: DataFrame,
+                inner_polygon: Polygon,
+                polygon_within_hole: list[Polygon]
                 ) -> DataFrame:
             """
             Function to remove hole within each 
@@ -101,8 +101,8 @@ def _remove_hole_if_inner_is_removed(
 
 
 def _remove_holes(
-        df : DataFrame,
-        polygon_within_hole : list[Polygon]
+        df: DataFrame,
+        polygon_within_hole: list[Polygon]
         ) -> DataFrame:
         """
         Recursive function to remove holes from 
@@ -121,12 +121,12 @@ def _remove_holes(
 
 
 def _not_valid_polygons(
-        osgb : str,
-        polygon : Polygon,
-        df : DataFrame,
-        outer_coords : list,
-        polygon_within_hole : Polygon,
-        remove_leave_pairs : list
+        osgb: str,
+        polygon: Polygon,
+        df: DataFrame,
+        outer_coords: list,
+        polygon_within_hole: Polygon,
+        remove_leave_pairs: list
         ) -> tuple[DataFrame, Polygon]:
     """
     Recursive function that attempts to rectify polygons where
@@ -210,10 +210,10 @@ def _not_valid_polygons(
 
 # This can all be simplified
 def _polygon_simplifying(
-        polygon : Polygon,
-        df : DataFrame,
-        osgb : str,
-        osgb_touching : str
+        polygon: Polygon,
+        df: DataFrame,
+        osgb: str,
+        osgb_touching: str
         ) -> DataFrame:
     """
     Function that attempts to simplify a polygon by applying

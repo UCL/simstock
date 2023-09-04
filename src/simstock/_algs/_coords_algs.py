@@ -5,7 +5,7 @@ geometric simplification etc. and not intended to
 be used directly through the API.
 """
 
-from typing import Any
+from typing import Any, Union
 import math
 from shapely.geometry import (
     LineString, 
@@ -30,7 +30,7 @@ def _remove_dups_from_list(lst : list) -> list:
     return lst_no_dup
 
 
-def _dist_within_tol(coords : list, tol : float) -> bool:
+def _dist_within_tol(coords: list, tol: float) -> bool:
     """
     Function that takes a list of coordinates and measures
     the pair-wise distance between each successive point.
@@ -43,7 +43,7 @@ def _dist_within_tol(coords : list, tol : float) -> bool:
     return False
 
 
-def _remove_item_from_list(lst : list, item : Any) -> list:
+def _remove_item_from_list(lst: list, item: Any) -> list:
     """
     Function that takes a list and removes the specified 
     item. List closure is respected.
@@ -57,7 +57,7 @@ def _remove_item_from_list(lst : list, item : Any) -> list:
 
 
 # Could be improved -- this implementation is inefficient
-def _remove_items_from_list(coords : list, items : list) -> list:
+def _remove_items_from_list(coords: list, items: list) -> list:
     """
     Function that takes a list and removes any number of items
     as specified in the items list. List closure is respected.
@@ -73,7 +73,7 @@ def _remove_items_from_list(coords : list, items : list) -> list:
     return coords
 
 
-def _radial_dist_simplify(coords : list, tol : float) -> tuple:
+def _radial_dist_simplify(coords: list, tol: float) -> tuple:
     """
     Function that goes through a list of coordinated and tests
     each connsecutive pair to see if they are closer to each other
@@ -99,7 +99,7 @@ def _radial_dist_simplify(coords : list, tol : float) -> tuple:
 
 # Could potentially simplify
 # Add tolerance to state 
-def _coords_cleaning(coords : list, remove_leave_pairs : list) -> tuple:
+def _coords_cleaning(coords: list, remove_leave_pairs: list) -> tuple:
     """
     Function that keeps applying radial distance simplification
     until the list of coordinates settles to a fixed state.
@@ -114,8 +114,8 @@ def _coords_cleaning(coords : list, remove_leave_pairs : list) -> tuple:
 
 
 def _remove_cleaned_coordinates(
-        coords : list,
-        remove_leave_pairs : list
+        coords: list,
+        remove_leave_pairs: list
         ) -> list:
     """
     Function that makes sure all of the 
@@ -129,7 +129,7 @@ def _remove_cleaned_coordinates(
     coords = _remove_dups_from_list(coords)
     return coords
 
-def _ccw_interior_ring(coords : list) -> list:
+def _ccw_interior_ring(coords: list) -> list:
     """
     Function that ensures the coords
     are ccw
@@ -142,9 +142,9 @@ def _ccw_interior_ring(coords : list) -> list:
 # This could be sped up, perhaps
 # by using itertools
 def _remove_buffered_coordinates(
-        coords : list,
-        new : list,
-        removed : list
+        coords: list,
+        new: list,
+        removed: list
         ) -> list:
     """
     Function that goes through a list of coordinates and 
@@ -194,7 +194,7 @@ def _remove_buffered_coordinates(
     return _remove_dups_from_list(coords)
 
 
-def _coollinear_points(coord_list : list) -> list:
+def _coollinear_points(coord_list: list) -> list:
     """
     Function that takes a list of coordinates and
     returns a list of collinear points 
@@ -219,7 +219,7 @@ def _coollinear_points(coord_list : list) -> list:
     return removed_coll
 
 
-def coordinates_move_origin(coordinates_list : list, origin) -> list:
+def coordinates_move_origin(coordinates_list: list, origin) -> list:
     '''
     Function which positions a coordinates relative to the origin
     '''
@@ -242,7 +242,7 @@ def coordinates_move_origin(coordinates_list : list, origin) -> list:
     return coordinates_list_moved_origin
 
 
-def _horizontal_surface_coordinates(coordinates_dictionary : dict, 
+def _horizontal_surface_coordinates(coordinates_dictionary: dict, 
                                     origin) -> list:
     '''
     Function which adjust coordinates to be suitable for creating E+ horizontal
@@ -261,7 +261,7 @@ def _horizontal_surface_coordinates(coordinates_dictionary : dict,
     return coordinates
 
 
-def _polygon_with_holes(coordinates_dictionary : dict) -> list:
+def _polygon_with_holes(coordinates_dictionary: dict) -> list:
     '''
     Function which merges outer and inned rings in suitable format (coordinate
     pairs order) so EnergyPlus can recognise it as a surface with holes. The
@@ -432,7 +432,7 @@ def _polygon_with_holes_coordinates(coordinates, outer_ring_linestring,
     return coordinates
 
 
-def _dist_two_points(p1 : float | int, p2 : float | int) -> float:
+def _dist_two_points(p1: Union[float, int], p2 : Union[float, int]) -> float:
     '''
     Internal function which calculates the Euclidean distance between two
     points
@@ -459,7 +459,7 @@ def _inner_string(inner_ring_coordinates, irop) -> MultiLineString:
     return inner_linestring
 
 
-def _coordinates_add_height(height : float | int, coordinates_list : list):
+def _coordinates_add_height(height: Union[float, int], coordinates_list: list):
     '''
     Function which adds Z coordinate to coordinate pairs
     '''

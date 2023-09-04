@@ -8,14 +8,41 @@ The routines in this module are not meant for use
 in the user API.
 """
 
+import datetime
+from typing import Any, Union
+import geopandas as gpd
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
 from shapely import wkt
 from shapely.errors import GEOSException
 from shapely.geometry.base import BaseGeometry
 
 
-def _is_dict_like(obj) -> bool:
+def _load_gdf(df: DataFrame) -> gpd.GeoDataFrame:
+    gdf = df.copy(deep=True)
+    return gpd.GeoDataFrame(gdf, geometry="polygon")
+
+
+def _assert_bool(val: Union[bool, str]) -> bool:
+    """
+    Function to ensure that a bool value that has been
+    wrongly encoded as a string is re-encoded back as a bool.
+    """
+    if type(val) == bool:
+        return val
+    if val == "false" or val == "False":
+        return False
+    if val == "true" or val == "True":
+        return True
+
+
+def _generate_unique_string() -> str:
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    return f"{timestamp}"
+
+
+def _is_dict_like(obj: Any) -> bool:
     """
     Check if the object is dict-like.
     """
@@ -26,7 +53,7 @@ def _is_dict_like(obj) -> bool:
     )
 
 
-def _is_wkt(obj) -> bool:
+def _is_wkt(obj: Any) -> bool:
     """
     Checks if value is valid wkt data.
     """
@@ -37,7 +64,7 @@ def _is_wkt(obj) -> bool:
     return True
 
 
-def _isna(value) -> bool:
+def _isna(value: Any) -> bool:
     """
     Check if the value is NaN-like.
     """
@@ -50,7 +77,7 @@ def _isna(value) -> bool:
     return False
 
 
-def _geoserialise_dict(dat : dict) -> dict:
+def _geoserialise_dict(dat: dict) -> dict:
     """
     Check if dictionary data is shapely-geometry type.
     """
@@ -59,14 +86,14 @@ def _geoserialise_dict(dat : dict) -> dict:
     return dat
 
 
-def _geoserialise_pdseries(dat : pd.Series) -> pd.Series:
+def _geoserialise_pdseries(dat: pd.Series) -> pd.Series:
     """
     Check if pandas Series data is shapely-geometry type.
     """
     return dat.apply(_shapely_loader) #(dat.values)
 
 
-def _geoserialise_array(arr) -> list:
+def _geoserialise_array(arr):
     """
     Check if array is shapely-geometry type.
     """
@@ -88,7 +115,7 @@ def _shapely_loader(obj):
     )
 
 
-def _series_serialiser(obj) -> pd.Series:
+def _series_serialiser(obj):
     """
     This is a function that takes some input data and attempts
     to turn it into a pandas series of shapely geometries.

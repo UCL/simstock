@@ -33,3 +33,4 @@ medlow_flat_roof,25mm_stone_chippings,19mm_asphalt,100mm_mineral_wool_dense,40mm
 medlow_glazing,4mm_clear,12mm_air,4mm_clear,,,,,,,,
 medlow_solid_ground_floor,750mm_clay_underfloor,25mm_brick_slips,100mm_cast_concrete,80mm_eps,50mm_flooring_screed,,,,,,
 medlow_wall,105mm_brick_outer_leaf,75mm_min_wool_quilt,100mm_concrete_1800,air_layer,13mm_plasterboard_wallboard,,,,,,
+low_glazing,4mm_clear,6mm_air,4mm_clear,,,,,,,,

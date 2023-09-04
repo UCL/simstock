@@ -5,10 +5,13 @@ Module containing the base simstock objects:
 """
 
 import os
+import shutil
+import json
 import inspect
+import copy
 import glob
-from typing import Any
-from functools import singledispatchmethod
+import numpy as np
+from typing import Any, Union
 import platform
 import itertools
 import pandas as pd
@@ -16,17 +19,20 @@ from pandas.core.frame import DataFrame
 import shapely as shp
 from shapely.geometry import (
     Polygon,
-    LineString,
+    LineString, 
     MultiLineString
 )
 from shapely.ops import unary_union, linemerge
 from eppy.modeleditor import IDF
-from simstock._utils._serialisation import _series_serialiser
+from simstock._utils._serialisation import (
+    _series_serialiser,
+    _assert_bool,
+    _generate_unique_string
+)
 from simstock._utils._exceptions import SimstockException
 import simstock._algs._polygon_algs as algs
 import simstock._algs._simplification as smpl
 import simstock._algs._idf_algs as ialgs
-from simstock._algs._idf_sim import _sim_main
 from simstock._utils._dirmanager import (
     _copy_directory_contents,
     _delete_directory_contents,
@@ -985,9 +991,14 @@ class IDFmanager:
         'polygon_horizontal'
     ]
 
+    buffer_radius = 50
+    out_dir = "outs"
+    bi_mode = True
+    data_fname = None
+    save_building_count = False
 
     def __init__(self,
-                 data: SimstockDataframe | DataFrame | str,
+                 data: Any,
                  **kwargs
                  ) -> None:
         """
@@ -997,11 +1008,6 @@ class IDFmanager:
         ----------
         ``data : SimstockDataframe | DataFrame |str``
             The input data containg geographical data.
-
-        ``idd_file : str = None``
-            The filepath of the user's idd file. If none is
-            given, then this intialisation will attempt
-            to find one automatically.
 
         ``kwargs``
             Keyword arguments to set class parameters.
@@ -1038,7 +1044,7 @@ class IDFmanager:
 
         # Try and load data from simstockdataframe
         try:
-            self.get_df(data)
+            self._get_df(data)
         except TypeError as exc:
             msg = f"Type: {type(data)} cannot be loaded."
             raise TypeError(msg) from exc
@@ -1058,11 +1064,36 @@ class IDFmanager:
             )
             raise SimstockException(msg)
 
+        # Set the settings IDF to be the one specified 
+        # in the SimstockDataframe
         self.idf = data.settings.copyidf()
-        self.epw = data.epw
 
-    def create_model_idf_with_bi(self, **kwargs) -> None:
-        _sim_main(self.idf, self.df, **kwargs)
+        # Set the weather file to be the one specified in the 
+        # SimstockDataframe, unless user has specified it 
+        # as a keyword argument at initialisation
+        if "epw" not in kwargs:
+            self.epw = data.epw
+
+        # Get simstock directory
+        current_file_path = inspect.getframeinfo(inspect.currentframe()).filename
+        absolute_file_path = os.path.abspath(current_file_path)
+        self.simstock_directory = os.path.dirname(absolute_file_path)
+
+        # Load in the ventilation and infiltration
+        # dictionaries, if now provided by user
+        if "ventilation_dict" not in kwargs:
+            json_fname = os.path.join(
+                self.simstock_directory, "settings", "ventilation_dict.json"
+                )
+            with open(json_fname, 'r') as json_file:
+                self.ventilation_dict = json.load(json_file)
+        if "infiltration_dict" not in kwargs:
+            json_fname = os.path.join(
+                self.simstock_directory, "settings", "infiltration_dict.json"
+                )
+            with open(json_fname, 'r') as json_file:
+                self.infiltration_dict = json.load(json_file)
+
 
     def __str__(self) -> str:
         msg = (
@@ -1073,8 +1104,9 @@ class IDFmanager:
     def __repr__(self) -> str:
         return "IDFobject()"
 
-    @singledispatchmethod
-    def get_df(self, data: Any) -> None:
+    def _get_df(self,
+                data: Union[SimstockDataframe, DataFrame, str]
+                ) -> None:
         """
         Function to extract the simstock or pandas
         data frame from `data` and store it in 
@@ -1093,19 +1125,23 @@ class IDFmanager:
         ``TypeError``
             If the data is an invalid format.
         """
-        msg = f"Type: {type(data)} cannot be loaded."
-        raise TypeError(msg)
+
+        if type(data) == SimstockDataframe:
+            self._sdf_to_df(data)
+        elif type(data) == DataFrame:
+            self._df_to_df(data)
+        elif type(data) == str:
+            self._str_to_df(data)
+        else:
+            raise TypeError  
     
-    @get_df.register
-    def _(self, data: SimstockDataframe) -> None:
+    def _sdf_to_df(self, data: SimstockDataframe) -> None:
         self.df = data._df.copy()
 
-    @get_df.register
-    def _(self, data: DataFrame) -> None:
+    def _df_to_df(self, data: DataFrame) -> None:
         self.df = data.copy()
 
-    @get_df.register
-    def _(self, data: str) -> None:
+    def _str_to_df(self, data: str) -> None:
         if not os.path.exists(data):
             raise FileNotFoundError
         try:
@@ -1134,196 +1170,258 @@ class IDFmanager:
         """
         return list(set(self.col_names).difference(set(self.df.columns)))
     
-    def move_towards_origin(self, **kwargs) -> None:
-        """
-        Function to move all objects in the data
-        towards the origin on the plane.
 
-        Parameters
-        ----------
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
-        """
-        self.__dict__.update(kwargs)
-        self.origin = self.df['polygon'].iloc[0]
-        self.origin = list(self.origin.exterior.coords[0])
-        self.origin.append(0)
+    def _get_osgb_value(
+            self,
+            val_name: str,
+            zones_df: DataFrame,
+            zone: str
+            ) -> float:
+        """Gets the value of a specified attribute for the zone"""
+        try:
+            osgb_from_zone = "_".join(zone.split("_")[:-2])
+            value = zones_df[zones_df["osgb"]==osgb_from_zone][val_name]
+            return value.to_numpy()[0]
+        except KeyError:
+            return 0.0
+    
 
-    def create_shading_objects(self, **kwargs) -> None:
-        """
-        Function to create shading objects for E+
-
-        Parameters
-        ----------
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
-        """
+    def create_model_idf(self, **kwargs) -> None:
         self.__dict__.update(kwargs)
 
+        # Ensure unique data file name
+        if not self.data_fname:
+            self.data_fname = _generate_unique_string()
+
+        if os.path.exists(self.out_dir):
+                shutil.rmtree(self.out_dir)
+        else:
+            os.makedirs(self.out_dir)
+            
+        # If the dataframe contains a built island column
+        if self.bi_mode:
+
+            # Calculate how many thermally simulated buildings are in each BI and output info as csv
+            bi_bldg_count = self.df[self.df["shading"]!=True]["bi"].value_counts()
+            if self.save_building_count:
+                bi_bldg_count.to_csv(
+                    os.path.join(self.out_dir, f"{self.data_fname}_bi_bldg_count.csv")
+                    )
+
+            # Iterate over unique building islands
+            self.bi_idf_list = []
+            for bi in self.df['bi'].unique().tolist():
+
+                # Revert idf to settings idf
+                temp_idf = self.idf.copyidf()
+            
+                # Change the name field of the building object
+                building_object = temp_idf.idfobjects['BUILDING'][0]
+                building_object.Name = bi
+                
+                # Get the data for the BI
+                bi_df = self.df[self.df['bi'] == bi]
+
+                # Get the data for other BIs to use as shading
+                rest  = self.df[self.df['bi'] != bi]
+
+                # Include other polygons which fall under the specified shading buffer radius
+                bi_df = pd.concat(
+                        [
+                        bi_df, 
+                        algs._shading_buffer(self.buffer_radius, bi_df, rest)
+                        ]
+                    )
+                
+                # Only create idf if the BI is 
+                # not entirely composed of shading blocks
+                shading_vals_temp = bi_df['shading'].to_numpy()
+                shading_vals = [_assert_bool(v) for v in shading_vals_temp]
+                if not np.asarray(shading_vals).all():
+                    self._createidfs(temp_idf, bi_df)
+                else:
+                    continue
+                
+                # Store the idf object for this built island
+                self.bi_idf_list.append(temp_idf)
+                
+
+        else: # Not built island mode
+
+            # Revert idf to settings idf
+            temp_idf = self.idf.copyidf()
+
+            # Change the name field of the building object
+            building_object = temp_idf.idfobjects['BUILDING'][0]
+            building_object.Name = self.data_fname
+
+             # Get non-shading data
+            df1 = self.df[self.df['shading'] == False]
+            bi_list = df1["bi"].unique()
+            
+            # Get the data for other BIs to use as shading
+            rest = self.df[self.df['shading'] == True]
+
+            # Include other polygons which fall under the specified shading buffer radius
+            shading_dfs = []
+            for bi in bi_list:
+                # Get the data for the BI
+                bi_df = self.df[self.df['bi'] == bi]
+
+                # Buffer each BI to specified radius and include shading which falls within this
+                shading_dfs.append(algs._shading_buffer(self.buffer_radius, bi_df, rest))
+
+            # Combine these separate shading DataFrames and drop duplicate rows
+            shading_df = pd.concat(shading_dfs)
+            shading_df = shading_df.drop_duplicates()
+
+            # Append the shading to the main DataFrame
+            if self.buffer_radius != 0:
+                df1 = pd.concat([df1, shading_df]).drop_duplicates(subset="osgb", keep="first")
+
+            # If shading radius is zero, i.e. no shading is to be included
+            elif self.buffer_radius == 0:
+                # Overwrite touching column with empty data to avoid errors
+                df1.loc[:, "touching"] = ["[]"] * len(df1)
+
+            # Only create idf if it is not entirely composed of shading blocks
+            shading_vals_temp = df1['shading'].to_numpy()
+            shading_vals = [_assert_bool(v) for v in shading_vals_temp]
+            if not np.asarray(shading_vals).all():
+
+                # If requested, output csv which excludes any buildings not within the shading buffer
+                df1.to_csv(os.path.join(self.out_dir, f"{self.data_fname}_final.csv"))
+
+                # Generate the idf file
+                self._createidfs(temp_idf, df1)
+
+            else:
+                raise Exception("There are no thermal zones to create! All zones are shading.")
+            
+            self.bi_idf_list.append(temp_idf)
+
+
+    def _createidfs(
+            self,
+            temp_idf: IDF,
+            bi_df: DataFrame
+            ) -> None:
+    
+        # Move all objects towards origins
+        origin = bi_df['polygon'].iloc[0]
+        origin = list(origin.exterior.coords[0])
+        origin.append(0)
+
+        bi_df['shading'] = bi_df['shading'].apply(_assert_bool)
+        
         # Shading volumes converted to shading objects
-        shading_df = self.df.loc[self.df['shading'] == True]
-        shading_df.apply(
-            ialgs._shading_volumes, args=(self.df, self.idf, self.origin,), axis=1
-        )
-
-    def create_thermal_zones(self, **kwargs) -> None:
-        """
-        Function to create thermal zone objects for E+
-
-        Parameters
-        ----------
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
-        """
-        self.__dict__.update(kwargs)
+        shading_df = bi_df.loc[bi_df['shading'] == True]
+        shading_df.apply(ialgs._shading_volumes, args=(self.df, temp_idf, origin,), axis=1)
 
         # Polygons with zones converted to thermal zones based on floor number
-        self.zones_df = self.df.loc[self.df['shading'] == False]
-        self.zones_df.apply(ialgs._thermal_zones, args=(self.df, self.idf, self.origin, self.min_avail_width_for_window, self.min_avail_height,), axis=1)
+        zones_df = bi_df.loc[bi_df['shading'] == False]
+        zone_use_dict = {} 
+        zones_df.apply(ialgs._thermal_zones, args=(bi_df, temp_idf, origin, self.min_avail_width_for_window, self.min_avail_height, zone_use_dict,), axis=1)
 
         # Extract names of thermal zones:
-        self.zones = self.idf.idfobjects['ZONE']
-        self.zone_names = list()
-        for zone in self.zones:
-            self.zone_names.append(zone.Name)
+        zones = temp_idf.idfobjects['ZONE']
+        zone_names = list()
+        for zone in zones:
+            zone_names.append(zone.Name)
 
-        # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
-        # in all objects which reffer to all zones (thermostat, people, etc.)
-        self.idf.newidfobject('ZONELIST', Name='Dwell')
-        objects = self.idf.idfobjects['ZONELIST'][-1]
-        for i, zone in enumerate(self.zone_names):
-            exec(f'objects.Zone_{i + 1}_Name = zone')
-
-
-    def create_load_systems(self, **kwargs) -> None:
-        """
-        Function to create load system objects for E+
-
-        Parameters
-        ----------
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
-        """
-        self.__dict__.update(kwargs)
+        # Plugin feature: mixed-use
+        ialgs._mixed_use(temp_idf, zone_use_dict)
 
         # Ideal loads system
-        for zone in self.zone_names:
-            system_name = f'{zone}_HVAC'
-            eq_name = f'{zone}_Eq'
-            supp_air_node = f'{zone}_supply'
-            air_node = f'{zone}_air_node'
-            ret_air_node = f'{zone}_return'
+        for zone in zone_names:
+            system_name = f"{zone}_HVAC"
+            eq_name = f"{zone}_Eq"
+            supp_air_node = f"{zone}_supply"
+            air_node = f"{zone}_air_node"
+            ret_air_node = f"{zone}_return"
 
-            self.idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
+            temp_idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
                                 Name=system_name,
                                 Zone_Supply_Air_Node_Name=supp_air_node,
                                 Dehumidification_Control_Type='None')
-            self.idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
+
+            temp_idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
                                 Name=eq_name,
                                 Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
                                 Zone_Equipment_1_Name=system_name,
                                 Zone_Equipment_1_Cooling_Sequence=1,
                                 Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
-            self.idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
+
+            temp_idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
                                 Zone_Name=zone,
                                 Zone_Conditioning_Equipment_List_Name=eq_name,
                                 Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+        
+            # Get specified inputs for zone
+            ventilation_rate = self._get_osgb_value("ventilation_rate", zones_df, zone)
+            infiltration_rate = self._get_osgb_value("infiltration_rate", zones_df, zone)
+
+            # Get the rest of the default obj values from dict
+            zone_ventilation_dict = copy.deepcopy(self.ventilation_dict)
+            zone_infiltration_dict = copy.deepcopy(self.infiltration_dict)
+
+            # Set the name, zone name and ventilation rate
+            zone_ventilation_dict["Name"] = zone + "_ventilation"
+            zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
+            zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
+            zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
+
+            # Same for infiltration
+            zone_infiltration_dict["Name"] = zone + "_infiltration"
+            zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone
+            zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
+
+            # Add the ventilation idf object
+            temp_idf.newidfobject(**zone_ventilation_dict)
+            temp_idf.newidfobject(**zone_infiltration_dict)
+
+
+    def save_idfs(self, **kwargs) -> None:
+        self.__dict__.update(kwargs)
+
+        # Iterate over the list of idfs that have been created
+        # and save each in a seperate file in out_dir
+        for j, idf in enumerate(self.bi_idf_list):
+            fname = os.path.join(self.out_dir, f"built_island_{j}.idf")
+            idf.saveas(fname)
     
-    def save_to_file(self, fname: str) -> None:
-        """
-        Function to save the E+ objects to an idf file
 
-        Parameters
-        ----------
-        ``fname : str``
-            File name to save to.
-        """
-        self.idf.saveas(fname)
-
-
-    def create_model_idf_file(self, fname: str, **kwargs) -> None:
-        """
-        Function to automatically create the IDF file from the
-        data in IDFcreator. This uses default settings.
-
-        Parameters
-        ----------
-        ``fname : str``
-            File name to save the IDF file to
-        
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
-
-        Usage example
-        -------------
-        ```python
-        import simstock as sim
-
-        # Read in data and create SimstockDataframe
-        sdf = sim.read_csv("tests/data/test_data.csv")
-
-        # Process it
-        sdf.preprocessing()
-
-        # Instantiate IDF creator object
-        ob = sim.IDFcreator(sdf)
-
-        # Create and save the IDF object
-        ob.create_idf_file("tests/data/test.idf")
-        ```
-        """
+    def run(self, **kwargs) -> None:
         self.__dict__.update(kwargs)
-        self.move_towards_origin()
-        self.create_shading_objects()
-        self.create_thermal_zones()
-        self.create_load_systems()
-        self.save_to_file(fname) 
+
+        # Iterate over the list of idfs that have been created
+        # and run them, putting the results of each into 
+        # a new subdirectory
+        for j, idf in enumerate(self.bi_idf_list):
+
+            # Create a new subdirectory for this build island
+            # idf within the out_dir directory.
+            # If the directory already exists, then 
+            # clear its contents
+            new_dir_path = os.path.join(
+                self.out_dir, f"built_island_{j}_ep_outputs"
+                )
+            if os.path.exists(new_dir_path):
+                shutil.rmtree(new_dir_path)
+            else:
+                os.makedirs(new_dir_path)
+
+            # Run energy plus
+            idf.epw = self.epw
+            idf.run(output_directory=new_dir_path)
 
 
-    def create_model_idf(self, **kwargs) -> None:
-        """
-        Function to automatically create an IDF object from the
-        data in IDFcreator. This uses default settings.
 
-        Parameters
-        ----------
-        ``fname : str``
-            File name to save the IDF file to
-        
-        ``kwargs``
-            Keyword arguments. See IDFcreator initialisation
-            docs for full list of acceptable keywords.
 
-        Usage example
-        -------------
-        ```python
-        import simstock as sim
 
-        # Read in data and create SimstockDataframe
-        sdf = sim.read_csv("tests/data/test_data.csv")
-
-        # Process it
-        sdf.preprocessing()
-
-        # Instantiate IDF creator object
-        ob = sim.IDFcreator(sdf)
-
-        # Create and save the IDF object
-        ob.create_idf_file("tests/data/test.idf")
-        ```
-        """
-        self.__dict__.update(kwargs)
-        self.move_towards_origin()
-        self.create_shading_objects()
-        self.create_thermal_zones()
-        self.create_load_systems()
+    
 
 
 

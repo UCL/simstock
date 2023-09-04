@@ -10,18 +10,62 @@ internally only and are not exposed through the
 user-facing API.
 """
 
+from typing import Union
 from shapely.geometry import (
     Polygon, 
     LinearRing,
     LineString,
     MultiLineString
 )
+from pandas.core.frame import DataFrame
 import simstock._algs._coords_algs as calgs
+from simstock._utils._serialisation import _load_gdf
 from shapely.wkt import loads
 from shapely.ops import unary_union
 
 
-def _orientate(poly : Polygon) -> Polygon:
+def _shading_buffer(
+        shading_buffer_radius: Union[float, int],
+        df: DataFrame,
+        rest: DataFrame
+        ) -> DataFrame:
+    """
+    Includes polygons which fall within a specified shading buffer radius in the main DataFrame.
+
+    Inputs:
+        - shading_buffer_radius: Radius in metres within which other polygons are included. An
+            empty string is interpreted as an infinite radius.
+        - df: The main DataFrame containing the thermal zones of interest
+        - rest: DataFrame containing all other polygons (i.e. shading and those from other BIs)
+    """
+    gdf = _load_gdf(df)
+    rest_gdf = _load_gdf(rest)
+    if shading_buffer_radius != '':
+    
+        # Buffer the df geometry to specified radius for shading
+        dissolved = gdf.dissolve().geometry.convex_hull.buffer(shading_buffer_radius)
+
+        # Find polygons which are within this buffer and create mask
+        mask = rest_gdf.intersects(dissolved[0])
+        
+        # Get data for the polygons within the buffer
+        within_buffer = rest.loc[mask].copy()
+
+        # Set them to be shading
+        within_buffer["shading"] = True
+    
+    else:
+        # All other buildings are to be included as shading
+        within_buffer = rest.copy()
+        within_buffer["shading"] = True
+
+    # Include them in the idf
+    #df = pd.concat([df, within_buffer])
+
+    return within_buffer
+
+
+def _orientate(poly: Polygon) -> Polygon:
     """
     Function that ensures polygon exteriors
     are clockwise and interiors 
@@ -42,7 +86,7 @@ def _orientate(poly : Polygon) -> Polygon:
     return Polygon(ext_coords, int_ring)
 
 
-def _is_exterior_ccw(poly : Polygon) -> bool:
+def _is_exterior_ccw(poly: Polygon) -> bool:
     """
     Function to determine whether a polgon's
     exterior is anti-clockwise.
@@ -50,7 +94,7 @@ def _is_exterior_ccw(poly : Polygon) -> bool:
     return poly.exterior.is_ccw
 
 
-def _remove_duplicate_coords(poly : Polygon) -> Polygon:
+def _remove_duplicate_coords(poly: Polygon) -> Polygon:
     """
     Function to remove any duplicate coordinates
     from both the exterior and any interior
@@ -66,7 +110,7 @@ def _remove_duplicate_coords(poly : Polygon) -> Polygon:
     return Polygon(ext_ring_no_dup, int_ring_no_dup_list)
 
 
-def _is_touching(poly1 : Polygon, poly2 : Polygon) -> bool:
+def _is_touching(poly1: Polygon, poly2: Polygon) -> bool:
     """
     Function to determine if polygon 1 touches
     polygon 2. A ValueError is raised if the
@@ -83,7 +127,7 @@ def _is_touching(poly1 : Polygon, poly2 : Polygon) -> bool:
     return False
 
 
-def _has_interior(poly : Polygon) -> bool:
+def _has_interior(poly: Polygon) -> bool:
     """
     Function to determine whether a polygon
     has any interior
@@ -93,7 +137,7 @@ def _has_interior(poly : Polygon) -> bool:
     return False
 
 
-def _poly_tol(poly : Polygon, tol : float) -> bool:
+def _poly_tol(poly: Polygon, tol: float) -> bool:
     """
     Function to determine whether any consective
     coordinate points within a polygon are 
@@ -111,7 +155,7 @@ def _poly_tol(poly : Polygon, tol : float) -> bool:
 
 
 # Could simplify
-def _poly_is_not_valid(poly : Polygon) -> bool:
+def _poly_is_not_valid(poly: Polygon) -> bool:
     """
     Function to determine whether a polygon
     has any interior components that 
@@ -128,9 +172,9 @@ def _poly_is_not_valid(poly : Polygon) -> bool:
 
 
 def _buffered_polygon(
-        t_poly : Polygon,
-        new_coords : list,
-        removed_coords : list
+        t_poly: Polygon,
+        new_coords: list,
+        removed_coords: list
         ) -> Polygon:
     """
     Function that takes a polygon and returns it after having
@@ -145,7 +189,7 @@ def _buffered_polygon(
     return Polygon(t_poly_coords, t_poly.interiors)
 
 
-def _check_collinearity(f : list, m : list, l : list) -> bool:
+def _check_collinearity(f: list, m: list, l: list) -> bool:
     """
     Boolean function returns True is the polygon formed
     from f,m,l is collinear
@@ -156,7 +200,7 @@ def _check_collinearity(f : list, m : list, l : list) -> bool:
 
 
 # Could be sped up
-def _collinear_points_list(objects_list : list) -> list:
+def _collinear_points_list(objects_list: list) -> list:
     """
     Function that returns a list of points that have been
     identified as collinear from within the shapes in
@@ -180,7 +224,7 @@ def _collinear_points_list(objects_list : list) -> list:
     return collinear_points_list
 
 
-def _update_polygon(polygon : Polygon, points_to_remove : list) -> Polygon:
+def _update_polygon(polygon: Polygon, points_to_remove: list) -> Polygon:
     """
     Function that takes a polygon and returns it once 
     all of the coordinates from the points_to_remove
@@ -232,7 +276,7 @@ def _update_exposed(exposed_ring, points_to_remove):
 
 
 # Could be improved
-def _remove_collinear_points_horizontal(poly : Polygon) -> Polygon:
+def _remove_collinear_points_horizontal(poly: Polygon) -> Polygon:
     """
     Function that takes a new polygon and returns it
     with all collinear points removed.
@@ -262,7 +306,7 @@ def _remove_collinear_points_horizontal(poly : Polygon) -> Polygon:
     return new_polygon
 
 
-def _polygon_coordinates_dictionary(poly : Polygon) -> dict:
+def _polygon_coordinates_dictionary(poly: Polygon) -> dict:
     '''
     Function which stores data form POLYGON((,,,),(,,,),(,,,)) in dictionary.
     Data are in the shape Polygon(exterior[, interiors=None])
@@ -282,7 +326,7 @@ def _polygon_coordinates_dictionary(poly : Polygon) -> dict:
     return polygon_coordinates_dict
 
 
-def _surface_coordinates(poly : Polygon, origin) -> list:
+def _surface_coordinates(poly: Polygon, origin) -> list:
     '''
     Function which creates a list of coordinates lists depending on the polygon
     type.
