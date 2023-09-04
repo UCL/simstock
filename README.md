@@ -1,7 +1,7 @@
 # Simstock
 ---
 
-This is the refactored core version of Simstock. User docs are available in ``docs/simstock.html`` (open in your web browser). 
+This is the refactored core version of Simstock. User docs are available in ``docs/build/html/index.html`` (open in your web browser). 
 
 See also the ``demo.ipynb`` Jupyter notebook in this repository for an interactive demo.
 
