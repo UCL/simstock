@@ -256,10 +256,13 @@ class SimstockDataframe:
         self.tol: float = tol 
 
         #: idd file name and full path
-        self.idd_file: str = idd_file
+        if idd_file is not None:
+            self.idd_file: str = idd_file
+        elif os.environ.get('IDD_FILE'):
+            self.idd_file = os.environ.get('IDD_FILE')
 
         # Set idd file id not already specified
-        if self.idd_file == None:
+        if self.idd_file is None:
             # Determine OS
             opsys = platform.system().casefold()
             if opsys not in ["windows", "darwin", "linux"]:
