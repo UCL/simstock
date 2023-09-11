@@ -41,15 +41,18 @@ First, clone the Simstock repository from `Github <https://github.com/UCL/simsto
 
 Alternatively, download the `zip <https://github.com/UCL/simstock>`_ from Github and unzip. Either way, this will create a directory called ``simstock`` with the following internal structure:
 
-| simstock/
-| ├── src/
-| │   └── simstock/
-| ├── README.md
-| ├── environment.yaml
-| ├── poetry.lock
-| ├── pyproject.toml
-| ├── tests/
-| └── docs/
+```
+    simstock/ 
+    ├── src/ 
+    │   └── simstock/ 
+    ├── README.md
+    ├── environment.yaml
+    ├── poetry.lock
+    ├── pyproject.toml
+    ├── tests/
+    └── docs/
+```
+
 
 The source code for Simstock is contained within ``src/simstock``. The ``docs`` folder contains the documentation you are currently reading. The ``tests`` folder contains unit tests that can be run with Python's unittest suite. 
 

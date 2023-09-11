@@ -1,0 +1,20 @@
+name: Build and publish simstock package
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  publish-simstock:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish simstock PyPi package
+        uses: code-specialist/pypi-poetry-publish@v1
+        with:
+          PACKAGE_DIRECTORY: "./src/simstock/"
+          PYTHON_VERSION: "3.9"
+          POETRY_VERSION: "1.4.2"
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_REGISTRY_PASSWORD: ${{ secrets.PUBLISH_REGISTRY_PASSWORD }}
