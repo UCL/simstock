@@ -11,6 +11,8 @@ UBEMs to be run straightforwardly from QGIS etc. The software performs the follo
 
 ---
 
+Full docs are available at [ReadtheDocs](https://simstock.readthedocs.io/en/latest/index.html).
+
 ## Installation
 
 > **_NOTE:_**  Simstock requires Python 3.8 or above, as well as an EnergyPlus installation.
