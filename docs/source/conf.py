@@ -11,12 +11,13 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/simstock/'))
 
 project = 'Simstock'
-copyright = '2023, Oliver Smith'
+copyright = '2023, Oliver Smith, Shyam Amrith'
 author = 'Oliver Smith'
 release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -24,6 +25,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autosectionlabel'
 ]
+
+autodoc_member_order = 'bysource'
 
 templates_path = ['_templates']
 exclude_patterns = []

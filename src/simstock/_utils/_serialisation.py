@@ -20,6 +20,13 @@ from shapely.geometry.base import BaseGeometry
 
 
 def _load_gdf(df: DataFrame) -> gpd.GeoDataFrame:
+    """
+    Function to load a geopandas dataframe from a 
+    pandas dataframe.
+
+    Note: this needs to be deprecated to remove
+    geopandas dependency.
+    """
     gdf = df.copy(deep=True)
     return gpd.GeoDataFrame(gdf, geometry="polygon")
 

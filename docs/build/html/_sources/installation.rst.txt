@@ -7,8 +7,25 @@ Installation
 
    Simstock requires an installation of EnergyPlus, and Python version 3.8 or above. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
 
-.. important:: \ \ 
-    Upon public release, Simstock will be published to the Python package index PyPI. This will greatly simplify the installation process and allow simstock to be simply installed using via ``pip install simstock`` or similar. Until then, simstock needs to be installed in "developer mode", requiring manual handling of package dependencies. This is detailed below.
+Simstock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.
+
+----
+
+Installation from PyPI (recommended)
+====================================
+
+After ensuring you have EnergyPlus installed, and python >= v3.8, simply run 
+
+.. code-block:: bash
+
+    pip install simstock
+
+in the command line.
+
+----
+
+Installation for developers
+===========================
 
 First, clone the Simstock repository from `Github <https://github.com/UCL/simstock>`_ by typing into the command line: 
 
@@ -31,12 +48,12 @@ Alternatively, download the `zip <https://github.com/UCL/simstock>`_ from Github
 The source code for Simstock is contained within ``src/simstock``. The ``docs`` folder contains the documentation you are currently reading. The ``tests`` folder contains unit tests that can be run with Python's unittest suite. 
 
 Handling dependencies
-=====================
+*********************
 
-As this is the development version, you need to handle the project's dependencies. This can be done either using `Poetry <https://python-poetry.org/>`_ (recommended), or Conda. This is what the ``.toml``, ``.lock`` and ``.yaml`` files are for.
+You will need to handle the project's dependencies. This can be done either using `Poetry <https://python-poetry.org/>`_ (recommended), or Conda. This is what the ``.toml``, ``.lock`` and ``.yaml`` files are for.
 
 Using Poetry
-------------
+^^^^^^^^^^^^
 
 First, download and install Poetry on your system by following the `installation guide <https://python-poetry.org/docs/>`_. Once installed, navigate into the base of the ``simstock`` directory and type into the command line (or power shell):
 
@@ -71,7 +88,7 @@ This script can now be run from the command line using
 Note the inclusion of the ``poetry run`` before the usual python commands.
 
 Using Conda
------------
+^^^^^^^^^^^
 
 First, ensure Conda is installed (see `installation guide <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_).
 

@@ -2,10 +2,6 @@
 Instructions for developers
 ===========================
 
-.. note:: \ \ 
-
-    This page will be removed upon public release of Simstock.
-
 Running unit tests
 ------------------
 

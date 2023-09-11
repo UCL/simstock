@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simstock documentation &mdash; Simstock 0.0.1 documentation</title>
+  <title>Simstock &mdash; Simstock 0.0.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -44,10 +44,9 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview of Simstock methodology</a></li>
-<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
 </ul>
 
         </div>
@@ -64,7 +63,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Simstock documentation</li>
+      <li class="breadcrumb-item active">Simstock</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -74,38 +73,58 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="simstock-documentation">
-<h1>Simstock documentation<a class="headerlink" href="#simstock-documentation" title="Permalink to this heading"></a></h1>
-<p>SimStock provides a workflow for taking geographical
-and contextual data, processing it into a form compatable with EnergyPlus, and running thermal simulations. This workflow
-broadly involves three steps: geometrical pre-processing,
-followed by the creation of thermal zone object data for
-EnergyPlus, and finally the running of the simulation itself. SimStock thereby provides an intermediate
+  <figure class="align-left">
+<a class="reference internal image-reference" href="_images/logo.svg"><img alt="alternate text" height="375px" src="_images/logo.svg" width="1125px" /></a>
+</figure>
+<section id="simstock">
+<h1>Simstock<a class="headerlink" href="#simstock" title="Permalink to this heading"></a></h1>
+<p>Simstock is a python package for taking geographical
+and contextual data, processing it into a form compatible with EnergyPlus, and running thermal simulations. SimStock thereby provides an intermediate
 layer between various data types and EnergyPlus, allowing
-UBEMs to be run straightforwardly from QGIS etc.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p></p>
-<p>Upon public release, this documentation will be hosted online at <a class="reference external" href="https://about.readthedocs.com/">ReadtheDocs</a>.</p>
-</div>
+UBEMs to be run straightforwardly from QGIS etc. The software performs the following setps:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Geometrical pre-processing. This ensures the input data is compatible with EnergyPlus.</p></li>
+<li><p>The creation of thermal zone object data for EnergyPlus.</p></li>
+<li><p>Running the simulation an handling the results.</p></li>
+</ol>
+</div></blockquote>
+<p>Simstock is provided by  <a class="reference external" href="https://www.ucl.ac.uk/bartlett/energy/research/building-stock-lab">Building Stock Lab</a> within UCL’s Bartlett Energy Institute <a class="reference external" href="https://www.ucl.ac.uk/bartlett/energy/">Bartlett Energy Institute</a>.</p>
+<hr class="docutils" />
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview of Simstock methodology</a></li>
-<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-from-pypi-recommended">Installation from PyPI (recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-for-developers">Installation for developers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#overview-reading-in-data-and-running-a-simulation">Overview: reading in data and running a simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#data-requirements">Data requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#reading-different-data-formats">Reading different data formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#working-with-the-simstockdataframe">Working with the SimstockDataframe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#plotting-data">Plotting data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#specifying-weather-data">Specifying weather data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#specifying-schedules-materials-and-constructions">Specifying schedules, materials, and constructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#running-a-simulation">Running a simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="simstock.html#the-simstock-simstockdataframe-class">The <code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.SimstockDataframe</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simstock.html#the-simstock-idfmanager-class">The <code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.IDFmanager</span></code> class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simstock.html#data-reading-functions">Data reading functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="simstock.html#the-simstock-plot-function">The <code class="xref py py-meth docutils literal notranslate"><span class="pre">simstock.plot()</span></code> function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="devinstructions.html#running-unit-tests">Running unit tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="devinstructions.html#generating-and-modifying-the-docs">Generating and modifying the docs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="devinstructions.html#updating-the-yaml-file-from-poetry">Updating the yaml file from poetry</a></li>
+</ul>
+</li>
 </ul>
 </div>
-</section>
-<section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
 </section>
 
 
@@ -118,7 +137,7 @@ UBEMs to be run straightforwardly from QGIS etc.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Oliver Smith.</p>
+    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -23,77 +23,100 @@ from simstock.base import SimstockDataframe
 
 def plot(
         sdf: Union[SimstockDataframe, Series, DataFrame],
-        edgecolor: str = "k",
+        facecolor: str= "lightblue",
+        edgecolor: str = "red",
+        polygon_column_name: str = "polygon",
         **kwargs
         ) -> Axes:
     """
-    Plot a SimstockDataframe's geometric data.
+    Function to plot geometric data from either a :py:class:`SimstockDataframe`, Pandas :py:class:`DataFrame`, or Pandas :py:class:`Series` using `matplotlib.pyplot`. The geometric data column should be named ``polygon``; if it is named anything else then it should be specified using the `polygon_column_name` parameter. You may also pass a matplotlib :py:class:`Axes` object via the optional parameter `ax`, in order to plot onto an existing axis (see examples below).
 
-    Parameters
-    ----------
-    ``sdf : SimstockDataframe or Pandas Series or Dataframe``
-        The data to be plotted. One column must be called 
-        ``polygon`` and contain shapely geometries.
+    :param sdf:
+        The :py:class:`SimstockDataframe`, Pandas :py:class`DataFrame`, or Pandas :py:class:`Series` containing the geometric data to be plotted. This data must be in the form of shapely geometries: either :py:class:`Polygon`, :py:class:`Point`, or :py:class:`LineString`.
+    :type sdf:
+        Union[SimstockDataframe, Series, DataFrame]
+    :param facecolor:
+        *Optional*. The fill colour of the shapesm defaults to ``lightblue``
+    :type facecolor:
+        str
+    :param edgecolor:
+        *Optional*. The border colour of the shapes, defaults to ``red``
+    :type edgecolor:
+        str
+    :param polygon_column_name:
+        *Optional*. The name of the column containing the geographical data to be plotted, defaults to ``polygon``
+    :type polygon_column_name:
+        str
 
-    ``**kwargs, optional``
-        All additional keyword arguments to be passed to 
-        ``matplotlib``
+    :param \**kwargs:
+        Optional keyword parameters to be passed to matplotlib; e.g. ``ax``
 
-    Returns
-    -------
-    ``ax : matplotlib Axes``
-        Matplotlib axis object instance containing 
+    :return:
+        A :py:class:`Axes` objects containing 
         the plotted geometric data
 
-    Examples
-    --------
-    ### Basic usage
+    :raises TypeError:
+        If the geometric data are not valid Shapely :py:class:`Polygon`, :py:class:`Point`, or :py:class:`LineString`
 
-    ```python
-    import matplotlib.pyplot as plt
-    import simstock as sim
+    Example
+    ~~~~~~~
+    .. code-block:: python 
 
-    # Create test simstockdataframe
-    sdf = sim.read_csv("testdata.csv")
+        # Basic usage
+        import matplotlib.pyplot as plt
+        import simstock as sim
 
-    # Plot
-    sim.plot(sdf, facecolor="lightblue", edgecolor="red")
-    plt.show()
-    ```
+        # Create test simstockdataframe
+        sdf = sim.read_csv("testdata.csv")
 
-    ### More advanced usage
+        # Plot
+        sim.plot(sdf, facecolor="lightblue", edgecolor="red")
+        plt.show()
 
-    ```python
-    import matplotlib.pyplot as plt
-    import simstock as sim
+    Advanced example: plotting to an already existing 
+    axes in order to add a background image
 
-    # Create test simstockdataframe
-    sdf = sim.read_csv("testdata.csv")
+    .. code-block:: python
 
-    # Create matplotlib figure and axis
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+        import matplotlib.pyplot as plt
+        import simstock as sim
 
-    # Plot to the existing axis
-    sim.plot(
-        sdf,
-        facecolor="lightblue",
-        edgecolor="red",
-        ax=ax)
+        # Create test simstockdataframe
+        sdf = sim.read_csv("testdata.csv")
 
-    # Set some ttributes
-    ax.title("Test Plot")
-    ax.set_xticks([])
-    ax.set_yticks([])
+        # Create matplotlib figure and axis
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
 
-    # Display plot
-    plt.show()
-    ```
+        # Read in an image to be used as a background map
+        bg_img = plt.imread("pathto/background_map.png")
+
+        # Plot the background map
+        ax.imshow(bg_img)  
+
+        # Plot the data the existing axis, thereby overlaying 
+        # it onto the background map
+        sim.plot(
+            sdf,
+            facecolor="lightblue",
+            edgecolor="red",
+            ax=ax
+            )
+
+        # Set some attributes
+        ax.title("Test Plot")
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        # Display plot
+        plt.show()
     """
     
     # Select the polygon data and feed into the
     # plotting function
-    return _plot_geometries(sdf.polygon, edgecolor=edgecolor, **kwargs)
+    return _plot_geometries(
+        sdf[polygon_column_name], facecolor=facecolor,edgecolor=edgecolor, **kwargs
+        )
 
 
 def _plot_geometries(geoms: list, **kwargs) -> Axes:
@@ -133,7 +156,7 @@ def _plot_geometries(geoms: list, **kwargs) -> Axes:
 
 
 @singledispatch
-def _plot_geometry(geom : Any, _ : Axes):
+def _plot_geometry(geom: Any, _: Axes):
     """
     Function to plot an individual shapely geometry.
     Each type of geometry (Point, Polygon, LineString)
@@ -153,7 +176,7 @@ def _plot_geometry(geom : Any, _ : Axes):
 
 
 @_plot_geometry.register
-def _(geom : Polygon, ax : Axes, **kwargs) -> PatchCollection:
+def _(geom: Polygon, ax: Axes, **kwargs) -> PatchCollection:
     """
     Overloaded Polygon implementation of the
     _plot_geometry function.
@@ -172,7 +195,7 @@ def _(geom : Polygon, ax : Axes, **kwargs) -> PatchCollection:
 
 
 @_plot_geometry.register
-def _(geom : Point, ax : Axes, **kwargs) -> None:
+def _(geom: Point, ax: Axes, **kwargs) -> None:
     """
     Overloaded Point implementation of the
     _plot_geometry function.
@@ -184,7 +207,7 @@ def _(geom : Point, ax : Axes, **kwargs) -> None:
 
 
 @_plot_geometry.register
-def _(geom : LineString, ax : Axes, **kwargs) -> None:
+def _(geom: LineString, ax: Axes, **kwargs) -> None:
     """
     Overloaded LineString implementation of the
     _plot_geometry function.

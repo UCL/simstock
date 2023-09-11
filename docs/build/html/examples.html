@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Simstock API docs" href="simstock.html" />
-    <link rel="prev" title="Instructions for developers" href="devinstructions.html" /> 
+    <link rel="prev" title="Installation" href="installation.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -45,8 +45,6 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview of Simstock methodology</a></li>
-<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Usage and basic examples</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview-reading-in-data-and-running-a-simulation">Overview: reading in data and running a simulation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#data-requirements">Data requirements</a></li>
@@ -74,6 +72,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
 </ul>
 
         </div>
@@ -172,10 +171,10 @@
 <hr class="docutils" />
 <section id="reading-different-data-formats">
 <h2>Reading different data formats<a class="headerlink" href="#reading-different-data-formats" title="Permalink to this heading"></a></h2>
-<p>SimstockDataframes can be instatiated from an already <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the <code class="docutils literal notranslate"><span class="pre">read</span></code> functions. Below is a summary of reading different formats.</p>
+<p>SimstockDataframes can be insantiated from an already <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the <code class="docutils literal notranslate"><span class="pre">read</span></code> functions. Below is a summary of reading different formats.</p>
 <section id="csv-files">
 <h3>csv files<a class="headerlink" href="#csv-files" title="Permalink to this heading"></a></h3>
-<p>SimstockDataframes can be instatiated from csv files using the <code class="docutils literal notranslate"><span class="pre">read_csv</span></code> function. E.g.:</p>
+<p>SimstockDataframes can be insantiated from csv files using the <code class="docutils literal notranslate"><span class="pre">read_csv</span></code> function. E.g.:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test_data.csv&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -183,7 +182,7 @@
 </section>
 <section id="parquet-files">
 <h3>Parquet files<a class="headerlink" href="#parquet-files" title="Permalink to this heading"></a></h3>
-<p>SimstockDataframes can be instatiated from parquet files using the <code class="docutils literal notranslate"><span class="pre">read_parquet</span></code> function. E.g.:</p>
+<p>SimstockDataframes can be insantiated from parquet files using the <code class="docutils literal notranslate"><span class="pre">read_parquet</span></code> function. E.g.:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;test_data.parquet&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -191,7 +190,7 @@
 </section>
 <section id="json-files">
 <h3>json files<a class="headerlink" href="#json-files" title="Permalink to this heading"></a></h3>
-<p>SimstockDataframes can be instatiated from json files using the <code class="docutils literal notranslate"><span class="pre">read_json</span></code> function. E.g.:</p>
+<p>SimstockDataframes can be insantiated from json files using the <code class="docutils literal notranslate"><span class="pre">read_json</span></code> function. E.g.:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s2">&quot;test_data.json&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -386,15 +385,15 @@
 </div>
 <p>This will show the following information:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>MATERIAL,
-10mm_carpet,              !- Name
-Rough,                    !- Roughness
-0.01,                     !- Thickness
-0.058,                    !- Conductivity
-20,                       !- Density
-1000,                     !- Specific Heat
-0.9,                      !- Thermal Absorptance
-0.5,                      !- Solar Absorptance
-0.5;                      !- Visible Absorptance
+    10mm_carpet,              !- Name
+    Rough,                    !- Roughness
+    0.01,                     !- Thickness
+    0.058,                    !- Conductivity
+    20,                       !- Density
+    1000,                     !- Specific Heat
+    0.9,                      !- Thermal Absorptance
+    0.5,                      !- Solar Absorptance
+    0.5;                      !- Visible Absorptance
 </pre></div>
 </div>
 <p>To change this material’s name from 10mm_carpet to 10mm_persian_rug, we simply do:</p>
@@ -552,14 +551,14 @@ Rough,                    !- Roughness
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="devinstructions.html" class="btn btn-neutral float-left" title="Instructions for developers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="simstock.html" class="btn btn-neutral float-right" title="Simstock API docs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Oliver Smith.</p>
+    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -1,3 +1,8 @@
+"""
+Module containing internal functions for modifying and copyong files.
+Mostly used to allow users to create and modify csv files for settings
+"""
+
 import os
 import shutil
 from eppy.modeleditor import IDF
@@ -8,7 +13,9 @@ def _copy_directory_contents(
         source_dir: str,
         destination_dir: str
         ) -> None:
-    
+    """
+    Makes a copy of source_dir in destination_dir
+    """
     try:
         # Get the list of items in the source directory
         items = os.listdir(source_dir)
@@ -32,7 +39,9 @@ def _copy_directory_contents(
 
 
 def _delete_directory_contents(directory_path: str) -> None:
-
+    """
+    Recursively removes contents of directory_path
+    """
     try:
         # Remove all the contents of the directory
         for item in os.listdir(directory_path):
@@ -70,7 +79,11 @@ def _add_or_modify_idfobject(
         row: pd.Series,
         idf: IDF
         ) -> None:
-    
+    """
+    Function used to take a row of a csv (pandas Dataframe), 
+    and create an IDF object out of it
+    """
+
     # Turn row into a nice dictionary
     d = {}
     for key, val in row.items():
@@ -95,6 +108,11 @@ def _add_or_modify_idfobject(
 
 
 def _compile_csvs_to_idf(idf: IDF, path: str) -> None:
+    """
+    Function that looks for csv files within path, and looks add their
+    contents. It uses to rows of the csv files to create IDF objects
+    that are then added to idf
+    """
     
     for csv_file in os.listdir(path):
         if csv_file.endswith(".csv"):
@@ -107,7 +125,9 @@ def _compile_csvs_to_idf(idf: IDF, path: str) -> None:
                 try:
                     na_values = ["", "N/A", "NA", "NaN", "NULL", "None"]
                     df = pd.read_csv(
-                        os.path.join(path, csv_file), na_values=na_values
+                        os.path.join(path, csv_file),
+                        na_values=na_values,
+                        on_bad_lines='skip'
                         )
                 except FileNotFoundError:
                     print(f"File '{csv_file}' not found.")
@@ -122,7 +142,14 @@ def _compile_csvs_to_idf(idf: IDF, path: str) -> None:
                 for _, row in df.iterrows():
 
                     # Add each entry as a new idf object
-                    _add_or_modify_idfobject(idf_class, row, idf)
+                    try:
+                        _add_or_modify_idfobject(idf_class, row, idf)
+                    except Exception as e:
+                        print(e)
+                        print(f"Cause: class {idf_class}")
+                        # for item in row.items():
+                        #     print(item)
+                        raise Exception from e
 
     # Then handle the on/off thing
     df = pd.read_csv(os.path.join(path, "DB-HeatingCooling-OnOff.csv"))

@@ -1,7 +1,7 @@
 """
 Module containing the base simstock objects:
-- SimstockDataframe
-- IDFcreator
+- :class:`SimstockDataframe`
+- :class:`IDFcreator`
 """
 
 import os
@@ -24,6 +24,7 @@ from shapely.geometry import (
 )
 from shapely.ops import unary_union, linemerge
 from eppy.modeleditor import IDF
+from eppy.bunch_subclass import EpBunch
 from simstock._utils._serialisation import (
     _series_serialiser,
     _assert_bool,
@@ -42,80 +43,181 @@ from simstock._utils._dirmanager import (
 
 class SimstockDataframe:
     """
-    A ``SimstockDataframe`` is an object used by simstock to represent all input data. It behaves the in the same way as a Pandas data frame, but with some key additional methods to perform geometric-based pre-processing.
+    A :class:`SimstockDataframe` is an object used by Simstock to store all input data and perform the necessary geometric simplification steps to make it a compatable with EnergyPlus. It behaves the in the same way as a Pandas :class:`DataFrame`, but with some key additional methods to perform geometric-based pre-processing.
 
-    In order to be a valid ``SimstockDataframe``, there must be one column names ``polygon`` that contains geometric data.
+    The :class:`SimstockDataframe` object also stores EnergyPlus settings, such as constructions, materials, and schedules. The class provides an interface for viewing and editing these settings. The settings can be viewed via the :class:`SimstockDataframe`'s properties; e.g. ``.constructions`` to view constructions, or ``.schedules`` to view schedules. These settings are stored in the form of `Eppy EpBunch <https://pythonhosted.org/eppy/dev_docs/epbunch.html>`_ objects which can be edited directly (see examples below). Settings can also be set by using ``csv`` files (see example below and :py:meth:`override_settings_with_csv`). By default the :class:`SimstockDataframe` will contain some standard settings. If you wish to start from a blank slate with no settings so that you can specify all of them yourself, then specifiy ``use_base_idf=True`` when constructing the :class:`SimstockDataframe`.
 
-    Additional required column names are: 
-    - ``osgb``
-    - ``shading``
-    - ``height``
-    - ``nofloors``
-    - ``construction``
-    - ``interiors``
-
-
-    Parameters
-    ----------
-    ``data : Any``
-        The polygon data together with ``osgb`` data etc.
-
-    ``index : array-like or Index``
-        The index for the SimstockSeries.
-
-    ``tol : float``
-        The tolerance to apply when assessing polygon intersections.
-
-    Usage example
-    -------------
-    ```python
-    import simstock as sim
-    sdf = sim.read_csv("text.csv")
+    Once the settings and data have been set, the :py:meth:`preprocessing` method can be used to ensure all geometries are compatable with E+, such as adjacent coordinates being a suitable tolerance away from each other (see example below). An EnergyPlus simulation can then be run using the :class:`IDFmanager` class.
     
-    # Access data in the smae way as a pandas dataframe:
-    print(sdf.columns)
-    >>> Index(['polygon', 'osgb', 'shading', 'height', 'wwr', 'nofloors',
-       'construction', 'interiors'],
-      dtype='object')
-    
-    print(sdf.loc[sdf["osgb"]=="osgb1000005307038", "polygon"])
-    >>> POLYGON ((528883.55 186137, 528878.05 186145.5...
-    Name: polygon, dtype: object
-    
-    # Perform preprocessing
-    sdf.preprocessing()
-    ```
+    :param inputobject: The geometric data, containing polygons, a unique
+        identifier, shading etc.
+    :type inputobject: dict, :class:`DataFrame`, :class:`SimstockDataframe`
+    :param polygon_coloumn_name: *Optional*. The name of the column or   
+        field containing the geometric data (which should either
+        be shapely objects or wkb or wkt strings). This is only required if the column is named something other that ``polygon``
+    :type polygon_coloumn_name: str
+    :param uid_column_name: *Optional*. The name of the column containing
+        the unique IDs. This is only required if the ID column name is something other than ``osgb``
+    :type uid_column_name: str
+    :param epw_file: *Optional*. The file name, including the path, to your
+        epw weather file. If none is specified, Simstock will default to using the St. James's park epw data
+    :type epw_file: str
+    :param tol: *Optional*. The minimum distance in metres that two 
+        coordinates are allowed to be after geometric simplification. EnergyPlus requires this to be at least 0.1m.
+    :type tol: float
+    :param use_base_idf: *Optional* Whether or not to start with a blank slate
+        settings object, so that you can populate the settings from scratch. Defaults to False
+    :type use_base_idf: bool
+    :param idd_file: *Optional* The file name, including the path, to your
+        EnergyPlus .idd file. If none is specified, Simstock will look in common locations, such as ``C:\\EnergyPlus*\\`` if you are running Windows or ``/usr/local/EnergyPlus*`` or ``/Applications/EnergyPlus*`` if you are running Unix (note * will be the version number)
+    :type idd_file: str
 
-    Attributes
-    ----------
+    :raises SystemError: If your operating systemm is of unknown type
+    :raises FileNotFoundError: If an EnergyPlus .idd file could not be found
+    :raises TypeError: If the input data is not a dict, :class:`DataFrame`, 
+        or :class:`SimstockDataframe`, or if your polygon data is not comprised of shapely objects or wkb or wkt strings
+    :raises KeyError: If a valid unique ID column could not be found. Hint: if
+        your ID column is named something other than ``osgb``, then specifiy its name using the uid_column_name parameter
 
-    ``is_ccw : bool or list<bool>``
-        Are the geometries counter-clockwise.
-    
-    ``is_exterior_ccw : bool or list<bool>``
-        Are the exterior perimeters counter-clockwise.
-    
-    ``is_valid : bool or list<bool>`` 
-        Are the geometries valid objects.
+    **See also**: :class:`IDFmanager`
 
-    ``length : int``
-        The length of the data (axis=0).
+    Example
+    ~~~~~~~
+    .. code-block:: python
+
+        import simstock as sim
+
+        # Create a SimstockDataframe from an already existing dict d
+        sdf = sim.SimstockDataframe(d) 
+
+    If your EnergyPlus installation, and therfore your .idd file is stored in a non-standard place, then use the `idd_file` parameter:
+
+    .. code-block:: python
+
+        sdf = sim.SimstockDataframe(
+            d,
+            idd_file="pathto/myenergyplusinstallation/my_idd_file.idd"
+            )
+
+    To view settings, e.g. the materials:
+
+    .. code-block:: python
+
+        mats = sdf.materials
+        print(mats)
+
+    Each setting is an `Eppy EpBunch <https://pythonhosted.org/eppy/dev_docs/epbunch.html>`_ object; e.g.,
+
+    .. code-block:: python
+
+        # This is a list of EpBunch objects, 
+        # one for each material
+        mats = sdf.materials
+
+        # print the first material in the list
+        print(mats[0])
+
+    returns:
+
+    .. code-block:: text
+
+        MATERIAL,
+            10mm_carpet,              !- Name
+            Rough,                    !- Roughness
+            0.01,                     !- Thickness
+            0.058,                    !- Conductivity
+            20,                       !- Density
+            1000,                     !- Specific Heat
+            0.9,                      !- Thermal Absorptance
+            0.5,                      !- Solar Absorptance
+            0.5;                      !- Visible Absorptance
+
+    To edit any field in each bunch, you can do ``bunchobject.Fieldname`. For example, to edit the `Name` field of the material above:
+
+    .. code-block:: python
+
+        # Change the name
+        mats[0].Name = "new_name" 
+
+        # Now print to see the new name
+        print(mats[0])
+
+    returns: 
+
+    .. code-block:: text
+
+        MATERIAL,
+            10mm_carpet,              !- new_name
+            Rough,                    !- Roughness
+            0.01,                     !- Thickness
+            0.058,                    !- Conductivity
+            20,                       !- Density
+            1000,                     !- Specific Heat
+            0.9,                      !- Thermal Absorptance
+            0.5,                      !- Solar Absorptance
+            0.5;                      !- Visible Absorptance
+
+    As another example, let's adjust the heat balance algorithm: 
+
+    .. code-block:: python
+
+        # Print the heat balance algorithm EpBunch
+        print(sdf.heat_balance_algorithm)
+
+    returns:
+
+    .. code-block:: text 
+
+        HEAT_BALANCE_ALGORITHM,
+            ConductionTransferFunction,       !- Algorithm
+            200;                              !- Surface Temperature Upper Limit
+
+    Now edit the surface temperature upper limit field and print the result:
+
+    .. code-block:: python
+
+        sdf.heat_balance_algorithm.Surface_Temperature_Upper_Limit = 210
+        print(heat_balance_algorithm)
+
+    gives:
+
+    .. code-block:: text 
+
+        HEAT_BALANCE_ALGORITHM,
+            ConductionTransferFunction,       !- Algorithm
+            210;                              !- Surface Temperature Upper Limit
+
+    Settings can be edited in this programmatic fashion, or, alternatively, settings can be read in as csv files (see :py:meth:`override_settings_with_csv` and :py:meth:`create_csv_folder`). To do this, it is recommended to start from a blank settings template by doing:
+
+    .. code-block:: python
+
+        # Use the use_base_idf option to start from a blank settings template
+        sdf = sim.SimstockDataframe(d, use_base_idf=True)
+
+    Once you are satisfied with the settings, you can run the :py:meth:`preprocessing` function, to get the data ready for an EnergyPlus simulation:
+
+    .. code-block:: python
+
+        # Perform all necessary geometric simplification steps
+        sdf.preprocessing()
+
+    .. note:: \ \ 
+
+        The :class:`SimstockDataframe` constructor creates a :class:`SimstockDataframe` from an object such as dict or Pandas :class:`DataFrame` that has been already instantiated and is in memory. To create a :class:`SimstockDataframe` from a file, see the functions :py:func:`read_csv`, :py:func:`read_json`, :py:func:`read_parquet`, and :py:func:`read_geopackage_layer`.
     
-    
-    Methods
-    -------
+    Class properties:
+    ~~~~~~~~~~~~~~~~~
     """
 
     # Common locations for E+ idd files
-    common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
-    common_posix_paths = [
+    _common_windows_paths = ["C:\\EnergyPlus*\\Energy+.idd"]
+    _common_posix_paths = [
         "/usr/local/EnergyPlus*/Energy+.idd",
         "/Applications/EnergyPlus*/Energy+.idd"
     ]
-    idd_file = None
 
     # Necessary data
-    required_cols = [
+    _required_cols = [
         "shading", "height", "wwr", "nofloors", "construction"
         ]
 
@@ -127,32 +229,36 @@ class SimstockDataframe:
             epw_file: str = None,
             tol: float = 0.1,
             use_base_idf: str = False,
+            idd_file: str = None,
             **kwargs
             ) -> None:
         """
-        Initialisation function for SimstockDataframe
-
-        Parameters
-        ----------
-
-        ``inputdata : Any``
-            Can be a dictionary or a Pandas dataframe.
-            This input data must include data fields ``osgb``, ``shading``, ``height``, ``wwr``, ``nofloors``, ``construction``, ``interiors``
-
-        ``tol : float``
-            Optional tolerance parameter for geomtric simplifications. Default
-            value is 0.1m
-
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
-
+        Constructor method
         """
         self.__dict__.update(kwargs) 
 
-        # Set tolerance
-        self.tol = tol
+        #: The minumum allowable distance between adjacent coordinates in a polygon
+        #:
+        #: Example
+        #: ~~~~~~~
+        #:
+        #: .. code-block:: python
+        #:      
+        #:      # Create a SimstockDaframe with tolerance 20cm
+        #:      sdf = sim.SimstockDataframe(d, tol=0.2)
+        #:
+        #:      # View the tolerance
+        #:      print(sdf.tol)
+        #:
+        #:      # Change the tolerance to 10cm
+        #:      sdf.tol = 0.1
+        #:
+        self.tol: float = tol 
 
-        # Set idd file
+        #: idd file name and full path
+        self.idd_file: str = idd_file
+
+        # Set idd file id not already specified
         if self.idd_file == None:
             # Determine OS
             opsys = platform.system().casefold()
@@ -260,9 +366,9 @@ class SimstockDataframe:
     
     def _find_idd(self, system: str) -> None:
         if system == "windows":
-            paths = self.common_windows_paths
+            paths = self._common_windows_paths
         else:
-            paths = self.common_posix_paths
+            paths = self._common_posix_paths
         for path in paths:
             # Use glob to handle pattern matching for version number
             matches = glob.glob(path)
@@ -271,16 +377,310 @@ class SimstockDataframe:
                 break
         if self.idd_file == None:
             raise FileNotFoundError("Could not find EnergyPlus IDD file")
+            
+    @property
+    def is_exterior_ccw(self) -> list[bool]:
+        """
+        True if polygon exteriors are counter-clockwise
+        """
+        return self._df['polygon'].map(algs._is_exterior_ccw)
+    
+    @property
+    def is_valid(self) -> list[bool]:
+        """
+        True if the polygon column's objects are valid shapely geometries
+        """
+        return shp.is_valid(self._df['polygon'])
+    
+    @property
+    def length(self) -> int:
+        """
+        Number of data entries in this SimstockDataframe 
+        """
+        return self._df.__len__()
+    
+    @property
+    def materials(self) -> list:
+        """
+        The list of materials (in :class:`eppy.bunch_subclass.EpBunch` format)
+
+        Example
+        ~~~~~~~
+        .. code-block:: python
+
+            # Print each material's EpBunch 
+            for mat in sdf.materials:
+                print(mat)
+
+            # Change the name of the first material in the list
+            sdf.materials[0].Name = "some_new_name"
         
+        """
+        return self.settings.idfobjects["MATERIAL"]
+    
+    @property
+    def material_nomass(self) -> list:
+        """
+        The list of no-mass materials (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["MATERIAL:NOMASS"]
+    
+    @property
+    def window_material_glazing(self) -> list:
+        """
+        The list of window glazing materials (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["WINDOWMATERIAL:GLAZING"]
+    
+    @property
+    def window_material_gas(self) -> list:
+        """
+        The list of window gas layer materials (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["WINDOWMATERIAL:GAS"]
+    
+    @property
+    def constructions(self) -> list:
+        """
+        The list of constructions (in :class:`eppy.bunch_subclass.EpBunch` format)
+
+        Example
+        ~~~~~~~
+        .. code-block:: python
+
+            # Print each constructions's EpBunch 
+            for cons in sdf.sonstructions:
+                print(cons)
+
+            # Change the name of the first construction in the list
+            sdf.constructions[0].Name = "some_new_name"
+        
+        """
+        return self.settings.idfobjects["CONSTRUCTION"]
+    
+    @property
+    def schedules(self) -> list:
+        """
+        The list of schedules (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["SCHEDULE:COMPACT"]
+    
+    @property
+    def simulation_control(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the simulation control options:
+         
+        - "Do Zone Sizing Calculation", defaults to No
+        - "Do System Sizing Calculation", defaults to No
+        - "Do Plant Sizing Calculation", defaults to No
+        - "Run Simulation for Sizing Periods", defaults to No
+        - "Run Simulation for Weather File Run Periods", defaults to Yes
+        """
+        return self.settings.idfobjects["SIMULATIONCONTROL"][0]
+    
+    @property
+    def building(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the building simulation options:
+
+        - "Name", defaults to "building"
+        - "North Axis", defaults to 0
+        - "Terrain", defaults to "City"
+        - "Loads Convergence Tolerance Value", defaults to 0.04
+        - "Temperature Convergence Tolerance Value", defaults to 0.4
+        - "Solar Distribution", defaults to "FullExerior"
+        - "Maximum Number of Warmup Days", defaults to 25
+        - "Minimum Number of Warmup Days", defaults to 6
+        """
+        return self.settings.idfobjects["BUILDING"][0]
+    
+    @property
+    def shadow_calculation(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the shadow calculation options:
+
+        - "Calculation Method", defaults to "AverageOverDaysInFrequency"
+        - "Calculation Frequency", defaults to 20
+        - "Maximum Figure in Shadow Overlap Calculations", defaults to 15000
+        - "Polygon Clipping Algorithm", defaults to "SutherlandHodgman"
+        - "Sky Diffuse Mofeling Algorithm", defaults to "SimpleSkyDiffuseModeling"
+        """
+        return self.settings.idfobjects["SHADOWCALCULATION"][0]
+    
+    @property
+    def inside_convection_algorithm(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the inside surface convection algorithm, defaults to "TARP"
+        """
+        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:INSIDE"][0]
+    
+    @property
+    def outside_convection_algorithm(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the outside surface convection algorithm, defaults to "TARP"
+        """
+        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:OUTSIDE"][0]
+    
+    @property
+    def heat_balance_algorithm(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the heat balance algorithm options: 
+
+        - "Algorithm", defaults to "ConductionTransferFunction
+        - "Surface Temperature Upper Limit", defaults to 200
+        """
+        return self.settings.idfobjects["HEATBALANCEALGORITHM"][0]
+    
+    @property
+    def timestep(self) -> int:
+        """
+        The number of timesteps per hour, defaults to 4
+        """
+        return self.settings.idfobjects["TIMESTEP"][0].Number_of_Timesteps_per_Hour
+    
+    @property
+    def run_period(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing the run period options: 
+
+        - "Name", defaults to NA
+        - "Begin Month", defaults to 1
+        - "Begin Day of Month", defaults to 1
+        - "End Month", defaults to 12
+        - "End Day of Month", defaults to 31
+        - "Day of Week for Start Day", defaults to "Monday"
+        - "Use Weather File Holidays and Special Days", defaults to "Yes"
+        - "Use Weather File Daylight Saving Period", defaults to "Yes"
+        - "Apply Weekend Holiday Rule", "defaults to "No"
+        - "Use Weather File Rain Indicators", defaults to "Yes"
+        - "Use Weather File Snow Indicators", defaults to "Yes"
+        - "Number of Times Runperiod to be Repeated", defaults to 1
+        """
+        return self.settings.idfobjects["RUNPERIOD"][0]
+    
+    @property
+    def schedule_type_limits(self) -> list:
+        """
+        List of :class:`eppy.bunch_subclass.EpBunch` objects containing schedule type limits
+        """
+        return self.settings.idfobjects["SCHEDULETYPELIMITS"]
+    
+    @property
+    def schedule_constant(self) -> EpBunch:
+        """
+        :class:`eppy.bunch_subclass.EpBunch` object containing constant schedule options:
+
+        - "Name", defaults to "Always 4"
+        - "Schedule Type Limits Name", defaults to "Control Type"
+        - "Hourly Value", defauts to 4 
+        """
+        return self.settings.idfobjects["SCHEDULE:CONSTANT"][0]
+    
+    @property
+    def people(self) -> list:
+        """
+        The list of people types (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["PEOPLE"]
+    
+    @property
+    def lights(self) -> list:
+        """
+        The lighting list (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["LIGHTS"]
+    
+    @property
+    def electric_equipment(self) -> list:
+        """
+        The list of electrical equipment (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["ELECTRICEQUIPMENT"]
+        
+    @property
+    def thermostat(self) -> list:
+        """
+        The list of thermostats (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["ZONECONTROL:THERMOSTAT"]
+    
+    @property
+    def thermostat_dual_setpoint(self) -> list:
+        """
+        The list of thermostat dual set points (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["THERMOSTATSETPOINT:DUALSETPOINT"]
+    
+    @property
+    def output_variable_dictionary(self) -> EpBunch:
+        """
+        The output variable dictionary (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["OUTPUT:VARIABLEDICTIONARY"][0]
+    
+    @property
+    def output_variable(self) -> list:
+        """
+        The list of desired EnergyPlus simulation output variables (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["OUTPUT:VARIABLE"]
+    
+    @property
+    def output_diagnostics(self) -> EpBunch:
+        """
+        The EnergyPlus simulation output diagnostics (in :class:`eppy.bunch_subclass.EpBunch` format)
+        """
+        return self.settings.idfobjects["OUTPUT:DIAGNOSTICS"][0]
+    
+    def print_settings(self) -> None:
+        """
+        Function to print the entire settings in a readable format. Interally, the SimstockDataframe stores settings as an :class:`IDF` object. This function essentially displays this object. 
+
+        Example
+        ~~~~~~~
+        .. code-block:: python
+
+            # Given a simstockdataframe sdf
+            sdf.print_settings()
+
+        Idividual settings, such as ``constructions`` can be viewed and edited using the invidual settings properties, such as :py:meth:`constructions`
+        """
+        self.settings.printidf()
 
     def create_csv_folder(
             self,
-            dirname: str = "simulation_settings"
+            settings_csv_path: str = "simulation_settings"
             ) -> None:
-        
-        # Check if the direcotry already exists and delete
+        """
+        Function to create an empty directory full of csv files, into which you can add your settings. The directory will have the following structure: 
+
+        | simulation_settings/
+        | ├── DB-Fabric-CONSTRUCTION.csv
+        | ├── DB-Fabric-MATERIAL_NOMASS.csv
+        | ├── DB-Fabric-MATERIAL.csv
+        | ├── DB-Fabric-WINDOWMATERIAL_GAS.csv
+        | ├── DB-Fabric-WINDOWMATERIAL_GLAZING.csv
+        | ├── DB-HeatingCooling-OnOff.csv
+        | ├── DB-Loads-ELECTRICEQUIPMENT.csv
+        | ├── DB-Loads-LIGHTS.csv
+        | ├── DB-Loads-PEOPLE.csv
+        | ├── DB-Schedules-SCHEDULE_COMPACT.csv
+        | ├── infiltration_dict.json
+        | └── ventilation_dict.json
+
+        The :py:meth:`override_settings_with_csv` method can then be used to set the SimstockDataframe's internal settings using these csv files.
+
+        :param settings_csv_path: *Optional*. The name of the directory (including the full path from your current working directory) into which to 
+            place the csv files. Defaults to ``simulation_settings/``, which we be placed in your working directory
+        :type dirname: str
+
+        .. warning:: \ \ 
+
+            If the directory `settings_csv_path` (default: "simulation_settings/") already exists, then it will be overwritten.
+        """
+        # Check if the directory already exists and delete
         # its contents if it does, otherwise make it
-        self.settings_csv_path = os.path.join(".", dirname)
+        self.settings_csv_path = settings_csv_path
         if os.path.exists(self.settings_csv_path):
             _delete_directory_contents(self.settings_csv_path)
         else:
@@ -294,10 +694,34 @@ class SimstockDataframe:
 
 
     def override_settings_with_csv(self, **kwargs) -> None:
+        """
+        Function that reads in the settings stored in the csv files in the directory ``settings_csv_path`` (default `` simulation_settings``) and uses them to set the internal SimstockDataframe settings, such as materials etc. 
+
+        An ``FileNotFoundError`` will be raised if the ``settings_csv_path`` directory cannot be found. In this case, either call the :py:meth:`create_csv_folder` method to create it, or specify the path to one that already exists using the SimstockDataframe's ``settings_csv_path`` property. Equivalently, you could specify this as a key word argument when calling the :py:meth:`override_settings_with_csv`.
+
+        :param \**kwargs:
+            Optional keyword parameters, such as `settings_csv_path` or any of
+            the other SimstockDataframe properties
+        
+        :raises FileNotFoundError:
+            If the `settings_csv_path` does not exist or has not been specified.
+        :raises KeyError:
+            If the input csv data contains unrecognised fields. Try running :py:meth:`create_csv_folder` to generate correctly formated files.
+
+        **See also**: :py:meth:`create_csv_folder`
+
+        Example
+        ~~~~~~~
+        .. code-block:: python 
+
+            # If you already have settings csv files saved in a directory 
+            # called my_directory within your working directory, you could call:
+            sdf.override_settings_with_csv(settings_csv_path="my_directory")
+        """
         self.__dict__.update(kwargs)
         if self.settings_csv_path == None:
             msg = "No csv folder found. Call create_csv_folder() first."
-            raise AttributeError(msg)
+            raise FileNotFoundError(msg)
         _compile_csvs_to_idf(self.settings, self.settings_csv_path)
 
     
@@ -337,7 +761,7 @@ class SimstockDataframe:
 
     def _add_missing_cols(self) -> None:
         missing = []
-        for col in self.required_cols:
+        for col in self._required_cols:
             if col not in self._df.columns:
                 missing.append(col)
                 print(f"Adding missing {col} column.")
@@ -349,162 +773,15 @@ class SimstockDataframe:
     def _add_interiors_column(self) -> None:
         self._df['interiors'] = self._df['polygon'].map(algs._has_interior)
     
-    @property
-    def is_ccw(self) -> list[bool]:
-        """
-        ``property : list[bool]``
-            Are the polygon column objects counter-clockwise?
-        """
-        return shp.is_ccw(self._df['polygon'])
-    
-    @property
-    def is_exterior_ccw(self) -> list[bool]:
-        """
-        ``property : list[bool]``
-            Do the polygon column objects have 
-            counter-clockwise exteriors?
-        """
-        return self._df['polygon'].map(algs._is_exterior_ccw)
-    
-    @property
-    def is_valid(self) -> list[bool]:
-        """
-        ``property : list[bool]``
-            Are the polygon column objects valid
-            shapley objects?
-        """
-        return shp.is_valid(self._df['polygon'])
-    
-    @property
-    def length(self) -> int:
-        """
-        ``property : int``
-            The length of the columns in the 
-            dataframe.
-        """
-        return self._df.__len__()
-    
-    def print_settings(self) -> None:
-        self.settings.printidf()
-    
-    @property
-    def materials(self) -> list:
-        return self.settings.idfobjects["MATERIAL"]
-    
-    @property
-    def constructions(self) -> list:
-        return self.settings.idfobjects["CONSTRUCTION"]
-    
-    @property
-    def schedules(self) -> list:
-        return self.settings.idfobjects["SCHEDULE:COMPACT"]
-    
-    @property
-    def simulation_control(self) -> list:
-        return self.settings.idfobjects["SIMULATIONCONTROL"]
-    
-    @property
-    def building(self) -> list:
-        return self.settings.idfobjects["BUILDING"]
-    
-    @property
-    def shadow_calculation(self) -> list:
-        return self.settings.idfobjects["SHADOWCALCULATION"]
-    
-    @property
-    def inside_convection_algorith(self) -> list:
-        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:INSIDE"]
-    
-    @property
-    def outside_convection_algorith(self) -> list:
-        return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:OUTSIDE"]
-    
-    @property
-    def heat_balance_algorith(self) -> list:
-        return self.settings.idfobjects["HEATBALANCEALGORITHM"]
-    
-    @property
-    def timestep(self) -> list:
-        return self.settings.idfobjects["TIMESTEP"]
-    
-    @property
-    def run_period(self) -> list:
-        return self.settings.idfobjects["RUNPERIOD"]
-    
-    @property
-    def schedule_type_limits(self) -> list:
-        return self.settings.idfobjects["SCHEDULETYPELIMITS"]
-    
-    @property
-    def schedule_constant(self) -> list:
-        return self.settings.idfobjects["SCHEDULE:CONSTANT"]
-    
-    @property
-    def material_nomass(self) -> list:
-        return self.settings.idfobjects["MATERIAL:NOMASS"]
-    
-    @property
-    def window_material_glazing(self) -> list:
-        return self.settings.idfobjects["WINDOWMATERIAL:GLAZING"]
-    
-    @property
-    def window_material_gas(self) -> list:
-        return self.settings.idfobjects["WINDOWMATERIAL:GAS"]
-    
-    @property
-    def global_geometry_rules(self) -> list:
-        return self.settings.idfobjects["GLOBALGEOMETRYRULES"]
-    
-    @property
-    def people(self) -> list:
-        return self.settings.idfobjects["PEOPLE"]
-    
-    @property
-    def lights(self) -> list:
-        return self.settings.idfobjects["LIGHTS"]
-    
-    @property
-    def electric_equipment(self) -> list:
-        return self.settings.idfobjects["ELECTRICEQUIPMENT"]
-    
-    @property
-    def infiltration(self) -> list:
-        return self.settings.idfobjects["ZONEINFILTRATION:DESIGNFLOWRATE"]
-    
-    @property
-    def ventilation(self) -> list:
-        return self.settings.idfobjects["ZONEVENTILATION:DESIGNFLOWRATE"]
-    
-    @property
-    def thermostat(self) -> list:
-        return self.settings.idfobjects["ZONECONTROL:THERMOSTAT"]
-    
-    @property
-    def thermostat_dual_setpoint(self) -> list:
-        return self.settings.idfobjects["THERMOSTATSETPOINT:DUALSETPOINT"]
-    
-    @property
-    def output_variable_dictionaryt(self) -> list:
-        return self.settings.idfobjects["OUTPUT:VARIABLEDICTIONARY"]
-    
-    @property
-    def output_variable(self) -> list:
-        return self.settings.idfobjects["OUTPUT:VARIABLE"]
-    
-    @property
-    def output_diagnostics(self) -> list:
-        return self.settings.idfobjects["OUTPUT:DIAGNOSTICS"]
     
     def orientate_polygons(self, **kwargs) -> None:
         """
-        Function to ensure that polygon exteriors and interiors 
-        are correctly orientated clockwise/anti-clockwise.
+        Function to ensure that polygon exteriors are orientated anticlockwise
+        annd interiors clockwise. This is to ensure internal consistency.
 
-        Parameters
-        ----------
-
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
         """
         self.__dict__.update(kwargs)
         self._add_interiors_column()
@@ -514,20 +791,17 @@ class SimstockDataframe:
         """
         Function to remove duplicated coordinates from polygons, while ensuring the polygons remain valid shapely objects.
 
-        Parameters
-        ----------
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
 
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        Example
+        ~~~~~~~
+        .. code-block:: python
 
-        Usage
-        -----
-
-        ```python
-        import simstock as sim
-        sdf = sim.read_csv("path/to/file.csv")
-        sdf.remove_duplicate_coords()
-        ```
+            import simstock as sim
+            sdf = sim.read_csv("path/to/file.csv")
+            sdf.remove_duplicate_coords()
         """
         self.__dict__.update(kwargs)
         self._df['polygon'] = self._df['polygon'].map(
@@ -538,28 +812,22 @@ class SimstockDataframe:
         """
         Function that checks whether polygons are touching or interecting each other. If any intersections are detected, an error is thrown. 
 
-        This function adds an additonal column to the SimstockDataframe called ``touching``. The i^th entry in ``touching`` lists the ``osbg`` values of all polygons touching the polygon in row i.
+        This function adds an additonal column to the SimstockDataframe called ``touching``. The i\ :sup:`th` entry in ``touching`` lists the ``osbg`` values of all polygons touching the polygon in row i.
 
-        Parameters
-        ----------
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
 
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        :Raises: **ValueError**
+            - If any polygons are touching.
 
-        Raises
-        ------
+        Example
+        ~~~~~~~
+        .. code-block:: python
 
-        ``ValueError`` 
-            If any polygons are touching.
-
-        Usage
-        -----
-
-        ```python
-        import simstock as sim
-        sdf = sim.read_csv("path/to/file.csv")
-        sdf.polygon_topology()
-        ```
+            import simstock as sim
+            sdf = sim.read_csv("path/to/file.csv")
+            sdf.polygon_topology()
         """
         self.__dict__.update(kwargs)
 
@@ -593,24 +861,30 @@ class SimstockDataframe:
 
     def polygon_tolerance(self, **kwargs) -> None:
         """
-        A function to assess which polygons need simplifying, based on a user-specifed tolerance. This can be set via ``tol`` in ``kwargs``. 
+        A function to assess which polygons need simplifying, based on a user-specifed tolerance. This can be set via the `tol` property, 
+        or also via the key word arguments of this function.
+
         Simplification here means removing intermediate coordinates in 
         a shape while preserving the shapes topology. Coordinates that
         are closer together than some tolerance are candidates for removal.
 
-        This function adds a boolean column named ``simplify`` which specifies whether each polygon needs simplifying or not, based on the tolerance.
+        This function adds a boolean column named ``simplify`` which specifies whether each polygon needs simplifying or not, based on the tolerance. A value in this column will be True if the corresponding geometry contains coordinate that are closer together than tol (in metres). This is important bacause EnergyPlus requires that no two coordinates are closer together than 0.1m.
 
-        Parameters
-        ----------
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
 
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        example
+        ~~~~~~~
+        .. code-block:: python
 
-        Usage example
-        -------------
-        ```python
-        sdf.polygon_toerance(tol=0.1)
-        ```
+            # To check if any polygons have coordinates closer than 
+            # 0.2m together, first call
+            sdf.polygon_tolerance(tol=0.2)
+
+            # This will add a new column called simplify, which 
+            # can now be viewed:
+            print(sdf["simplify"])
         """
         self.__dict__.update(kwargs)
         f = lambda x: algs._poly_tol(x, self.tol)
@@ -722,13 +996,21 @@ class SimstockDataframe:
                         
     def polygon_simplification(self, **kwargs) -> None:
         """
-        Function that simplifies polygons, by e.g. exploiting transitivity of points and merging points within tolerances. 
+        Function that simplifies polygons, by e.g. exploiting transitivity of points and merging points within tolerances, such that no polygons contain coordinates closer together than ``tol``. 
 
-        Parameters
-        ----------
+        Only functions that have been marked for simplification by the 
+        :py:meth:`polygon_tolerance` function will be simplified. Therefore, 
+        :py:meth:`polygon_tolerance` must be called first.
 
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
+
+        :Raises: **KeyError**
+            - If no ``simplify`` column can be found, meaning that
+            :py:meth:`polygon_tolerance` has not yet been called.
+
+        **See also**: :py:meth:`polygon_tolerance`
         """
         self.__dict__.update(kwargs)
         while self._df['simplify'].sum() > 0:
@@ -749,11 +1031,9 @@ class SimstockDataframe:
         """
         Function that removes collinear points from polygons and determines exterior surfaces.
 
-        Parameters
-        ----------
-
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
         """
         self.__dict__.update(kwargs)
 
@@ -834,10 +1114,22 @@ class SimstockDataframe:
                 ] = horizontal
         self.processed = True
 
-    def bi_adj(self) -> None:
+    def bi_adj(self, **kwargs) -> None:
+        """
+        Function to group buildings into built islands (BIs). E.g. 
+        two semi-detatched houses in BIs. This adds a new column 
+        to the SimstockDataframe called BI, which contains unique
+        building island IDs.
 
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
+
+        :Raises: **ValueError**
+            - If building islands are unable to be resolved.
+        """
+        self.__dict__.update(kwargs)
         polygon_union = unary_union(self._df.polygon)
-
         if polygon_union.geom_type == "MultiPolygon":
             for bi in polygon_union.geoms:
                 # Get a unique name for the BI which is based on a point
@@ -857,7 +1149,7 @@ class SimstockDataframe:
                 self._df.at[row.Index, 'bi'] = bi_name
         
         if len(self._df["bi"]) != len(self._df["bi"].dropna()):
-            raise Exception("Simstock was unable to resolve all built islands. "
+            raise ValueError("Simstock was unable to resolve all built islands."
                             "It is likely that intersections are present.")
 
         try:
@@ -871,21 +1163,30 @@ class SimstockDataframe:
             
     def preprocessing(self, **kwargs) -> None:
         """
-        Function to perform default processing on the SimstockDataframe to ready it for ``IDF`` creation. 
+        Function to perform default all the necessary geometric simplification and processing on the SimstockDataframe to make it EnergyPlus compatable. Specifically this function takes ensures all the necessary conditions ar met, such as no adjacent coordinates ina polygon being closer than 0.1m together. 
 
-        This function first checks that all polygons are correctly orientated. It then proceeds to remove duplicate coordinates and simplify polygons while ensuring that polygons do not intersect each other.
+        This function calls the following functions in order: 
 
-        Parameters
-        ----------
+            1. :py:meth:`orientate_polygons`
+            2. :py:meth:`remove_duplicate_coords`
+            3. :py:meth:`polygon_topology`
+            4. :py:meth:`polygon_tolerance`
+            5. :py:meth:`polygon_simplification`
+            6. :py:meth:`polygon_topology`
+            7. :py:meth:`collinear_exterior`
+            8. :py:meth:`polygon_topology`
+            9. :py:meth:`bi_adj`
 
-        ``kwargs : dict``
-            Dictionary of key-words arguments, see Simstockbase for full list of recognised key word arguments.
+        In essence, this function first checks that all polygons are correctly orientated. It then proceeds to remove duplicate coordinates and simplify polygons while ensuring that polygons do not intersect each other.
 
-        Raises
-        ------
+        :param \**kwargs:
+            Optional keyword parameters: any of the  
+            SimstockDataframe properties
 
-        ``ValueError``
-            If polygons cannot be simplified without causing intersection.
+        .. hint:: \ \ 
+
+            You can instead call functions 1. to 9. above manually for finer grained control.
+
         """
         self.__dict__.update(kwargs)
         # Perform all of the steps,
@@ -909,138 +1210,109 @@ class IDFmanager:
     SimstockDataframe, and create an IDF file or Eppy IDF
     object for an E+ run.
 
-    Parameters
-    ----------
-    ``data : dict-like``
-        Data containing polygon and contextual information.
+    :param data:
+        The input data containing polygon information, and optionally built-island data.
+    :type data: 
+        :class:`simstock.SimstockDataframe`
+    :param min_avail_width_for_window: 
+        *Optional*. Do not place window if the wall width is less than this number
+    :type min_avail_width_for_window:
+        float, int
+    :param min_avail_height: 
+        *Optional*. Do not place window if partially exposed external wall is less than this number % of zone height
+    :type min_avail_height: 
+        float, int
+    :param out_dir:
+        *Optional*. The directory (including full file path) into which to place the EnergyPlus output files, defaults to ``outs/``
+    :type out_dir: 
+        str
+    :param bi_mode:
+        *Optional*. Whether or not to group buildings into built islands (BIs)
+    :type bi_mode: 
+        bool
+    :param data_fname: 
+        *Optional*. Unique name for this simuation project. Only necessary if you want to save the building count, in which case that information will be saved to a file called data_fname within the out_dir directory
+    :type data_fname:
+        str
+    :param save_building_count:
+        *Optional*. Whether or not to save the number of buildings being simulated to a file called data_fname within out_dir. If not data_fname is supplied, then a unique string will be generated for the file name instead
+    :type save_building_count:
+        bool
+    :param epw:
+        *Optional*. Path and file name of an epw weather file to use for the weather settings. If none is specified, the St. James's park weather data will be used instead
+    :type epw:
+        str
+    :param buffer_radius:
+        *Optional*. The distance in metres of building buffers
+    :type buffer_radius:
+        float, int
+    :param ventilation_dict:
+        *Optional*. Dictioary containing ventilation settings. If none is specified, then default settings will be used
+    :type ventilation_dict:
+        dict
+    :param infiltration_dict:
+        *Optional*. Dictionary containing infiltration settings. If none is specified, then default settings will be used
+    :type infiltration_dict:
+        dict
 
-    ``idf : IDF``
-        The IDF object containing elements for E+.
+    :raises TypeError:
+        If the input data is not of type *str*, :class:`simstock.SimstockDataframe`, or :class:`DataFrame`
+    :raises FileNotFoundError: 
+        If the input data is a file name and path, but that file cannot be found
+    :raises IOError: 
+        If the input data is a file name and path, but that file cannot be read
+    :raises SimstockException:
+        If the input data does not contain the necessary fields. (See data specification above)
 
-    ``idd_file : str = None``
-        The path to the idd_file on the user's computer.
-        If none is given, the initialiser function will
-        attempt to find one autmatically.
+    Example
+    ~~~~~~~
+    .. code-block:: python
 
-    ``ep_basic_settings : str = None``
-        The path to the idf file containing the basic settings
-        for E+. If none is given, then the system reverts to
-        the basic_settings.idf.
+        # Basic usage example
+        # given a SimstockDataframe sdf
+        simulation = sim.IDFmanager(sdf)
 
-    ``min_avail_width_for_windows : float | int = 1``
-        Windows will not be placed is wall widths are less
-        than this distance in metres.
+        # Now compute model IDFs for each built island
+        simulation.create_model_idf(bi_mode=True)
 
-    ``min_avail_height : float | int = 80``
-        Windows wil not be placed if partially exposed 
-        external wall is less than this number % of zone height.
-
-    Usage example
-    -------------
-    ```python
-    import simtock as sim
-
-    # Assuming the user has a SimstockData frame named sdf,
-    # instantiate new IDFcreator object:
-    ob = sim.IDFcreator(sdf)
-
-    # Create all necessary E+ objects:
-    # First, move all objects towards origin
-    ob.move_towards_origin()
-
-    # Create shading objects
-    ob.create_shading_objects()
+        # Run E+ simulation, this will put outputs into outs/ folder by default
+        simulation.run()
     
-    # Create thermal zones based on floor number
-    ob.create_thermal_zones()
+    
 
-    # Compute ideal load systems
-    ob.create_load_systems()
-
-    # All relevant data for an E+ run have now been created
-    # The results can be saved to a file,
-    # Or kept as an eppy idf object for further processing:
-    idf = ob.idf
-    ```
-
-    Attributes
-    ----------
-    ``is_valid : bool``
-        Are all of the necessary column names present in the 
-        input data.
-
-    ``missing_columns : list[str]``
-        List of the names of necessary columns that are 
-        not present in the input data.
-
-    See also
-    --------
-    ``SimstockDataframe``
-
-    Methods
-    -------
+    **See also**: :py:class:`SimstockDataframe`
     """
 
-    # Do not place window if the wall width is less than this number
-    min_avail_width_for_window = 1
-    # Do not place window if partially exposed external wall is less than this number % of zone height
-    min_avail_height = 80
-
-    col_names = [
+    # Required column names
+    _col_names = [
         'polygon', 'osgb', 'shading', 'height', 'wwr', 'nofloors','construction', 'interiors', 'touching', 'polygon_exposed_wall',
         'polygon_horizontal'
     ]
 
-    buffer_radius = 50
-    out_dir = "outs"
-    bi_mode = True
-    data_fname = None
-    save_building_count = False
-
     def __init__(self,
-                 data: Any,
-                 **kwargs
+                 data: SimstockDataframe,
+                 min_avail_width_for_window: Union[float, int] = 1,
+                 min_avail_height: Union[float, int] = 80,
+                 out_dir: str = "outs",
+                 bi_mode: bool = True,
+                 data_fname: str = None,
+                 save_building_count: bool = False,
+                 epw: str = None,
+                 buffer_radius: Union[float, int] = 50,
+                 ventilation_dict: dict = None, 
+                 infiltration_dict: dict = None
                  ) -> None:
         """
-        Initialisation function for the IDFcreator object.
-
-        Parameters
-        ----------
-        ``data : SimstockDataframe | DataFrame |str``
-            The input data containg geographical data.
-
-        ``kwargs``
-            Keyword arguments to set class parameters.
-
-        Raises
-        ------
-        ``TypeError``
-            If the input data is in a format that cannot be loaded.
-            The data must be either a SimstockDataframe or a Pandas
-            DataFrame, or else a filepath containing such data in
-            csv, parquet, or json format.
-
-        ``FileNotFoundError``
-            If the user specified filepath containing the 
-            data cannot be found.
-
-        ``IOError``
-            If the user has specified a file path for the data 
-            but the file does not have an appropriate extension.
-
-        ``SimstockException``
-            If the input data is missing critical values.
-
-        ``SystemError``
-            If the user's operating system environment 
-            cannot be determined.
-
-        ``Warning``
-            If the user has E+ installed correctly, but is 
-            using a Silicone Mac (M1,2) without having
-            Rosetta installed.
+        Constructor method
         """
-        self.__dict__.update(kwargs)
+
+        self.min_avail_width_for_window = min_avail_width_for_window
+        self.min_avail_height = min_avail_height
+        self.buffer_radius = buffer_radius
+        self.out_dir = out_dir
+        self.bi_mode = bi_mode
+        self.data_fname = data_fname
+        self.save_building_count = save_building_count
 
         # Try and load data from simstockdataframe
         try:
@@ -1060,7 +1332,7 @@ class IDFmanager:
             msg = (
                 "Error: the following columns are missing from the data: \n"
                 f"{self.missing_columns} \n"
-                "Please pre-process the data accordingly using Simstock."
+                "Please pre-process the data accordingly using the SimstockDataframe and its methods."
             )
             raise SimstockException(msg)
 
@@ -1071,7 +1343,7 @@ class IDFmanager:
         # Set the weather file to be the one specified in the 
         # SimstockDataframe, unless user has specified it 
         # as a keyword argument at initialisation
-        if "epw" not in kwargs:
+        if epw == None:
             self.epw = data.epw
 
         # Get simstock directory
@@ -1081,18 +1353,22 @@ class IDFmanager:
 
         # Load in the ventilation and infiltration
         # dictionaries, if now provided by user
-        if "ventilation_dict" not in kwargs:
+        if ventilation_dict == None:
             json_fname = os.path.join(
                 self.simstock_directory, "settings", "ventilation_dict.json"
                 )
             with open(json_fname, 'r') as json_file:
                 self.ventilation_dict = json.load(json_file)
-        if "infiltration_dict" not in kwargs:
+        else:
+            self.ventilation_dict = ventilation_dict
+        if infiltration_dict == None:
             json_fname = os.path.join(
                 self.simstock_directory, "settings", "infiltration_dict.json"
                 )
             with open(json_fname, 'r') as json_file:
                 self.infiltration_dict = json.load(json_file)
+        else:
+            self.infiltration_dict = infiltration_dict
 
 
     def __str__(self) -> str:
@@ -1112,20 +1388,20 @@ class IDFmanager:
         data frame from `data` and store it in 
         the IDFcreator object.
 
-        Parameters
-        ----------
-        ``data : Any``
+        :param data:
             The data that should contain somehow a dataframe.
             This data can either already be a simstock or 
             pandas data frame, or it can be a filename 
             (including path) containing such.
+        :type data: 
+            :class:`simstock.SimstockDataframe`, :class:`DataFrame`, str
 
-        Raises
-        ------
-        ``TypeError``
+        :Raises TypeError:
             If the data is an invalid format.
         """
 
+        # Extract the data frame using the appropriate
+        # method based on type
         if type(data) == SimstockDataframe:
             self._sdf_to_df(data)
         elif type(data) == DataFrame:
@@ -1161,14 +1437,14 @@ class IDFmanager:
         """
         Are all of the necessary column names present
         """
-        return all(col in self.df.columns for col in self.col_names)
+        return all(col in self.df.columns for col in self._col_names)
     
     @property
     def missing_columns(self) -> list:
         """
         Necessary column names that are missing from the data
         """
-        return list(set(self.col_names).difference(set(self.df.columns)))
+        return list(set(self._col_names).difference(set(self.df.columns)))
     
 
     def _get_osgb_value(
@@ -1187,6 +1463,44 @@ class IDFmanager:
     
 
     def create_model_idf(self, **kwargs) -> None:
+        """
+        Function to create IDF objects for each built island (if bi_mode=True), or else a single IDF for the entire model. 
+
+        Creates a new attibute called bi_idf_list containing all the created IDF objects. Each of these can be used to run a simulation.
+
+        Example
+        ~~~~~~~
+
+        .. code-block:: python
+
+            # Assuming we have a correctly processed SimstockDataframe sdf,
+            # instantiate a IDFmanager object
+            simulation = sim.IDFmanager(sdf)
+
+            # Now compute IDFs for each built island
+            simulation.create_model_idf(bi_mode=True)
+
+            # This will create a list constaining the IDFs for each BI
+            # This can be accessed via
+            idf_list = simulation.bi_idf_list
+            print(idf_list)
+
+            # Alternatively, we can create a single IDF for the whole 
+            # model using the command
+            simulation.create_model_idf(bi_mode=False)
+
+            # This will create a list of length 1 called bi_idf_list
+            # which will contain the single IDF for the model
+            # This can be accessed via
+            model_idf = simulation.bi_idf_list[0]
+
+        :param \**kwargs:
+            Optional keyword parameters, such as `bi_mode` or any of
+            the other IDFmanager properties
+
+        **See also**: :py:meth:`save_idfs` -- Used to save the IDF objects
+        """
+
         self.__dict__.update(kwargs)
 
         # Ensure unique data file name
@@ -1306,6 +1620,9 @@ class IDFmanager:
             temp_idf: IDF,
             bi_df: DataFrame
             ) -> None:
+        """
+        Internal function to create IDF objects for each built island, or for the entire model
+        """
     
         # Move all objects towards origins
         origin = bi_df['polygon'].iloc[0]
@@ -1384,7 +1701,38 @@ class IDFmanager:
 
 
     def save_idfs(self, **kwargs) -> None:
+        """
+        Function to save the IDF objects in a directory. By default, this directory will be called "outs/" and be located in the working directory. A different directory can be specified by the parameter or keyword argument "out_dir".
+
+        Each IDF object is saved in its own file within the directory, and will be named "built_island_i.idf", where "i" will be the index of each built island. If built island mode is not being used (bi_mode=False), then only a single IDF is saved. 
+
+        :param \**kwargs:
+            Optional keyword parameters, such as `out_dir` or any of
+            the other IDFmanager properties
+        
+        :raises SimstockException:
+            If no IDF objects yet exist. This is likely because 
+            :py:meth:`create_model_idf` has not yet been called
+
+
+        Example
+        ~~~~~~~
+        .. code-block:: python
+
+            # Output the idf objects to some folder of your choice
+            simulation.save_idfs(out_dir="path/to/some_folder")
+        """
+
         self.__dict__.update(kwargs)
+
+        if len(self.bi_idf_list) == 0:
+            msg = (
+                """
+                No model IDFs have been created yet.
+                Please call create_model_idf() first.
+                """
+            )
+            raise SimstockException()
 
         # Iterate over the list of idfs that have been created
         # and save each in a seperate file in out_dir
@@ -1394,6 +1742,35 @@ class IDFmanager:
     
 
     def run(self, **kwargs) -> None:
+        """
+        Function to run an EnergyPlus simulation on each of the model
+        IDF objects created by :py:meth:`create_model_idf`. The settings
+        used for the simulation will be those specified within the :class:`SimstockDataframe`.
+
+        The EnergyPlus output files resulting from the simulations will be saved into a directory. By default, this directory will be called "outs/" and be located in the working directory. A different directory can be specified by the parameter or keyword argument "out_dir". Within this directory, a further subdirectory will be made for each simulation (one per built island) containind all E+ files. Each subdirectory will be called "built_island_i_ep_outputs" where "i" will be the index of the built island. If built island mode is not being used (bi_mode=False), then only a single such subdirectory will be created. 
+
+        :param \**kwargs:
+            Optional keyword parameters, such as `out_dir` or any of
+            the other IDFmanager properties
+
+        .. code-block:: python
+
+            # Assuming creat_model_idf() has already been called to 
+            # create the model IDFs. We can check how many IDFs, 
+            # corresponding to the number of built islands there
+            # are by doing
+            no_bi = len(simulation.bi_idf_list)
+
+            # If bi_mode=False, then no_bi will equal 1. Now when we call
+            # run(), it will create no_bi subdirectories inside  out_dir 
+            # directory. E.g.
+            simulation.run() 
+
+            # This will have created, by default a directory called outs/
+            # containing at least one subdirectory containing E+ outputs
+        """
+
+
         self.__dict__.update(kwargs)
 
         # Iterate over the list of idfs that have been created
@@ -1416,36 +1793,3 @@ class IDFmanager:
             # Run energy plus
             idf.epw = self.epw
             idf.run(output_directory=new_dir_path)
-
-
-
-
-
-    
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-                                
-
-
-
-                        
-
-                        
-
-                    
-

@@ -1,39 +1,34 @@
-.. Simstock documentation master file, created by
-   sphinx-quickstart on Thu Aug 31 10:35:13 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Simstock documentation master file
 
-Simstock documentation
-======================
+.. figure:: logo.svg
+   :width: 450px
+   :height: 150px
+   :scale: 250 %
+   :alt: alternate text
+   :align: left
 
-SimStock provides a workflow for taking geographical
-and contextual data, processing it into a form compatable with EnergyPlus, and running thermal simulations. This workflow
-broadly involves three steps: geometrical pre-processing,
-followed by the creation of thermal zone object data for
-EnergyPlus, and finally the running of the simulation itself. SimStock thereby provides an intermediate
+Simstock 
+========
+
+Simstock is a python package for taking geographical
+and contextual data, processing it into a form compatible with EnergyPlus, and running thermal simulations. SimStock thereby provides an intermediate
 layer between various data types and EnergyPlus, allowing
-UBEMs to be run straightforwardly from QGIS etc.
+UBEMs to be run straightforwardly from QGIS etc. The software performs the following setps: 
 
-.. note:: \ \ 
+   1. Geometrical pre-processing. This ensures the input data is compatible with EnergyPlus.
+   2. The creation of thermal zone object data for EnergyPlus.
+   3. Running the simulation an handling the results. 
 
-   Upon public release, this documentation will be hosted online at `ReadtheDocs <https://about.readthedocs.com/>`_.
 
+Simstock is provided by  `Building Stock Lab <https://www.ucl.ac.uk/bartlett/energy/research/building-stock-lab>`_ within UCL's Bartlett Energy Institute `Bartlett Energy Institute <https://www.ucl.ac.uk/bartlett/energy/>`_.
+
+---- 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    installation
-   overview
-   devinstructions
    examples
    simstock
-   
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   devinstructions

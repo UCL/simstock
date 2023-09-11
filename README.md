@@ -1,110 +1,146 @@
 # Simstock
+
+Simstock is a python package for taking geographical
+and contextual data, processing it into a form compatible with EnergyPlus, and running thermal simulations. SimStock thereby provides an intermediate
+layer between various data types and EnergyPlus, allowing
+UBEMs to be run straightforwardly from QGIS etc. The software performs the following setps: 
+
+   1. Geometrical pre-processing. This ensures the input data is compatible with EnergyPlus.
+   2. The creation of thermal zone object data for EnergyPlus.
+   3. Running the simulation an handling the results. 
+
 ---
 
-This is the refactored core version of Simstock. User docs are available in ``docs/build/html/index.html`` (open in your web browser). 
-
-See also the ``demo.ipynb`` Jupyter notebook in this repository for an interactive demo.
-
----
 ## Installation
 
- Either ``poetry`` or ``conda`` can be used to set up the environment and manage depenencies.
+> **_NOTE:_**  Simstock requires Python 3.8 or above, as well as an EnergyPlus installation.
 
 
-> **NOTE 1:** To use Simstock, you will need to have EnergyPlus version 8.9 or above installed. This can be found on the official EnergyPlus website.
+Simstock can be installed directly from PyPI (recommended) or in developer mode by cloning this repository. 
 
-> **NOTE 2:** These installation docs will be adjusted when there is a public release, after which Simstock will be available from PyPI. After the public release, the user docs will be hosted in readthedocs.com.
+## Installing from PyPI (recommended)
 
-### via Poetry (recommended)
 
-First, ensure Poetry is installed. See [poetry homepage](https://python-poetry.org/) for an introduction to Poetry, and [poetry installation docs](https://python-poetry.org/docs/#installation) for platform specific instructions.
+After ensuring you have EnergyPlus installed, and python >= v3.8, simply run 
 
-Next, download or clone this simstock repository. Navigate into this repository and type into the command line:
-```bash
-poetry install
+``` bash
+    pip install simstock
 ```
 
-And that's it.
+in the command line.
 
+## Installing from Github (for developers)
 
+First, clone the Simstock repository from `Github <https://github.com/UCL/simstock>`_ by typing into the command line: 
 
-
-### via Conda
-
-First, ensure Conda is installed. See [Conda docs](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
-
-Next, download or clone this simstock repository. Navigate into this repository and type the commands below into the commnd line, one at a time:
-```bash
-conda env create -f environment.yaml
-conda activate simstock
+``` bash
+    git clone https://github.com/UCL/simstock.git
 ```
 
-And that's it.
+Alternatively, download the `zip <https://github.com/UCL/simstock>`_ from Github and unzip. Either way, this will create a directory called ``simstock`` with the following internal structure:
 
----
+| simstock/
+| ├── src/
+| │   └── simstock/
+| ├── README.md
+| ├── environment.yaml
+| ├── poetry.lock
+| ├── pyproject.toml
+| ├── tests/
+| └── docs/
 
-## Using Simstock
+The source code for Simstock is contained within ``src/simstock``. The ``docs`` folder contains the documentation you are currently reading. The ``tests`` folder contains unit tests that can be run with Python's unittest suite. 
 
-After activating the repository using either Poetry or Conda, Simstock can be used within python. E.g. create a python script called, say, ``example.py`` and populate it with the following code:
-```python
-import simstock as sim
+### Handling dependencies
 
-# Create test simstockdataframe
-sdf = sim.read_csv("tests/data/test_data.csv")
+
+You will need to handle the project's dependencies. This can be done either using `Poetry <https://python-poetry.org/>`_ (recommended), or Conda. This is what the ``.toml``, ``.lock`` and ``.yaml`` files are for.
+
+#### Using Poetry
+
+First, download and install Poetry on your system by following the `installation guide <https://python-poetry.org/docs/>`_. Once installed, navigate into the base of the ``simstock`` directory and type into the command line (or power shell):
+
+``` bash
+    poetry install
 ```
 
-This code can then be run from the command line via:
-```bash
-# If using poetry
-poetry run python example.py
+This installs all the requisite dependencies in a local virtual environment. You can now enter the python interactive shell using 
+
+``` bash
+    poetry run python
 ```
 
-```bash
-# If using conda
-python example.py
+To varify installation of simstock, you may then type into the python shell:
+
+``` python
+    import simstock as sim
 ```
 
-Simstock can also be run within the interactive python shell. To do this simply type into the command line:
-```bash
-poetry run python # if using poetry
-```
-or
-```bash
-python # if using conda
-```
-Within the resulting interactive python shell, you can then invoke simstock as normal:
-```python
-import simstock as sim
+Alternatively, you could create a python script called, say, ``script.py`` which should be located in the base of the ``simstock`` directory. Inside this file write
+
+``` python
+    import simstock as sim
 ```
 
-----
+This script can now be run from the command line using 
 
-Running unit tests
-------------------
+``` bash
+    poetry run python script.py
+``` 
 
-This version of simstock comes with a unit test suite, located within the ``tests/`` subdirectory. To run these tests, ensure you are in the base of the Simstock directory and run the following command: 
+Note the inclusion of the ``poetry run`` before the usual python commands.
 
-.. code-block:: bash
+#### Using Conda
 
-    poetry run python -m unittest -b -v
+First, ensure Conda is installed (see `installation guide <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_).
 
-If you are using Conda instead of Poetry, then omit the ``poetry run`` command. For more information on modifying and adding tests, consult the ``unittest`` `documentation <https://docs.python.org/3/library/unittest.html>`_.
+Navigate into the base of the ``Simstock`` directory and type the commands below into the commnd line, one at a time:
 
-Generating and modifying the docs
----------------------------------
+``` bash
+    conda env create -f environment.yaml
+    conda activate simstock
+```
 
-HTML docs are automatically generated from the docstrings within the Simstock source code. You can also include additional pages (such as this one) giving tutorials etc. 
+The interactive python shell can now be invoked simply by typing ``python`` into the command line. Inside the interactive shell, you could type
 
-To compile the docs into html, navigate into the ``docs`` subdirectory and run 
+``` python
+    import simstock as sim
+```
 
-.. code-block:: bash
+to varify the ``Simstock`` installation. Any scripts can be run by the usual python command; e.g., to run a script you have created called ``script.py``:
 
-    poetry run make clean
-    poetry run make html
+``` bash
+    python script.py
+```
 
-If not using Poetry, then omit the ``poetry run`` directives.
+--- 
 
-All pages and docstrings within the documentation must be written in ``.rst`` format. This is similar to markdown. Refer to the `rst cheatsheet <https://bashtage.github.io/sphinx-material/rst-cheatsheet/rst-cheatsheet.html>`_ for a quick guide. All documentation .rst files are contained within ``docs/source/``. To add a new page to the documentation, create a new .rst file within ``docs/source/`` and then add the file name (minus the .rst extension)  into toctree list within ``docs/source/index.rst``.
+## Usage
 
-Once compiled, the html documents can be found within ``docs/build/html``.
+Simstock is structured around two objects: the ``SimstockDataframe`` and the ``IDFmanager``. The ``SimstockDataframe`` is an extension of a `Pandas Dataframe <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>`_. It allows data to be read in from a variety of formats. It also performs geometruc simplification on the data. The ``SimstockDataframe`` also contains the EnergyPlus settings, allowing easy manipulation of materials etc. Once these settings have been set, and any geometrical simplification perfomed, the ``IDFmanager`` then creates the necessary thermal zones from the ``SimstockDataframe``. The ``IDFmanager`` can also be used to run an EnergyPlus simulation. 
+
+Below is an example of a typical Simstock work flow.
+
+``` python
+    # Import the simstock package
+    import simstock as sim
+
+    # Let's say we have some test data stored in a file called test.csv. 
+    # We can read it in as a SimstockDataframe:
+    sdf = sim.read_csv("test.csv")
+
+    # We now perform geometrical pre-processing:
+    sdf.preprocessing()
+
+    # Now create an new instance of an IDFmanager object that takes the
+    # processed SimstockDataframe as an argument:
+    simulation = sim.IDFmanager(sdf)
+
+    # Create the thermal zones necessary for EnergyPlus
+    simulation.create_model_idf()
+
+    # Run the energy plus simulation
+    simulation.run()
+```
+
 

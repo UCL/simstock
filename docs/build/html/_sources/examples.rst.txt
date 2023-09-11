@@ -79,12 +79,12 @@ If your geometry and unique ID columns are named something other than ``polygon`
 Reading different data formats
 ------------------------------
 
-SimstockDataframes can be instatiated from an already `Pandas Dataframe <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>`_, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the ``read`` functions. Below is a summary of reading different formats. 
+SimstockDataframes can be insantiated from an already `Pandas Dataframe <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>`_, a python dictionary, or another SimstockDataframe. However, SimstockDataframes can also be created directly from data files using the ``read`` functions. Below is a summary of reading different formats. 
 
 csv files
 ~~~~~~~~~
 
-SimstockDataframes can be instatiated from csv files using the ``read_csv`` function. E.g.:
+SimstockDataframes can be insantiated from csv files using the ``read_csv`` function. E.g.:
 
 .. code-block:: python 
 
@@ -95,7 +95,7 @@ The input csv must conform to the standard outlined above in the data requiremen
 Parquet files
 ~~~~~~~~~~~~~
 
-SimstockDataframes can be instatiated from parquet files using the ``read_parquet`` function. E.g.:
+SimstockDataframes can be insantiated from parquet files using the ``read_parquet`` function. E.g.:
 
 .. code-block:: python 
 
@@ -106,7 +106,7 @@ The input parquet file must conform to the standard outlined above in the data r
 json files
 ~~~~~~~~~~
 
-SimstockDataframes can be instatiated from json files using the ``read_json`` function. E.g.:
+SimstockDataframes can be insantiated from json files using the ``read_json`` function. E.g.:
 
 .. code-block:: python 
 
@@ -366,15 +366,15 @@ This will show the following information:
 .. code-block:: text 
 
     MATERIAL,
-    10mm_carpet,              !- Name
-    Rough,                    !- Roughness
-    0.01,                     !- Thickness
-    0.058,                    !- Conductivity
-    20,                       !- Density
-    1000,                     !- Specific Heat
-    0.9,                      !- Thermal Absorptance
-    0.5,                      !- Solar Absorptance
-    0.5;                      !- Visible Absorptance
+        10mm_carpet,              !- Name
+        Rough,                    !- Roughness
+        0.01,                     !- Thickness
+        0.058,                    !- Conductivity
+        20,                       !- Density
+        1000,                     !- Specific Heat
+        0.9,                      !- Thermal Absorptance
+        0.5,                      !- Solar Absorptance
+        0.5;                      !- Visible Absorptance
 
 To change this material's name from 10mm_carpet to 10mm_persian_rug, we simply do:
 
