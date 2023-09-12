@@ -1,4 +1,4 @@
-name: Build and publish simstock package
+name: Build
 
 on:
   release:

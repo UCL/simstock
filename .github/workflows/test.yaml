@@ -1,8 +1,4 @@
-# Run this job on pushes to `main`, and for pull requests. If you don't specify
-# `branches: [main], then this actions runs _twice_ on pull requests, which is
-# annoying.
-name: Run simstock unit tests
-
+name: Testing
 
 on:
   push:
@@ -15,8 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # If you wanted to use multiple Python versions, you'd have specify a matrix in the job and
-      # reference the matrixe python version here.
       - uses: actions/setup-python@v4
         with:
           python-version: 3.9
@@ -69,9 +63,7 @@ jobs:
       # they'll be installed and working.
       - run: poetry install --no-interaction
 
-      # And finally run tests. I'm using pytest and all my pytest config is in my `pyproject.toml`
-      # so this line is super-simple. But it could be as complex as you need.
-
+      # And finally run tests
       - name: Download Energy+ IDD file
         run: wget https://raw.githubusercontent.com/NREL/EnergyPlus/2ad5b542c761abde2179225b08ce7af0b94a5d3b/idd/versions/V8-9-0-Energy%2B.idd -O test.idd
 

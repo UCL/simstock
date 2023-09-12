@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "simstock"
 version = "0.1.0"
-description = "Developmental core version of the simstock model"
+description = "A Python package for building stock simulations"
 authors = [
     "Olly Smith <olly.smith@ucl.ac.uk>",
     "Ivan Korolija <i.korolija@ucl.ac.uk>",
-    "add others..."
+    "Shyam Amrith <email>"
     ]
 readme = "README.md"
 packages = [{include = "simstock", from = "src"}]
