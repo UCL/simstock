@@ -30,5 +30,7 @@ Simstock is provided by  `Building Stock Lab <https://www.ucl.ac.uk/bartlett/ene
 
    installation
    examples
+   simstockqgis
    simstock
    devinstructions
+   
