@@ -104,9 +104,9 @@ def _coords_cleaning(coords: list, remove_leave_pairs: list) -> tuple:
     Function that keeps applying radial distance simplification
     until the list of coordinates settles to a fixed state.
     """
-    coords_lenght = len(coords) + 1
-    while (len(coords) < coords_lenght) and (len(coords) > 3):
-        coords_lenght = len(coords)
+    coords_length = len(coords) + 1
+    while (len(coords) < coords_length) and (len(coords) > 3):
+        coords_length = len(coords)
         coords, r_l_pair = _radial_dist_simplify(coords, 0.1)
         if r_l_pair:
             remove_leave_pairs.append(r_l_pair)

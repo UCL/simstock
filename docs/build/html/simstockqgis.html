@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simstock QGIS Plugin Documentation &mdash; Simstock 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Simstock API docs" href="simstock.html" />
+    <link rel="prev" title="Usage and basic examples" href="examples.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Simstock
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simstock QGIS Plugin Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation-setup-and-testing">Installation, setup and testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#supported-qgis-versions">Supported QGIS versions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initial-setup">Initial setup</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#using-the-plugin">Using the plugin</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#important-notes">Important notes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#overall-workflow">Overall workflow</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-data">Input data</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#geometry">Geometry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#attribute-table-fields">Attribute table fields</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mixed-use-fields">Mixed-use fields</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#setting-the-current-working-directory-cwd">Setting the current working directory (cwd)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#what-the-cwd-is">What the cwd is</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#saving-reloading-exporting-the-database-file">Saving/reloading/exporting the database file</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#database">Database</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#what-it-contains">What it contains</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#interacting-with-the-database">Interacting with the database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id4">Schedules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mixed-use">Mixed-use</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#editing-the-database">Editing the database</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#toggling-heating-and-cooling-loads">Toggling heating and cooling loads</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#running-simstock-and-the-simulations">Running Simstock and the simulations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#built-islands">Built islands</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#re-running">Re-running</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#results">Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#config-file">Config file</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#new-layer-is-incorrectly-located-does-not-overlap-with-the-source">New layer is incorrectly located/does not overlap with the source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#python-errors">Python errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#energyplus-errors">EnergyPlus errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contact-feedback">Contact &amp; feedback</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simstock.html">Simstock API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devinstructions.html">Instructions for developers</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Simstock</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Simstock QGIS Plugin Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/simstockqgis.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="simstock-qgis-plugin-documentation">
+<h1>Simstock QGIS Plugin Documentation<a class="headerlink" href="#simstock-qgis-plugin-documentation" title="Permalink to this heading"></a></h1>
+<section id="installation-setup-and-testing">
+<span id="installation"></span><h2>Installation, setup and testing<a class="headerlink" href="#installation-setup-and-testing" title="Permalink to this heading"></a></h2>
+<section id="supported-qgis-versions">
+<h3>Supported QGIS versions<a class="headerlink" href="#supported-qgis-versions" title="Permalink to this heading"></a></h3>
+<p>The plugin has been tested on a range of QGIS versions, on both Windows and Mac operating systems. The supported versions of QGIS are any LTR (long-term release) between QGIS LTR 3.10 and the latest QGIS LTR 3.22.</p>
+<p>The non-LTR versions are likely to work too, however sometimes the Python versions and associated packages in these versions differ from the LTR versions.</p>
+</section>
+<section id="id1">
+<h3>Installation<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>The Simstock QGIS plugin is available from the official <a class="reference external" href="https://plugins.qgis.org/plugins/">QGIS Python Plugins Repository</a>. It can be installed directly in QGIS by navigating to Plugins -&gt; Manage and install plugins.</p></li>
+<li><p>Also search for ‘Plugin Reloader’ and install it.</p></li>
+<li><p>After installing these, you may need to restart QGIS.</p></li>
+<li><p>If the Simstock QGIS plugin has successfully been installed, you should be able to see it listed under the ‘Plugins’ list as well as a new icon on the toolbar.</p></li>
+<li><p>The plugin will now need to be setup - see the next section for information.</p></li>
+</ol>
+</section>
+<section id="initial-setup">
+<h3>Initial setup<a class="headerlink" href="#initial-setup" title="Permalink to this heading"></a></h3>
+<p>Before running anything, make sure that the QGIS Python Console is open as there will be outputs here that will be useful to read. It should open automatically when the plugin is launched, but if not, you can do this by clicking <strong>Plugins</strong> -&gt; <strong>Python Console</strong> in the top bar of QGIS.</p>
+<p>When the plugin is launched, you will see an <strong>Initial Setup</strong> button. This will run checks to verify that all the dependencies are working as expected.</p>
+<p>Click the <strong>Initial Setup</strong> button and watch the Python console for any errors. If any of the steps fail, they should be reported here. If all checks passed, a green success message should show up in the QGIS console. The plugin should now be fully functioning - though you may need to restart QGIS for a final time.</p>
+</section>
+</section>
+<section id="using-the-plugin">
+<span id="usingplugin"></span><h2>Using the plugin<a class="headerlink" href="#using-the-plugin" title="Permalink to this heading"></a></h2>
+<section id="important-notes">
+<h3>Important notes<a class="headerlink" href="#important-notes" title="Permalink to this heading"></a></h3>
+<p>There are some important things to note when using the plugin:</p>
+<ul class="simple">
+<li><p><strong>Python Console</strong>: When using the plugin, always have the Python console open. This will output information about what the plugin is doing. It should open by default when the plugin is launched, but if not, you can do this by clicking Plugins $rightarrow$ Python Console in the top bar of QGIS.</p></li>
+<li><p><strong>Python Errors</strong>: If an error occurs, a yellow notification appears in QGIS. The Python error can be viewed by clicking ‘Stack Trace’. This should give information about what is causing the error.</p></li>
+<li><p><strong>Plugin Reloader</strong>: Make sure the <a class="reference external" href="https://plugins.qgis.org/plugins/plugin_reloader/">Plugin Reloader</a> is also installed. The Simstock plugin will need to be reloaded after each use.</p></li>
+</ul>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-pyconsole.png"><img alt="alternate text" src="Figures/QG-pyconsole.png" style="width: 600px;" /></a>
+</figure>
+</section>
+<section id="overall-workflow">
+<h3>Overall workflow<a class="headerlink" href="#overall-workflow" title="Permalink to this heading"></a></h3>
+<p>The figure below describes the Simstock plugin workflow at a glance. Step 1 only needs to be run once, and step 2 is optional depending on your input data. For detailed descriptions of each component, see the relevant sections of the documentation.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-interface.png"><img alt="alternate text" src="Figures/QG-interface.png" style="width: 600px;" /></a>
+</figure>
+</section>
+<section id="input-data">
+<span id="id2"></span><h3>Input data<a class="headerlink" href="#input-data" title="Permalink to this heading"></a></h3>
+<p>Before the plugin is run, the input data must be prepared in such a way that Simstock can process it.</p>
+<section id="geometry">
+<h4>Geometry<a class="headerlink" href="#geometry" title="Permalink to this heading"></a></h4>
+<p>The geometry (i.e. buildings footprints) must exist as a Vector Layer. There are no requirements about where this geometry is sourced from; it can be hand-drawn or acquired from a digital source. The plugin retrieves the geometry directly from the selected layer’s feature geometries using the built-in QGIS Python API.</p>
+</section>
+<section id="attribute-table-fields">
+<h4>Attribute table fields<a class="headerlink" href="#attribute-table-fields" title="Permalink to this heading"></a></h4>
+<p>The input data for each polygon is specified via the QGIS attribute table. Simstock expects certain fields to exist here. These fields can be added to the Vector Layer by selecting the layer in the drop-down menu and clicking on the <strong>Add Fields</strong> button. This will duplicate the layer with the following fields added:</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-attrs.png"><img alt="alternate text" src="Figures/QG-attrs.png" style="width: 600px;" /></a>
+</figure>
+<p>Detailed descriptions of each attribute:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>‘<strong>UID</strong>’ - Unique identifier <em>[string]</em></dt><dd><ul>
+<li><p>An ID that is unique to each polygon. The UIDs for each polygon are automatically generated by the plugin when the ‘Add Fields’ button is pressed. <strong>The UIDs should NOT be edited.</strong></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>height</strong>’ - Building height (m) <em>[float]</em></dt><dd><ul>
+<li><p>Expressed in metres.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>shading</strong>’ <em>[boolean string]</em></dt><dd><ul>
+<li><p>FALSE - Building is included in the energy modelling.</p></li>
+<li><p>TRUE - Building is treated as a shading block. In this case, the only other attributes required for the given polygon are the UID and building height.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>wwr</strong>’ - Window-to-wall/glazing ratio (%) <em>[float]</em></dt><dd><ul>
+<li><p>The ratio between the surface area of the window to the surface area of the wall for the building. Expressed as a percentage value between 0-100.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>nofloors</strong>’ - Number of floors <em>[integer]</em></dt><dd><ul>
+<li><p>Number of floors in the building. Determines how many thermal zones are stacked vertically within the EnergyPlus model for the given polygon.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>construction</strong>’ <em>[string]</em></dt><dd><ul>
+<li><p>Used to select a construction preset from the database - explained further in the <a class="reference internal" href="#database">Database</a> section.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>glazing_const</strong>’ <em>[string]</em></dt><dd><ul>
+<li><p>Used to select a glazing construction preset from the database.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>infiltration_rate</strong>’ <em>[float]</em></dt><dd><ul>
+<li><p>Specifies the <em>infiltration rate</em> in ‘air changes per hour’ (ACH). Applies to every zone in the building.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>ventilation_rate</strong>’ <em>[float]</em></dt><dd><ul>
+<li><p>Specifies the <em>ventilation rate</em> in ‘air changes per hour’ (ACH). Applies to every zone in the building.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>‘<strong>overhang_depth</strong>’ - Shading overhang depth (m) <em>[float]</em></dt><dd><ul>
+<li><p>Allows a shading overhang to be added to each window. If left blank or at ‘0’ value, no overhangs are created. If a float value is specified, an overhang will be added to every window of the polygon with a depth of the specified amount in metres (m).</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>After these fields have been added to the layer, they need to be filled out (except for the UID).</p>
+<p>Note that the newly created layer will need to be saved. This can be done by right-clicking on the layer and selecting <em>Make Permanent</em>. QGIS will then ask in what form to save it. It is possible to append this layer to an existing Geopackage if desired.</p>
+</section>
+<section id="mixed-use-fields">
+<h4>Mixed-use fields<a class="headerlink" href="#mixed-use-fields" title="Permalink to this heading"></a></h4>
+<p>After creating and filling out these fields, more optional fields can be created to specify the use on each floor. To do this, make sure the <cite>nofloors</cite> has been entered for every non-shading polygon, then click <em>Add Fields</em> again. This will add a new  <cite>FLOOR_X: use</cite> field for every floor. The options for these fields are: <cite>Dwell</cite>, <cite>Commercial</cite>, <cite>Use3</cite> and <cite>Use4</cite>. To understand what effect these choices have, see the section on <a class="reference internal" href="#mixed-use">Mixed-use</a>.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-mixeduse.png"><img alt="alternate text" src="Figures/QG-mixeduse.png" style="width: 600px;" /></a>
+</figure>
+<p>This section has summarised the minimum input data required to run the plugin from start to finish. It is possible to specify much more detail via the database (see section <a class="reference internal" href="#database">Database</a>), however if this step is omitted then the plugin will simply use the default database settings.</p>
+</section>
+</section>
+<section id="setting-the-current-working-directory-cwd">
+<span id="cwd"></span><h3>Setting the current working directory (cwd)<a class="headerlink" href="#setting-the-current-working-directory-cwd" title="Permalink to this heading"></a></h3>
+<section id="what-the-cwd-is">
+<h4>What the cwd is<a class="headerlink" href="#what-the-cwd-is" title="Permalink to this heading"></a></h4>
+<p>The current working directory (cwd) is the folder where the project is setup and stored. The following files will be output to the cwd:</p>
+<ul class="simple">
+<li><p>The project-specific database file: <cite>Simstock-Database.gpkg</cite></p></li>
+<li><p>The generated EnergyPlus .idf files $^1$</p></li>
+<li><p>The raw EnergyPlus simulation results$^1$</p></li>
+</ul>
+<p>$^1$Since the simulation results are automatically loaded back into QGIS (as explained later), it should not be necessary to interact directly with these.</p>
+</section>
+<section id="saving-reloading-exporting-the-database-file">
+<h4>Saving/reloading/exporting the database file<a class="headerlink" href="#saving-reloading-exporting-the-database-file" title="Permalink to this heading"></a></h4>
+<p>To set the cwd, browse to the desired path using the selector box and then select the green tick button.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-cwd.png"><img alt="alternate text" src="Figures/QG-cwd.png" style="width: 300px;" /></a>
+</figure>
+<p>The project database file will be called <cite>Simstock-Database.gpkg</cite>:</p>
+<ul class="simple">
+<li><p>If this file does not exist in the cwd, it is created from defaults and saved here.</p></li>
+<li><p>If this file already exists in the cwd, it is loaded.</p></li>
+</ul>
+<p>Therefore if you want to save any changes you’ve made to the database, you can backup the <cite>Simstock-Database.gpkg</cite> file. This file, if present, will be reloaded when the cwd is set in the future. This file can also be shared with others.</p>
+</section>
+</section>
+<section id="database">
+<span id="id3"></span><h3>Database<a class="headerlink" href="#database" title="Permalink to this heading"></a></h3>
+<p>Section <a class="reference internal" href="#cwd">cwd</a> discussed how the database file is managed. This section will cover what the database is and how it can be viewed/edited.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-database1.png"><img alt="alternate text" src="Figures/QG-database1.png" style="width: 600px;" /></a>
+</figure>
+<section id="what-it-contains">
+<h4>What it contains<a class="headerlink" href="#what-it-contains" title="Permalink to this heading"></a></h4>
+<p>After the cwd has been set, a number of layers will be loaded into the QGIS project. Each layer corresponds to a different category of data required to generate the EnergyPlus models:</p>
+<ul class="simple">
+<li><p>Fabric: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#material">Materials</a></p></li>
+<li><p>Fabric: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#construction-000">Constructions</a> (arranges the materials)</p></li>
+<li><p><a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-schedules.html#schedulecompact">Schedules</a></p></li>
+<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#people">People</a></p></li>
+<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#lights-000">Lighting</a></p></li>
+<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#electricequipment">Electric equipment</a></p></li>
+<li><p>Heating + Cooling on/off toggle (explained in <a class="reference internal" href="#toggling-heating-and-cooling-loads"><span class="std std-ref">Toggling heating and cooling loads</span></a>)</p></li>
+</ul>
+<p>Each of these layers provide an easy way to interact with the EnergyPlus model objects. The structure of each layer, as well as their field names correspond to the standard EnergyPlus syntax. For the full documentation of each, see the links on each bullet point above.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-database2.png"><img alt="alternate text" src="Figures/QG-database2.png" style="width: 600px;" /></a>
+</figure>
+</section>
+<section id="interacting-with-the-database">
+<h4>Interacting with the database<a class="headerlink" href="#interacting-with-the-database" title="Permalink to this heading"></a></h4>
+<section id="viewing-the-database">
+<h5>Viewing the database<a class="headerlink" href="#viewing-the-database" title="Permalink to this heading"></a></h5>
+<p>Right-click on one of the database layers and click <em>Open Attribute Table</em>. This will display the database in Table View - see below. Each row represents an individual element and the columns represent the fields of the element. A more intuitive way to view this is to select <em>Form View</em> at the bottom-right of the window - see below.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/databaselayer1.png"><img alt="alternate text" src="Figures/databaselayer1.png" style="width: 400px;" /></a>
+</figure>
+<p>The “MATERIAL” database layer, in Table View.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/databaselayer2.png"><img alt="alternate text" src="Figures/databaselayer2.png" style="width: 400px;" /></a>
+</figure>
+<p>The same “MATERIAL” database layer, in Form View.</p>
+</section>
+<section id="using-constructions">
+<h5>Using constructions<a class="headerlink" href="#using-constructions" title="Permalink to this heading"></a></h5>
+<p>A set of default construction presets have been included with the plugin:</p>
+<ul class="simple">
+<li><p>uninsulated</p></li>
+<li><p>low</p></li>
+<li><p>medlow</p></li>
+<li><p>medhigh</p></li>
+</ul>
+<p>To select one of these constructions for a given polygon, simply enter the name (e.g. medlow) in the <em>constructions</em> field in the attribute table.</p>
+</section>
+<section id="construction-components">
+<h5>Construction components<a class="headerlink" href="#construction-components" title="Permalink to this heading"></a></h5>
+<p>Each construction is composed of separate elements which make up the construction. These are:</p>
+<ul class="simple">
+<li><p>X_wall</p></li>
+<li><p>X_roof</p></li>
+<li><p>X_ground_floor</p></li>
+</ul>
+<p>where <cite>X</cite> is a unique name. The Notes field of the database layer provides information on each element. The <cite>ceiling</cite>, <cite>ceiling_inverse`$^2$ and `partition</cite> constructions are shared by all presets.</p>
+<p>$^2$`ceiling_inverse` must be composed of the exact same material layers as <cite>ceiling</cite> but in reverse order. If there is only one material layer, it is identical to <cite>ceiling</cite>.</p>
+<p>The materials contained in the constructions can be found in the MATERIAL database. Some materials are shared amongst multiple constructions, so if you want to make a change which only affects one construction, you may have to duplicate materials. Remember to change the names to something unique and reference these in the relevant construction layer(s).</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-consts.png"><img alt="alternate text" src="Figures/QG-consts.png" style="width: 600px;" /></a>
+</figure>
+<p>If you want to add a whole new construction preset, ensure that you add all of the elements above. Also ensure that you have spelled the names of the materials correctly. To learn how to make changes to the database, see the section on  <a class="reference internal" href="#editing-the-database"><span class="std std-ref">Editing the database</span></a>.</p>
+</section>
+</section>
+<section id="id4">
+<h4>Schedules<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h4>
+<p>The following schedules exist for each use type:</p>
+<ul class="simple">
+<li><p>Y_Occ: Occupancy pattern used in ‘People’ object</p></li>
+<li><p>Y_Heat: Heating setpoint schedule</p></li>
+<li><p>Y_Cool: Cooling setpoint schedule</p></li>
+<li><p>Y_Equip: Equipment schedule used in ‘ElectricEquipment’ object</p></li>
+<li><p>Y_Light: Lighting schedule used in ‘Lights’ object</p></li>
+</ul>
+<p>Where <cite>Y</cite> is the name of a use type (explained in <a class="reference internal" href="#mixed-use">Mixed-use</a>).</p>
+</section>
+<section id="mixed-use">
+<span id="id5"></span><h4>Mixed-use<a class="headerlink" href="#mixed-use" title="Permalink to this heading"></a></h4>
+<p>It is common for buildings to have different uses on each floor; for example the ground floor may be occupied by a shop, whilst the floors above may be occupied by residential flats. These per-floor differences can be accounted for in the plugin using the mixed-use feature, as explained below.</p>
+<p>The options for floor use are: <cite>Dwell</cite>, <cite>Commercial</cite>, <cite>Use3</cite> and <cite>Use4</cite>. This is entered in the <cite>FLOOR_X: use</cite> field in the attribute table (for instructions on how to generate these fields, see the <a class="reference internal" href="#input-data"><span class="std std-ref">Input data</span></a> section). This will determine which database objects are selected for that particular floor. If the use fields are not present, <cite>Dwell</cite> will be applied to all zones. The database objects affected by this choice are:</p>
+<ul class="simple">
+<li><p>People</p></li>
+<li><p>Lights</p></li>
+<li><p>Electric equipment</p></li>
+<li><p>Schedules</p></li>
+</ul>
+<p>Each of the database layers above have unique entries for <cite>Dwell</cite>, <cite>Commercial</cite>, <cite>Use3</cite> and <cite>Use4</cite>. The latter two are placeholders for custom use types - you can edit the corresponding database objects above to create your own use types.</p>
+<p><strong>Note:</strong> The uses are fixed; they cannot be added or renamed. Instead, you can personalise the database objects belonging to <cite>Use3</cite> and <cite>Use4</cite> to create your own use types if necessary. A future planned feature is to generalise the mixed-use handling to allow more flexibility.</p>
+</section>
+<section id="editing-the-database">
+<span id="id6"></span><h4>Editing the database<a class="headerlink" href="#editing-the-database" title="Permalink to this heading"></a></h4>
+<p>Edit mode can be activated by selecting the pencil icon in the top-left corner (see figures above). You can now make edits to any of the fields in the database. <strong>When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.</strong> If yes is selected, the changes will be saved to the <cite>Simstock-Database.gpkg</cite> file within your cwd.</p>
+<p>Warning:</p>
+<ul class="simple">
+<li><p>Do not change the database layer names</p></li>
+<li><p>Do not name any other layers “DB-…”</p></li>
+<li><p>If you make edits, check for duplicates or misspellings as these will cause errors during simulation.</p></li>
+</ul>
+</section>
+<section id="toggling-heating-and-cooling-loads">
+<span id="id7"></span><h4>Toggling heating and cooling loads<a class="headerlink" href="#toggling-heating-and-cooling-loads" title="Permalink to this heading"></a></h4>
+<p>You can decide whether to turn on/off the heating and cooling setpoints before running the simulations. The database layer named <cite>DB-HeatingCooling-OnOff</cite> contains a TRUE/FALSE field which can be edited.</p>
+<ul class="simple">
+<li><p><strong>TRUE</strong> (default) - Heating and cooling are turned on. The setpoint schedules are sourced from the <cite>DB-Schedules-SCHEDULE_COMPACT</cite> layer.</p></li>
+<li><p><strong>FALSE</strong> - Heating and cooling are turned off.</p></li>
+</ul>
+<p>The name of the outputted results layer states whether heating and cooling were activated for that specific simulation.</p>
+</section>
+</section>
+<section id="running-simstock-and-the-simulations">
+<h3>Running Simstock and the simulations<a class="headerlink" href="#running-simstock-and-the-simulations" title="Permalink to this heading"></a></h3>
+<p>After the input data is setup, Simstock can be run. This will take in all the information (geometry, attribute table, database) and Simstock will produce EnergyPlus models of the area. These model idf files will be output into the cwd. The plugin will then automatically launch the EnergyPlus simulations. The results will be loaded as a new layer in QGIS. The raw results will also be output into the cwd.</p>
+<section id="built-islands">
+<h4>Built islands<a class="headerlink" href="#built-islands" title="Permalink to this heading"></a></h4>
+<p>The area is initially divided into ‘built islands’. A built island is defined as a group of buildings which are physically touching (excluding those which only share a single point). Each built island is given a unique reference number (bi_ref). In the results layer, every polygon is given a bi_ref to indicate which built island it belongs to. The bi_ref can be used to locate the relevant idf file if necessary.</p>
+</section>
+<section id="re-running">
+<h4>Re-running<a class="headerlink" href="#re-running" title="Permalink to this heading"></a></h4>
+<p>There are two things to note before re-running the plugin:</p>
+<ul class="simple">
+<li><p>The Simstock QGIS plugin will need to be reloaded (using the plugin reloader) before it can be run again.</p></li>
+<li><p>If you are editing the database between test cases, it is a good idea to make a copy of the previous database file (and give it a useful name) so that you can refer back to the setup when analysing the results.</p></li>
+</ul>
+</section>
+</section>
+<section id="results">
+<h3>Results<a class="headerlink" href="#results" title="Permalink to this heading"></a></h3>
+<p>The results will appear as a new layer in QGIS. This results layer is <strong>not</strong> saved by default. To save the layer, it must be converted from a temporary <em>scratch</em> layer into a permanent layer. This can be done by right-clicking on the layer and selecting <strong>Make Permanent</strong>. QGIS will then ask in what form to save it. It is possible to append this layer to an existing Geopackage if desired.</p>
+<p><strong>Note:</strong> Do not re-run Simstock on a results layer. It will not be able to populate result fields since they already exist. Instead, use the original layer which was used to produce the result layer.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-results1.png"><img alt="alternate text" src="Figures/QG-results1.png" style="width: 600px;" /></a>
+</figure>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-results2.png"><img alt="alternate text" src="Figures/QG-results2.png" style="width: 600px;" /></a>
+</figure>
+</section>
+<section id="config-file">
+<span id="config"></span><h3>Config file<a class="headerlink" href="#config-file" title="Permalink to this heading"></a></h3>
+<p>Certain settings can be edited in the <cite>config.json</cite> file if necessary. This can be found in the plugin directory. To locate this directory, Navigate to Settings -&gt; User Profiles -&gt; Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named <cite>python</cite>. Next, open the folder named <cite>plugins</cite> and then <cite>simstock_qgis</cite>.</p>
+<p>Currently editable fields and what they represent:</p>
+<ul class="simple">
+<li><p><strong>Low temperature threshold:</strong> Number of hours <em>below</em> this operative temperature threshold will be reported in the results (default: 18$^circ$C).</p></li>
+<li><p><strong>High temperature threshold:</strong> Number of hours <em>above</em> this operative temperature threshold will be reported in the results (default: 28$^circ$C).</p></li>
+<li><p><strong>CRS:</strong> Coordinate reference system for the current project (default: <cite>epsg:27700</cite>).</p></li>
+<li><p><strong>epw:</strong> Name of the weather file used for simulations. The specified file must be located at the base of the plugin directory (default: GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw).</p></li>
+</ul>
+<p>In the future, it is aimed to move these settings into the main plugin interface to avoid users needing to access the plugin directory and simplify the process.</p>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading"></a></h2>
+<section id="new-layer-is-incorrectly-located-does-not-overlap-with-the-source">
+<h3>New layer is incorrectly located/does not overlap with the source<a class="headerlink" href="#new-layer-is-incorrectly-located-does-not-overlap-with-the-source" title="Permalink to this heading"></a></h3>
+<p>If the new layers created by the Simstock plugin are in the wrong location, you may need to change the coordinate reference system (CRS). This can be changed in the config file; see <a class="reference internal" href="#config">Config</a>.</p>
+</section>
+<section id="python-errors">
+<h3>Python errors<a class="headerlink" href="#python-errors" title="Permalink to this heading"></a></h3>
+<p>If a Python error occurs, a yellow notification appears in QGIS. The error can be viewed by clicking <cite>Stack Trace</cite>. This will open a new window containing details about the error.</p>
+<p>Usually, the bold message at the top of the window provides a useful error message. Occasionally however, this is not so helpful and you will need to scroll down to check the later lines of the traceback.</p>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-pyerror1.png"><img alt="alternate text" src="Figures/QG-pyerror1.png" style="width: 600px;" /></a>
+</figure>
+<figure class="align-left">
+<a class="reference internal image-reference" href="Figures/QG-pyerror2.png"><img alt="alternate text" src="Figures/QG-pyerror2.png" style="width: 600px;" /></a>
+</figure>
+</section>
+<section id="energyplus-errors">
+<h3>EnergyPlus errors<a class="headerlink" href="#energyplus-errors" title="Permalink to this heading"></a></h3>
+<p>If EnergyPlus failed to complete the simulation, the plugin will halt and a Python error will be raised to inform of this. The error message should contain reference to which .idf caused the failure.</p>
+<p>To understand what the problem was, the EnergyPlus .err file needs to be checked. Within the specified cwd, a folder will exist called <cite>idf_files</cite>. In here, there will be sub-directories for each .idf, within which the EnergyPlus .err files can be found.</p>
+</section>
+</section>
+<section id="contact-feedback">
+<h2>Contact &amp; feedback<a class="headerlink" href="#contact-feedback" title="Permalink to this heading"></a></h2>
+<p>We hope you have a smooth and enjoyable experience using the Simstock QGIS plugin! If you have any feedback, issues or other comments, please email me at: <a class="reference external" href="mailto:shyam&#46;amrith&#46;14&#37;&#52;&#48;ucl&#46;ac&#46;uk">shyam<span>&#46;</span>amrith<span>&#46;</span>14<span>&#64;</span>ucl<span>&#46;</span>ac<span>&#46;</span>uk</a></p>
+</section>
+<section id="credit">
+<h2>Credit<a class="headerlink" href="#credit" title="Permalink to this heading"></a></h2>
+<p>EnergyPlus v8.9 is packaged as part of the Simstock QGIS Plugin. The official EnergyPlus website can be found here: <a class="reference external" href="https://energyplus.net/">https://energyplus.net/</a></p>
+<p>Eppy is packaged as part of the Simstock QGIS Plugin. The project’s homepage on PyPI can be found here: <a class="reference external" href="https://pypi.org/project/eppy/">https://pypi.org/project/eppy/</a></p>
+<p># TODO:</p>
+<ul class="simple">
+<li><p>Update documentation to latest plugin version</p></li>
+<li><p>Add notes to say what features are planned</p></li>
+<li><p>Adjust image sizes</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples.html" class="btn btn-neutral float-left" title="Usage and basic examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="simstock.html" class="btn btn-neutral float-right" title="Simstock API docs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
