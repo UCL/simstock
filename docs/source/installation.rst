@@ -98,6 +98,7 @@ Navigate into the base of the ``Simstock`` directory and type the commands below
 
     conda env create -f environment.yaml
     conda activate simstock
+    pip install -e .
 
 The interactive python shell can now be invoked simply by typing ``python`` into the command line. Inside the interactive shell, you could type
 
