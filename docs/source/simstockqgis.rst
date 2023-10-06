@@ -35,6 +35,7 @@ When the plugin is launched, you will see an **Initial Setup** button. This will
 
 Click the **Initial Setup** button and watch the Python console for any errors. If any of the steps fail, they should be reported here. If all checks passed, a green success message should show up in the QGIS console. The plugin should now be fully functioning - though you may need to restart QGIS for a final time.
 
+----
 
 .. _UsingPlugin:
 
@@ -50,7 +51,7 @@ There are some important things to note when using the plugin:
 * **Plugin Reloader**: Make sure the `Plugin Reloader <https://plugins.qgis.org/plugins/plugin_reloader/>`_ is also installed. The Simstock plugin will need to be reloaded after each use.
 
 .. figure:: Figures/QG-pyconsole.png
-   :width: 600px
+   :width: 720px
    :alt: alternate text
    :align: left
 
@@ -59,8 +60,20 @@ There are some important things to note when using the plugin:
 |
 |
 
-----
 
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+----
 
 Overall workflow
 ----------------
@@ -75,7 +88,19 @@ The figure below describes the Simstock plugin workflow at a glance. Step 1 only
 |
 |
 |
-
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
 ----
 
 
@@ -96,7 +121,7 @@ The input data for each polygon is specified via the QGIS attribute table. Simst
 
 
 .. figure:: Figures/QG-attrs.png
-   :width: 600px
+   :width: 720px
    :alt: alternate text
    :align: left
 
@@ -151,7 +176,7 @@ After creating and filling out these fields, more optional fields can be created
 
 
 .. figure:: Figures/QG-mixeduse.png
-   :width: 600px
+   :width: 720px
    :alt: alternate text
    :align: left
 
@@ -159,7 +184,15 @@ After creating and filling out these fields, more optional fields can be created
 |
 |
 |
-
+|
+|
+|
+|
+|
+|
+|
+|
+|
 This section has summarised the minimum input data required to run the plugin from start to finish. It is possible to specify much more detail via the database (see section Database_), however if this step is omitted then the plugin will simply use the default database settings.
 
 .. _cwd:
@@ -253,16 +286,57 @@ Viewing the database
 Right-click on one of the database layers and click *Open Attribute Table*. This will display the database in Table View - see below. Each row represents an individual element and the columns represent the fields of the element. A more intuitive way to view this is to select *Form View* at the bottom-right of the window - see below. 
 
 .. figure:: Figures/databaselayer1.png
-   :width: 400px
+   :width: 600px
    :alt: alternate text
    :align: left
+
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
 
 The "MATERIAL" database layer, in Table View.
 
 .. figure:: Figures/databaselayer2.png
-   :width: 400px
+   :width: 720px
    :alt: alternate text
    :align: left
+
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
 
 The same "MATERIAL" database layer, in Form View.
 
@@ -451,9 +525,9 @@ EnergyPlus v8.9 is packaged as part of the Simstock QGIS Plugin. The official En
 
 Eppy is packaged as part of the Simstock QGIS Plugin. The project's homepage on PyPI can be found here: https://pypi.org/project/eppy/
 
-..
-   TODO:
+.. ..
+..    TODO:
 
-* Add notes to say what features are planned
-* Do not delete use objects
-* Update interface screenshot
+.. * Add notes to say what features are planned
+.. * Do not delete use objects
+.. * Update interface screenshot

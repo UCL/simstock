@@ -67,10 +67,11 @@
 <li class="toctree-l4"><a class="reference internal" href="#saving-reloading-exporting-the-database-file">Saving/reloading/exporting the database file</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#important-config-settings">Important config settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#database">Database</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#what-it-contains">What it contains</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#interacting-with-the-database">Interacting with the database</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id4">Schedules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#schedules">Schedules</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#mixed-use">Mixed-use</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#editing-the-database">Editing the database</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#toggling-heating-and-cooling-loads">Toggling heating and cooling loads</a></li>
@@ -79,9 +80,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#running-simstock-and-the-simulations">Running Simstock and the simulations</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#built-islands">Built islands</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#re-running">Re-running</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#results">Results</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#results">Results</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#config-file">Config file</a></li>
 </ul>
 </li>
@@ -147,6 +148,7 @@
 <p>Before running anything, make sure that the QGIS Python Console is open as there will be outputs here that will be useful to read. It should open automatically when the plugin is launched, but if not, you can do this by clicking <strong>Plugins</strong> -&gt; <strong>Python Console</strong> in the top bar of QGIS.</p>
 <p>When the plugin is launched, you will see an <strong>Initial Setup</strong> button. This will run checks to verify that all the dependencies are working as expected.</p>
 <p>Click the <strong>Initial Setup</strong> button and watch the Python console for any errors. If any of the steps fail, they should be reported here. If all checks passed, a green success message should show up in the QGIS console. The plugin should now be fully functioning - though you may need to restart QGIS for a final time.</p>
+<hr class="docutils" />
 </section>
 </section>
 <section id="using-the-plugin">
@@ -155,20 +157,61 @@
 <h3>Important notes<a class="headerlink" href="#important-notes" title="Permalink to this heading"></a></h3>
 <p>There are some important things to note when using the plugin:</p>
 <ul class="simple">
-<li><p><strong>Python Console</strong>: When using the plugin, always have the Python console open. This will output information about what the plugin is doing. It should open by default when the plugin is launched, but if not, you can do this by clicking Plugins $rightarrow$ Python Console in the top bar of QGIS.</p></li>
+<li><p><strong>Python Console</strong>: When using the plugin, always have the Python console open. This will output information about what the plugin is doing. It should open by default when the plugin is launched, but if not, you can do this by clicking Plugins -&gt; Python Console in the top bar of QGIS.</p></li>
 <li><p><strong>Python Errors</strong>: If an error occurs, a yellow notification appears in QGIS. The Python error can be viewed by clicking ‘Stack Trace’. This should give information about what is causing the error.</p></li>
 <li><p><strong>Plugin Reloader</strong>: Make sure the <a class="reference external" href="https://plugins.qgis.org/plugins/plugin_reloader/">Plugin Reloader</a> is also installed. The Simstock plugin will need to be reloaded after each use.</p></li>
 </ul>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-pyconsole.png"><img alt="alternate text" src="Figures/QG-pyconsole.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-pyconsole.png"><img alt="alternate text" src="_images/QG-pyconsole.png" style="width: 720px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 </section>
+<hr class="docutils" />
 <section id="overall-workflow">
 <h3>Overall workflow<a class="headerlink" href="#overall-workflow" title="Permalink to this heading"></a></h3>
 <p>The figure below describes the Simstock plugin workflow at a glance. Step 1 only needs to be run once, and step 2 is optional depending on your input data. For detailed descriptions of each component, see the relevant sections of the documentation.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-interface.png"><img alt="alternate text" src="Figures/QG-interface.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-interface.png"><img alt="alternate text" src="_images/QG-interface.png" style="width: 600px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<hr class="docutils" />
 </section>
 <section id="input-data">
 <span id="id2"></span><h3>Input data<a class="headerlink" href="#input-data" title="Permalink to this heading"></a></h3>
@@ -181,9 +224,16 @@
 <h4>Attribute table fields<a class="headerlink" href="#attribute-table-fields" title="Permalink to this heading"></a></h4>
 <p>The input data for each polygon is specified via the QGIS attribute table. Simstock expects certain fields to exist here. These fields can be added to the Vector Layer by selecting the layer in the drop-down menu and clicking on the <strong>Add Fields</strong> button. This will duplicate the layer with the following fields added:</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-attrs.png"><img alt="alternate text" src="Figures/QG-attrs.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-attrs.png"><img alt="alternate text" src="_images/QG-attrs.png" style="width: 720px;" /></a>
 </figure>
-<p>Detailed descriptions of each attribute:</p>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
+<div class="admonition-input-data-fields admonition">
+<p class="admonition-title">Input data fields </p>
 <ul class="simple">
 <li><dl class="simple">
 <dt>‘<strong>UID</strong>’ - Unique identifier <em>[string]</em></dt><dd><ul>
@@ -257,15 +307,34 @@
 </dl>
 </li>
 </ul>
+</div>
 <p>After these fields have been added to the layer, they need to be filled out (except for the UID).</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
 <p>Note that the newly created layer will need to be saved. This can be done by right-clicking on the layer and selecting <em>Make Permanent</em>. QGIS will then ask in what form to save it. It is possible to append this layer to an existing Geopackage if desired.</p>
+</div>
 </section>
 <section id="mixed-use-fields">
 <h4>Mixed-use fields<a class="headerlink" href="#mixed-use-fields" title="Permalink to this heading"></a></h4>
 <p>After creating and filling out these fields, more optional fields can be created to specify the use on each floor. To do this, make sure the <cite>nofloors</cite> has been entered for every non-shading polygon, then click <em>Add Fields</em> again. This will add a new  <cite>FLOOR_X: use</cite> field for every floor. The options for these fields are: <cite>Dwell</cite>, <cite>Commercial</cite>, <cite>Use3</cite> and <cite>Use4</cite>. To understand what effect these choices have, see the section on <a class="reference internal" href="#mixed-use">Mixed-use</a>.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-mixeduse.png"><img alt="alternate text" src="Figures/QG-mixeduse.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-mixeduse.png"><img alt="alternate text" src="_images/QG-mixeduse.png" style="width: 720px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 <p>This section has summarised the minimum input data required to run the plugin from start to finish. It is possible to specify much more detail via the database (see section <a class="reference internal" href="#database">Database</a>), however if this step is omitted then the plugin will simply use the default database settings.</p>
 </section>
 </section>
@@ -276,16 +345,16 @@
 <p>The current working directory (cwd) is the folder where the project is setup and stored. The following files will be output to the cwd:</p>
 <ul class="simple">
 <li><p>The project-specific database file: <cite>Simstock-Database.gpkg</cite></p></li>
-<li><p>The generated EnergyPlus .idf files $^1$</p></li>
-<li><p>The raw EnergyPlus simulation results$^1$</p></li>
+<li><p>The generated EnergyPlus .idf files</p></li>
+<li><p>The raw EnergyPlus simulation results</p></li>
 </ul>
-<p>$^1$Since the simulation results are automatically loaded back into QGIS (as explained later), it should not be necessary to interact directly with these.</p>
+<p>Since the simulation results are automatically loaded back into QGIS (as explained later), it should not be necessary to interact directly with the idf files or the raw simulation results.</p>
 </section>
 <section id="saving-reloading-exporting-the-database-file">
 <h4>Saving/reloading/exporting the database file<a class="headerlink" href="#saving-reloading-exporting-the-database-file" title="Permalink to this heading"></a></h4>
 <p>To set the cwd, browse to the desired path using the selector box and then select the green tick button.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-cwd.png"><img alt="alternate text" src="Figures/QG-cwd.png" style="width: 300px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-cwd.png"><img alt="alternate text" src="_images/QG-cwd.png" style="width: 300px;" /></a>
 </figure>
 <p>The project database file will be called <cite>Simstock-Database.gpkg</cite>:</p>
 <ul class="simple">
@@ -295,27 +364,34 @@
 <p>Therefore if you want to save any changes you’ve made to the database, you can backup the <cite>Simstock-Database.gpkg</cite> file. This file, if present, will be reloaded when the cwd is set in the future. This file can also be shared with others.</p>
 </section>
 </section>
+<section id="important-config-settings">
+<span id="id3"></span><h3>Important config settings<a class="headerlink" href="#important-config-settings" title="Permalink to this heading"></a></h3>
+<p>There are two vital pieces of information that need to be specified in order for the simulations to perform correctly. These only need to be specified once and the settings will be saved, unless the project requires these to be changed.</p>
+<p>Open the <cite>config.json</cite> file by clicking on the link in the plugin interface. The following settings must be specified:</p>
+<ul class="simple">
+<li><p><strong>CRS:</strong> Coordinate reference system for the current project (default: <cite>epsg:27700</cite>).</p></li>
+<li><p><strong>epw:</strong> Name of the weather epw file used for simulations. The specified file must be located in the cwd. The epw file is a commonly used format for weather data; these can be found freely available online, covering many locations around the world.</p></li>
+</ul>
+<p>For information about the other settings in the config file, see: <a class="reference internal" href="#config"><span class="std std-ref">Config file</span></a>.</p>
+</section>
 <section id="database">
-<span id="id3"></span><h3>Database<a class="headerlink" href="#database" title="Permalink to this heading"></a></h3>
+<span id="id4"></span><h3>Database<a class="headerlink" href="#database" title="Permalink to this heading"></a></h3>
 <p>Section <a class="reference internal" href="#cwd">cwd</a> discussed how the database file is managed. This section will cover what the database is and how it can be viewed/edited.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-database1.png"><img alt="alternate text" src="Figures/QG-database1.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-database1.png"><img alt="alternate text" src="_images/QG-database1.png" style="width: 650px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 <section id="what-it-contains">
 <h4>What it contains<a class="headerlink" href="#what-it-contains" title="Permalink to this heading"></a></h4>
-<p>After the cwd has been set, a number of layers will be loaded into the QGIS project. Each layer corresponds to a different category of data required to generate the EnergyPlus models:</p>
-<ul class="simple">
-<li><p>Fabric: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#material">Materials</a></p></li>
-<li><p>Fabric: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#construction-000">Constructions</a> (arranges the materials)</p></li>
-<li><p><a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-schedules.html#schedulecompact">Schedules</a></p></li>
-<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#people">People</a></p></li>
-<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#lights-000">Lighting</a></p></li>
-<li><p>Loads: <a class="reference external" href="https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-internal-gains-people-lights-other.html#electricequipment">Electric equipment</a></p></li>
-<li><p>Heating + Cooling on/off toggle (explained in <a class="reference internal" href="#toggling-heating-and-cooling-loads"><span class="std std-ref">Toggling heating and cooling loads</span></a>)</p></li>
-</ul>
+<p>After the cwd has been set, a number of layers will be loaded into the QGIS project. Each layer corresponds to a different category of data required to generate the EnergyPlus models.</p>
 <p>Each of these layers provide an easy way to interact with the EnergyPlus model objects. The structure of each layer, as well as their field names correspond to the standard EnergyPlus syntax. For the full documentation of each, see the links on each bullet point above.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-database2.png"><img alt="alternate text" src="Figures/QG-database2.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-database2.png"><img alt="alternate text" src="_images/QG-database2.png" style="width: 600px;" /></a>
 </figure>
 </section>
 <section id="interacting-with-the-database">
@@ -324,12 +400,55 @@
 <h5>Viewing the database<a class="headerlink" href="#viewing-the-database" title="Permalink to this heading"></a></h5>
 <p>Right-click on one of the database layers and click <em>Open Attribute Table</em>. This will display the database in Table View - see below. Each row represents an individual element and the columns represent the fields of the element. A more intuitive way to view this is to select <em>Form View</em> at the bottom-right of the window - see below.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/databaselayer1.png"><img alt="alternate text" src="Figures/databaselayer1.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="_images/databaselayer1.png"><img alt="alternate text" src="_images/databaselayer1.png" style="width: 600px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 <p>The “MATERIAL” database layer, in Table View.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/databaselayer2.png"><img alt="alternate text" src="Figures/databaselayer2.png" style="width: 400px;" /></a>
+<a class="reference internal image-reference" href="_images/databaselayer2.png"><img alt="alternate text" src="_images/databaselayer2.png" style="width: 720px;" /></a>
 </figure>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+<div class="line"><br /></div>
+</div>
 <p>The same “MATERIAL” database layer, in Form View.</p>
 </section>
 <section id="using-constructions">
@@ -351,17 +470,23 @@
 <li><p>X_roof</p></li>
 <li><p>X_ground_floor</p></li>
 </ul>
-<p>where <cite>X</cite> is a unique name. The Notes field of the database layer provides information on each element. The <cite>ceiling</cite>, <cite>ceiling_inverse`$^2$ and `partition</cite> constructions are shared by all presets.</p>
-<p>$^2$`ceiling_inverse` must be composed of the exact same material layers as <cite>ceiling</cite> but in reverse order. If there is only one material layer, it is identical to <cite>ceiling</cite>.</p>
+<p>where <cite>X</cite> is a unique name. The Notes field of the database layer provides information on each element. The <cite>ceiling</cite>, <cite>ceiling_inverse</cite> and <cite>partition</cite> constructions are shared by all presets.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><cite>ceiling_inverse</cite> must be composed of the exact same material layers as <cite>ceiling</cite> but in reverse order. If there is only one material layer, it is identical to <cite>ceiling</cite>.</p>
+</div>
 <p>The materials contained in the constructions can be found in the MATERIAL database. Some materials are shared amongst multiple constructions, so if you want to make a change which only affects one construction, you may have to duplicate materials. Remember to change the names to something unique and reference these in the relevant construction layer(s).</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-consts.png"><img alt="alternate text" src="Figures/QG-consts.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-consts.png"><img alt="alternate text" src="_images/QG-consts.png" style="width: 650px;" /></a>
 </figure>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
 <p>If you want to add a whole new construction preset, ensure that you add all of the elements above. Also ensure that you have spelled the names of the materials correctly. To learn how to make changes to the database, see the section on  <a class="reference internal" href="#editing-the-database"><span class="std std-ref">Editing the database</span></a>.</p>
+</div>
 </section>
 </section>
-<section id="id4">
-<h4>Schedules<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h4>
+<section id="schedules">
+<h4>Schedules<a class="headerlink" href="#schedules" title="Permalink to this heading"></a></h4>
 <p>The following schedules exist for each use type:</p>
 <ul class="simple">
 <li><p>Y_Occ: Occupancy pattern used in ‘People’ object</p></li>
@@ -383,17 +508,20 @@
 <li><p>Schedules</p></li>
 </ul>
 <p>Each of the database layers above have unique entries for <cite>Dwell</cite>, <cite>Commercial</cite>, <cite>Use3</cite> and <cite>Use4</cite>. The latter two are placeholders for custom use types - you can edit the corresponding database objects above to create your own use types.</p>
-<p><strong>Note:</strong> The uses are fixed; they cannot be added or renamed. Instead, you can personalise the database objects belonging to <cite>Use3</cite> and <cite>Use4</cite> to create your own use types if necessary. A future planned feature is to generalise the mixed-use handling to allow more flexibility.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The uses are fixed; they cannot be added or renamed. Instead, you can personalise the database objects belonging to <cite>Use3</cite> and <cite>Use4</cite> to create your own use types if necessary. A future planned feature is to generalise the mixed-use handling to allow more flexibility.</p>
+</div>
 </section>
 <section id="editing-the-database">
 <span id="id6"></span><h4>Editing the database<a class="headerlink" href="#editing-the-database" title="Permalink to this heading"></a></h4>
 <p>Edit mode can be activated by selecting the pencil icon in the top-left corner (see figures above). You can now make edits to any of the fields in the database. <strong>When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.</strong> If yes is selected, the changes will be saved to the <cite>Simstock-Database.gpkg</cite> file within your cwd.</p>
-<p>Warning:</p>
-<ul class="simple">
-<li><p>Do not change the database layer names</p></li>
-<li><p>Do not name any other layers “DB-…”</p></li>
-<li><p>If you make edits, check for duplicates or misspellings as these will cause errors during simulation.</p></li>
-</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>*  Do not change the database layer names
+*  Do not name any other layers “DB-…”
+*  If you make edits, check for duplicates or misspellings as these will cause errors during simulation.</p>
+</div>
 </section>
 <section id="toggling-heating-and-cooling-loads">
 <span id="id7"></span><h4>Toggling heating and cooling loads<a class="headerlink" href="#toggling-heating-and-cooling-loads" title="Permalink to this heading"></a></h4>
@@ -420,28 +548,36 @@
 <li><p>If you are editing the database between test cases, it is a good idea to make a copy of the previous database file (and give it a useful name) so that you can refer back to the setup when analysing the results.</p></li>
 </ul>
 </section>
-</section>
 <section id="results">
-<h3>Results<a class="headerlink" href="#results" title="Permalink to this heading"></a></h3>
+<h4>Results<a class="headerlink" href="#results" title="Permalink to this heading"></a></h4>
 <p>The results will appear as a new layer in QGIS. This results layer is <strong>not</strong> saved by default. To save the layer, it must be converted from a temporary <em>scratch</em> layer into a permanent layer. This can be done by right-clicking on the layer and selecting <strong>Make Permanent</strong>. QGIS will then ask in what form to save it. It is possible to append this layer to an existing Geopackage if desired.</p>
-<p><strong>Note:</strong> Do not re-run Simstock on a results layer. It will not be able to populate result fields since they already exist. Instead, use the original layer which was used to produce the result layer.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Do not re-run Simstock on a results layer. It will not be able to populate result fields since they already exist. Instead, use the original layer which was used to produce the result layer.</p>
+</div>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-results1.png"><img alt="alternate text" src="Figures/QG-results1.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-results1.png"><img alt="alternate text" src="_images/QG-results1.png" style="width: 650px;" /></a>
 </figure>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-results2.png"><img alt="alternate text" src="Figures/QG-results2.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-results2.png"><img alt="alternate text" src="_images/QG-results2.png" style="width: 650px;" /></a>
 </figure>
+</section>
 </section>
 <section id="config-file">
 <span id="config"></span><h3>Config file<a class="headerlink" href="#config-file" title="Permalink to this heading"></a></h3>
-<p>Certain settings can be edited in the <cite>config.json</cite> file if necessary. This can be found in the plugin directory. To locate this directory, Navigate to Settings -&gt; User Profiles -&gt; Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named <cite>python</cite>. Next, open the folder named <cite>plugins</cite> and then <cite>simstock_qgis</cite>.</p>
-<p>Currently editable fields and what they represent:</p>
+<p>Certain settings can be edited in the <cite>config.json</cite> file if necessary. Some of thee have already been mentioned in the section on <a class="reference internal" href="#important-config-settings"><span class="std std-ref">Important config settings</span></a>, however for completeness they are listed here again.</p>
+<blockquote>
+<div><p>The config file can be accessed by clicking the link in the plugin interface. If this does not work, you can navigate manually to the plugin directory. To locate this directory, go to Settings -&gt; User Profiles -&gt; Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named <cite>python</cite>. Next, open the folder named <cite>plugins</cite> and then <cite>simstock_qgis</cite>. You should see the <cite>config.json</cite> file in this folder.</p>
+</div></blockquote>
+<div class="admonition-editable-config-settings-currently-editable-fields-and-what-they-represent admonition">
+<p class="admonition-title">Editable config settings Currently editable fields and what they represent:</p>
 <ul class="simple">
-<li><p><strong>Low temperature threshold:</strong> Number of hours <em>below</em> this operative temperature threshold will be reported in the results (default: 18$^circ$C).</p></li>
-<li><p><strong>High temperature threshold:</strong> Number of hours <em>above</em> this operative temperature threshold will be reported in the results (default: 28$^circ$C).</p></li>
+<li><p><strong>Low temperature threshold:</strong> Number of hours <em>below</em> this operative temperature threshold will be reported in the results (default: 18C).</p></li>
+<li><p><strong>High temperature threshold:</strong> Number of hours <em>above</em> this operative temperature threshold will be reported in the results (default: 28C).</p></li>
 <li><p><strong>CRS:</strong> Coordinate reference system for the current project (default: <cite>epsg:27700</cite>).</p></li>
-<li><p><strong>epw:</strong> Name of the weather file used for simulations. The specified file must be located at the base of the plugin directory (default: GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw).</p></li>
+<li><p><strong>epw:</strong> Name of the weather file used for simulations. The specified file must be located in the cwd.</p></li>
 </ul>
+</div>
 <p>In the future, it is aimed to move these settings into the main plugin interface to avoid users needing to access the plugin directory and simplify the process.</p>
 </section>
 </section>
@@ -456,10 +592,10 @@
 <p>If a Python error occurs, a yellow notification appears in QGIS. The error can be viewed by clicking <cite>Stack Trace</cite>. This will open a new window containing details about the error.</p>
 <p>Usually, the bold message at the top of the window provides a useful error message. Occasionally however, this is not so helpful and you will need to scroll down to check the later lines of the traceback.</p>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-pyerror1.png"><img alt="alternate text" src="Figures/QG-pyerror1.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-pyerror1.png"><img alt="alternate text" src="_images/QG-pyerror1.png" style="width: 600px;" /></a>
 </figure>
 <figure class="align-left">
-<a class="reference internal image-reference" href="Figures/QG-pyerror2.png"><img alt="alternate text" src="Figures/QG-pyerror2.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="_images/QG-pyerror2.png"><img alt="alternate text" src="_images/QG-pyerror2.png" style="width: 600px;" /></a>
 </figure>
 </section>
 <section id="energyplus-errors">
@@ -476,12 +612,6 @@
 <h2>Credit<a class="headerlink" href="#credit" title="Permalink to this heading"></a></h2>
 <p>EnergyPlus v8.9 is packaged as part of the Simstock QGIS Plugin. The official EnergyPlus website can be found here: <a class="reference external" href="https://energyplus.net/">https://energyplus.net/</a></p>
 <p>Eppy is packaged as part of the Simstock QGIS Plugin. The project’s homepage on PyPI can be found here: <a class="reference external" href="https://pypi.org/project/eppy/">https://pypi.org/project/eppy/</a></p>
-<p># TODO:</p>
-<ul class="simple">
-<li><p>Update documentation to latest plugin version</p></li>
-<li><p>Add notes to say what features are planned</p></li>
-<li><p>Adjust image sizes</p></li>
-</ul>
 </section>
 </section>
 
