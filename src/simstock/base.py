@@ -257,12 +257,10 @@ class SimstockDataframe:
 
         #: idd file name and full path
         if idd_file is not None:
-            self.idd_file: str = idd_file
+            self._idd_file: str = idd_file
         elif os.environ.get('IDD_FILE'):
             self.idd_file = os.environ.get('IDD_FILE')
-
-        # Set idd file id not already specified
-        if self.idd_file is None:
+        elif idd_file is None:
             # Determine OS
             opsys = platform.system().casefold()
             if opsys not in ["windows", "darwin", "linux"]:
@@ -276,7 +274,7 @@ class SimstockDataframe:
         self.simstock_directory = os.path.dirname(absolute_file_path)
 
         # Set default settings
-        IDF.setiddname(self.idd_file)
+        IDF.setiddname(self._idd_file)
         if use_base_idf:
             self.settings = IDF(
             os.path.join(self.simstock_directory, "settings", "base.idf")
@@ -376,9 +374,9 @@ class SimstockDataframe:
             # Use glob to handle pattern matching for version number
             matches = glob.glob(path)
             if matches:
-                self.idd_file = matches[0]
+                self._idd_file = matches[0]
                 break
-        if self.idd_file == None:
+        if self._idd_file == None:
             raise FileNotFoundError("Could not find EnergyPlus IDD file")
             
     @property
