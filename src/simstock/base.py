@@ -259,7 +259,7 @@ class SimstockDataframe:
         if idd_file is not None:
             self._idd_file: str = idd_file
         elif os.environ.get('IDD_FILE'):
-            self.idd_file = os.environ.get('IDD_FILE')
+            self._idd_file = os.environ.get('IDD_FILE')
         elif idd_file is None:
             # Determine OS
             opsys = platform.system().casefold()
