@@ -489,7 +489,7 @@ def _adiabatic_roof(
     ceiling_coordinates_list = calgs._coordinates_add_height(
         ceiling_height, horizontal_surface_coordinates)
     coordinates_list = _idf_ceiling_coordinates_list(ceiling_coordinates_list)
-    surface_name = polygon_name + '_AdiabaticRoof'
+    surface_name = str(polygon_name) + '_AdiabaticRoof'
     for coordinates in coordinates_list:
         _shading_building_detailed(idf, surface_name, coordinates)
     return
@@ -553,7 +553,7 @@ def adiabatic_walls(
                 ceil_coord[i + 1], ceil_coord[i], floor_coord[i])
             # Generate the name form polygon name, wall name and centre
             # coordinate
-            surface_name = polygon_name + '_' + wall_name + '_' + wcc
+            surface_name = str(polygon_name) + '_' + str(wall_name) + '_' + str(wcc)
             # Generate wall coordinates in format used by energyplus
             coordinates = _idf_wall_coordinates(i, ceil_coord, floor_coord)
             # Creates shading elements which represent the adiabatic
@@ -716,7 +716,7 @@ def floor(
     # below name appended with '_Ceiling' string
     else:
         outside_boundary_condition = 'Surface'
-        outside_boundary_condition_object = space_below_floor + '_Ceiling'
+        outside_boundary_condition_object = str(space_below_floor) + '_Ceiling'
     # Append the floor horizontal coordinates with the height
     floor_coordinates_list = calgs._coordinates_add_height(
         floor_height, horizontal_surface_coordinates)
@@ -748,7 +748,7 @@ def _roof_ceiling(
     # condition to the 'Outdoors'
     if space_above_floor == 'Outdoors':
         # Surface name made of the zone name appended with '_Roof' string
-        surface_name = zone_name + '_Roof'
+        surface_name = str(zone_name) + '_Roof'
         # Surface type; sun exposure; wind exposure
         surface_type = 'Roof'
         sun_exposure = 'SunExposed'
@@ -757,7 +757,7 @@ def _roof_ceiling(
         outside_boundary_condition_object = ''
     else:
         # Surface name made of the zone name appended with '_Ceiling' string
-        surface_name = zone_name + '_Ceiling'
+        surface_name = str(zone_name) + '_Ceiling'
         # Surface type; sun exposure; wind exposure
         surface_type = 'Ceiling'
         sun_exposure = 'NoSun'
@@ -766,7 +766,7 @@ def _roof_ceiling(
         # boundary condition object to the zone above name appended with
         # '_Floor' string
         outside_boundary_condition = 'Surface'
-        outside_boundary_condition_object = space_above_floor + '_Floor'
+        outside_boundary_condition_object = str(space_above_floor) + '_Floor'
     # Append the roof/ceiling horizontal coordinates with the height
     ceiling_coordinates_list = calgs._coordinates_add_height(
         ceiling_height, horizontal_surface_coordinates)
@@ -818,7 +818,7 @@ def _overhang(
     if isinstance(depth, float) or isinstance(depth, int):
         if depth > 0:
             idf.newidfobject('SHADING:OVERHANG',
-                            Name=window_name+"_Overhang",
+                            Name=str(window_name)+"_Overhang",
                             Window_or_Door_Name=window_name,
                             Height_above_Window_or_Door=0.0,
                             Tilt_Angle_from_WindowDoor=90.0,
@@ -869,7 +869,7 @@ def _external_walls(
                 ceil_coord[i + 1], ceil_coord[i], floor_coord[i])
             # Generate the surface name form zone name, '_Wall_' string and
             # centre coordinate
-            surface_name = zone_name + '_Wall_' + wcc
+            surface_name =str(zone_name) + '_Wall_' + str(wcc)
             # Generate wall coordinates in format used by energyplus
             coordinates = _idf_wall_coordinates(i, ceil_coord, floor_coord)
             # Creates building surface detailed element which represent wall
@@ -894,7 +894,7 @@ def _external_walls(
                 z = (h - wh) / 2
                 # Window name made from the surface name appended with
                 # the '_Window' string
-                win_surface_name = surface_name + '_Window'
+                win_surface_name = str(surface_name) + '_Window'
                 # Base surface name
                 building_surface_name = surface_name
                 # Coordinates converted into strings
@@ -947,7 +947,7 @@ def _partition_walls(
                 ceil_coord[i + 1], ceil_coord[i], floor_coord[i])
             # Generate the surface name form zone name, '_Part_' string,
             # opposite zone name and centre coordinate
-            surface_name = zone_name + '_Part_' + opposite_zone + '_' + wcc
+            surface_name = str(zone_name) + '_Part_' + str(opposite_zone) + '_' + str(wcc)
             # Generate wall coordinates in format used by energyplus
             coordinates = _idf_wall_coordinates(i, ceil_coord, floor_coord)
             # Creates partition building surface detailed element

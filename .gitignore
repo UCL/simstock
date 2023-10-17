@@ -37,3 +37,17 @@ db.sqlite3-journal
 
 # E+ data 
 src/simstock/idf_files
+
+# Ignore any local jupyter notebooks
+# (I tend to use these for experimenting with the code
+# during development)
+*.ipynb
+
+# Local simulation data
+data/
+
+# Other files used for testing
+processed_croydon.csv
+simstock_v2_pt2_selection_202203170624.csv
+processed_sdf
+model_idfs/

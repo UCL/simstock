@@ -3,7 +3,6 @@ Plotting module containing routines for plotting
 basic geometries.
 """
 
-from functools import singledispatch
 from typing import Any, Union
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,7 +13,8 @@ from matplotlib.axes._axes import Axes
 from shapely.geometry import (
     Polygon,
     Point,
-    LineString
+    LineString,
+    MultiPolygon
 )
 from pandas.core.series import Series
 from pandas.core.frame import DataFrame
@@ -123,9 +123,6 @@ def _plot_geometries(geoms: list, **kwargs) -> Axes:
     """
     Function that takes a list of shapely geometries, 
     and plots each of them togther in a single plot.
-
-    This is utility function, not designed to be exposed
-    to the user API.
     """
 
     # If a matplotlib axis object has already been
@@ -154,35 +151,28 @@ def _plot_geometries(geoms: list, **kwargs) -> Axes:
     ax.set_yticks([])
     return ax
 
-
-@singledispatch
-def _plot_geometry(geom: Any, _: Axes):
+def _plot_geometry(geom: Any, ax: Axes, **kwargs) -> None:
     """
-    Function to plot an individual shapely geometry.
-    Each type of geometry (Point, Polygon, LineString)
-    needs to be plotted differently. To handle this, this
-    function is overloaded using singledispatch to accept
-    each of these three types.
-
-    This is utility function, not designed to be exposed
-    to the user API.
+    Function that takes a shapely geometry, finds its type, 
+    and assigns it to the appropriate plotting function.
     """
 
-    # If geom is not of a type for which an overloaded
-    # function definition is given, then this
-    # code will be reached, giving a type error.
-    msg = f"Type: {type(geom)} cannot be used with function plot_geometry()"
-    raise TypeError(msg)
+    if isinstance(geom, Polygon):
+        _plot_polygon(geom, ax, **kwargs)
+    elif isinstance(geom, Point):
+        _plot_point(geom, ax, **kwargs)
+    elif isinstance(geom, LineString):
+        _plot_linestring(geom, ax, **kwargs)
+    elif isinstance(geom, MultiPolygon):
+        _plot_multipolygon(geom, ax, **kwargs)
+    else:
+        raise TypeError(f"Could not plot {type(geom)}")
 
 
-@_plot_geometry.register
-def _(geom: Polygon, ax: Axes, **kwargs) -> PatchCollection:
+
+def _plot_polygon(geom: Polygon, ax: Axes, **kwargs) -> None:
     """
-    Overloaded Polygon implementation of the
-    _plot_geometry function.
-
-    This is utility function, not designed to be exposed
-    to the user API.
+    Function to plot a polygon to ax
     """
     path = Path.make_compound_path(
         Path(np.asarray(geom.exterior.coords)[:, :2]),
@@ -191,28 +181,25 @@ def _(geom: Polygon, ax: Axes, **kwargs) -> PatchCollection:
     collection = PatchCollection([patch], **kwargs)
     ax.add_collection(collection, autolim=True)
     ax.autoscale_view()
-    return collection
 
-
-@_plot_geometry.register
-def _(geom: Point, ax: Axes, **kwargs) -> None:
+def _plot_point(geom: Point, ax: Axes, **kwargs) -> None:
     """
-    Overloaded Point implementation of the
-    _plot_geometry function.
-
-    This is utility function, not designed to be exposed
-    to the user API.
+    Function to plot a point to ax
     """
     ax.plot(geom.x, geom.y, **kwargs)
 
 
-@_plot_geometry.register
-def _(geom: LineString, ax: Axes, **kwargs) -> None:
+def _plot_linestring(geom: LineString, ax: Axes, **kwargs) -> None:
     """
-    Overloaded LineString implementation of the
-    _plot_geometry function.
-
-    This is utility function, not designed to be exposed
-    to the user API.
+    Function to plot a linestring to ax
     """
     ax.plot(*geom.xy, **kwargs)
+
+def _plot_multipolygon(geom: MultiPolygon, ax: Axes, **kwargs) -> None:
+    """
+    Function to plot as multipolygon to ax
+    """
+    for p in list(geom.geoms):
+        _plot_geometry(p, ax, **kwargs)
+
+

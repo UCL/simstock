@@ -317,6 +317,9 @@ class SimstockDataframe:
         # Check that the polygon column exists
         self._validate_polygon_column() 
 
+        # Check for any multipolygons with length > 1
+        self._check_for_multipolygons()
+
         # Add any missing columns
         self._add_missing_cols()
 
@@ -401,6 +404,16 @@ class SimstockDataframe:
         return self._df.__len__()
     
     @property
+    def built_islands(self) -> int:
+        """
+        The number of built islands
+        """
+        try:
+            return len(self._df["bi"].unique())
+        except KeyError:
+            return 0
+    
+    @property
     def materials(self) -> list:
         """
         The list of materials (in :class:`eppy.bunch_subclass.EpBunch` format)
@@ -479,6 +492,10 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["SIMULATIONCONTROL"][0]
     
+    @simulation_control.setter
+    def simulation_control(self, new_controls: EpBunch) -> None:
+        self.settings.idfobjects["SIMULATIONCONTROL"][0] = new_controls
+    
     @property
     def building(self) -> EpBunch:
         """
@@ -495,6 +512,10 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["BUILDING"][0]
     
+    @building.setter
+    def simulation_control(self, new_building: EpBunch) -> None:
+        self.settings.idfobjects["BUILDING"][0] = new_building
+    
     @property
     def shadow_calculation(self) -> EpBunch:
         """
@@ -508,6 +529,10 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["SHADOWCALCULATION"][0]
     
+    @shadow_calculation.setter
+    def shadow_calculation(self, new_shadow_cals: EpBunch) -> None:
+        self.settings.idfobjects["SHADOWCALCULATION"][0] = new_shadow_cals
+    
     @property
     def inside_convection_algorithm(self) -> EpBunch:
         """
@@ -515,12 +540,24 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:INSIDE"][0]
     
+    @inside_convection_algorithm.setter
+    def inside_convection_algorithm(
+        self, new_inside_convection_alg: EpBunch
+        ) -> None:
+        self.settings.idfobjects["SURFACECONVECTIONALGORITHM:INSIDE"][0] = new_inside_convection_alg
+    
     @property
     def outside_convection_algorithm(self) -> EpBunch:
         """
         :class:`eppy.bunch_subclass.EpBunch` object containing the outside surface convection algorithm, defaults to "TARP"
         """
         return self.settings.idfobjects["SURFACECONVECTIONALGORITHM:OUTSIDE"][0]
+    
+    @outside_convection_algorithm.setter
+    def outside_convection_algorithm(
+        self, new_outside_convection_alg: EpBunch
+        ) -> None:
+        self.settings.idfobjects["SURFACECONVECTIONALGORITHM:OUTSIDE"][0] = new_outside_convection_alg
     
     @property
     def heat_balance_algorithm(self) -> EpBunch:
@@ -532,12 +569,20 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["HEATBALANCEALGORITHM"][0]
     
+    @heat_balance_algorithm.setter
+    def heat_balance_algorithm(self, new_heat_alg: EpBunch) -> None:
+        self.settings.idfobjects["HEATBALANCEALGORITHM"][0] = new_heat_alg
+    
     @property
     def timestep(self) -> int:
         """
         The number of timesteps per hour, defaults to 4
         """
         return self.settings.idfobjects["TIMESTEP"][0].Number_of_Timesteps_per_Hour
+    
+    @timestep.setter
+    def timestep(self, new_timestep: int) -> None:
+        self.settings.idfobjects["TIMESTEP"][0].Number_of_Timesteps_per_Hour = new_timestep
     
     @property
     def run_period(self) -> EpBunch:
@@ -559,6 +604,10 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["RUNPERIOD"][0]
     
+    @run_period.setter
+    def run_period(self, new_run_period: EpBunch) -> None:
+        self.settings.idfobjects["RUNPERIOD"][0] = new_run_period
+    
     @property
     def schedule_type_limits(self) -> list:
         """
@@ -576,6 +625,10 @@ class SimstockDataframe:
         - "Hourly Value", defauts to 4 
         """
         return self.settings.idfobjects["SCHEDULE:CONSTANT"][0]
+    
+    @schedule_constant.setter
+    def schedule_constant(self, new_schedule_constant: EpBunch) -> None:
+        self.settings.idfobjects["SCHEDULE:CONSTANT"][0] = new_schedule_constant
     
     @property
     def people(self) -> list:
@@ -619,6 +672,10 @@ class SimstockDataframe:
         """
         return self.settings.idfobjects["OUTPUT:VARIABLEDICTIONARY"][0]
     
+    @output_variable_dictionary.setter
+    def output_variable_dictionary(self, new_out_dict: EpBunch) -> None:
+        self.settings.idfobjects["OUTPUT:VARIABLEDICTIONARY"][0] = new_out_dict
+    
     @property
     def output_variable(self) -> list:
         """
@@ -632,6 +689,10 @@ class SimstockDataframe:
         The EnergyPlus simulation output diagnostics (in :class:`eppy.bunch_subclass.EpBunch` format)
         """
         return self.settings.idfobjects["OUTPUT:DIAGNOSTICS"][0]
+    
+    @output_diagnostics.setter
+    def output_diagnostics(self, new_out_diags: EpBunch) -> None:
+        self.settings.idfobjects["OUTPUT:DIAGNOSTICS"][0] = new_out_diags
     
     def print_settings(self) -> None:
         """
@@ -787,6 +848,38 @@ class SimstockDataframe:
         self.__dict__.update(kwargs)
         self._add_interiors_column()
         self._df['polygon'] = self._df['polygon'].map(algs._orientate)
+
+
+    def _check_for_multipolygons(self) -> None:
+        """
+        Hand-drawn polygons can be multipolygons with len 1, i.e. a nested
+        polygon within a multipolygon wrapper. This aims to extract them,
+        and catch cases where there are true multipolygons that have length
+        of more than 1. 
+        """
+
+        # Convert any multipolygons of length 1 into regular polygons
+        # if this cant be done, then it must be a non-trivial
+        # multipolygon that needs fixing. A new flag column
+        # keeps track of which things are true multi-polygons
+        # (will equal True if so)
+        self._df[["flag", "polygon"]] = self._df["polygon"].apply(
+            algs._check_for_multi
+            ).apply(pd.Series)
+        
+        # If there are no non-trivial multipolygons, then we are
+        # done here and just drop the flag column
+        if not self._df["flag"].any():
+            self._df.drop("flag", axis=1, inplace=True)
+            return
+
+        # Extract "osgb" values for entries with multiple polygons
+        multipoly_osgb = self._df[self._df["flag"]]["osgb"].tolist()
+        print("Error: The following entries are MultiPolygons:")
+        for poly in multipoly_osgb:
+            print(poly)
+        raise TypeError(f"There are {len(multipoly_osgb)} MultiPolygons.")
+
 
     def remove_duplicate_coords(self, **kwargs) -> None:
         """

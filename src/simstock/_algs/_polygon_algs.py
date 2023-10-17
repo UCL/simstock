@@ -15,13 +15,36 @@ from shapely.geometry import (
     Polygon, 
     LinearRing,
     LineString,
-    MultiLineString
+    MultiLineString,
+    MultiPolygon
 )
 from pandas.core.frame import DataFrame
 import simstock._algs._coords_algs as calgs
 from simstock._utils._serialisation import _load_gdf
 from shapely.wkt import loads
 from shapely.ops import unary_union
+
+
+def _check_for_multi(
+        polygon: Union[Polygon, MultiPolygon]
+        ) -> tuple[bool, Polygon]:
+    """
+    Hand-drawn polygons can be multipolygons with len 1, i.e. a nested 
+    polygon within a multipolygon wrapper. This aims to extract them.
+
+    This function takes a shapely object and returns a bool (indicating if
+    the object is a non-trivial multipolygon) and a shapely object. This 
+    object will be a polygon, if one could be successfully extracted, or
+    it will be a multipolygon if is a multipolgon containing more 
+    that one polygons. A True value for the boolean flag indicates
+    a multipolygon object has been found.
+    """
+    if isinstance(polygon, MultiPolygon):
+        if len(list(polygon.geoms)) == 1:
+            return (False, list(polygon.geoms)[0])
+        else:
+            return (True, polygon)
+    return (False, polygon)
 
 
 def _shading_buffer(
@@ -246,13 +269,13 @@ def _update_polygon(polygon: Polygon, points_to_remove: list) -> Polygon:
 
 def _update_exposed(exposed_ring, points_to_remove):
     """
-    Function that takes an exposed ting and returns it once 
+    Function that takes an exposed ring and returns it once 
     all of the coordinates from the points_to_remove
     list have been removed.
     """
     if exposed_ring.geom_type == 'MultiLineString':
         new_ms = list()
-        for item in exposed_ring:
+        for item in list(exposed_ring.geoms):
             new_item = calgs._remove_items_from_list(list(item.coords),
                                                 points_to_remove)
             if len(new_item) > 1:
@@ -286,7 +309,7 @@ def _remove_collinear_points_horizontal(poly: Polygon) -> Polygon:
     i_r = MultiLineString(poly.interiors)
     t_t = unary_union((o_r, i_r))
     if t_t.geom_type == 'MultiLineString':
-        for item in t_t:
+        for item in list(t_t.geoms):
             coords = list(item.coords)
             coords.append(coords[1])
             coll_points = calgs._coollinear_points(coords)

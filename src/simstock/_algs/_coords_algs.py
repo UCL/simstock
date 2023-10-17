@@ -358,7 +358,7 @@ def _polygon_with_holes(coordinates_dictionary: dict) -> list:
     # ordered pair of outer ring coordinate list
     elif outer_ring.geom_type == 'MultiLineString':
         # Loop through LineString in a MultiLineString
-        for i, linestring in enumerate(outer_ring):
+        for i, linestring in enumerate(outer_ring.geoms):
             # First and last ordered pair of polygon with holes coordinates is
             # the first coordinate of the first LineString
             if i == 0:
@@ -410,9 +410,9 @@ def _polygon_with_holes_coordinates(coordinates, outer_ring_linestring,
             # which is the same as the last ordered pair of the second
             # LineString)
             if hole.geom_type == 'MultiLineString':
-                for coord in hole[1].coords:
+                for coord in hole.geoms[1].coords:
                     coordinates.append(coord)
-                for coord in hole[0].coords[1:]:
+                for coord in hole.geoms[0].coords[1:]:
                     coordinates.append(coord)
             # Close the coordinates by adding the first outer ring
             # LineStings's ordered pair
