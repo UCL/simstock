@@ -9,7 +9,7 @@ Installation, setup and testing
 Supported QGIS versions
 -----------------------
 
-The plugin has been tested on a range of QGIS versions, on both Windows and Mac operating systems. The supported versions of QGIS are any LTR (long-term release) between QGIS LTR 3.10 and the latest QGIS LTR 3.22.
+The plugin has been tested on a range of QGIS versions, on both Windows and Mac operating systems. The supported versions of QGIS are any LTR (long-term release) between QGIS LTR 3.20 and the latest QGIS LTR version.
 
 The non-LTR versions are likely to work too, however sometimes the Python versions and associated packages in these versions differ from the LTR versions.
 
@@ -263,6 +263,7 @@ What it contains
 After the cwd has been set, a number of layers will be loaded into the QGIS project. Each layer corresponds to a different category of data required to generate the EnergyPlus models.
 
 .. admonition:: Database layers \ \ 
+   
   *  Fabric: `Materials <https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#material>`_
   *  Fabric: `Constructions <https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-surface-construction-elements.html#construction-000>`_ (arranges the materials)
   *  `Schedules <https://bigladdersoftware.com/epx/docs/8-9/input-output-reference/group-schedules.html#schedulecompact>`_
@@ -410,9 +411,15 @@ Each of the database layers above have unique entries for `Dwell`, `Commercial`,
 
 Editing the database
 ^^^^^^^^^^^^^^^^^^^^
-Edit mode can be activated by selecting the pencil icon in the top-left corner (see figures above). You can now make edits to any of the fields in the database. **When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.** If yes is selected, the changes will be saved to the `Simstock-Database.gpkg` file within your cwd. 
+Edit mode can be activated by selecting the pencil icon in the top-left corner (see figures above). You can now make edits to any of the fields in the database.
+
+.. admonition:: Saving your changes \ \ 
+
+   **When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.** If yes is selected, the changes will be saved to the `Simstock-Database.gpkg` file within your cwd.
+
 
 .. warning:: \ \ 
+
    *  Do not change the database layer names
    *  Do not name any other layers "DB-..."
    *  If you make edits, check for duplicates or misspellings as these will cause errors during simulation.
@@ -470,16 +477,21 @@ Config file
 -----------
 Certain settings can be edited in the `config.json` file if necessary. Some of thee have already been mentioned in the section on :ref:`Important config settings`, however for completeness they are listed here again.
 
- The config file can be accessed by clicking the link in the plugin interface. If this does not work, you can navigate manually to the plugin directory. To locate this directory, go to Settings -> User Profiles -> Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named `python`. Next, open the folder named `plugins` and then `simstock_qgis`. You should see the `config.json` file in this folder.
+.. admonition:: Accessing the config file \ \ 
+
+	The config file can be accessed by clicking the link in the plugin interface.
+   If this does not work, you can navigate manually to the plugin directory. To locate this directory, go to Settings -> User Profiles -> Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named `python`. Next, open the folder named `plugins` and then `simstock_qgis`. You should see the `config.json` file in this folder.
 
 
 .. admonition:: Editable config settings \ \ 
+
    Currently editable fields and what they represent:
 
+   *  **CRS:** Coordinate reference system for the current project (default: `epsg:27700`).
+   *  **Shading buffer radius - m:** The radius within which surrounding buildings from other BIs will be included as shading. A larger radius will increase simulation time (default: 50m).
+   *  **epw:** Name of the weather file used for simulations. The specified file must be located in the cwd.
    *  **Low temperature threshold:** Number of hours *below* this operative temperature threshold will be reported in the results (default: 18C).
    *  **High temperature threshold:** Number of hours *above* this operative temperature threshold will be reported in the results (default: 28C).
-   *  **CRS:** Coordinate reference system for the current project (default: `epsg:27700`).
-   *  **epw:** Name of the weather file used for simulations. The specified file must be located in the cwd.
 
 In the future, it is aimed to move these settings into the main plugin interface to avoid users needing to access the plugin directory and simplify the process.
 
@@ -531,3 +543,5 @@ Eppy is packaged as part of the Simstock QGIS Plugin. The project's homepage on 
 .. * Add notes to say what features are planned
 .. * Do not delete use objects
 .. * Update interface screenshot
+.. * Shading buffer radius
+.. * Mention glazing const
