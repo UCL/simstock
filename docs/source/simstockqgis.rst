@@ -9,7 +9,7 @@ Installation, setup and testing
 Supported QGIS versions
 -----------------------
 
-The plugin has been tested on a range of QGIS versions, on both Windows and Mac operating systems. The supported versions of QGIS are any LTR (long-term release) between QGIS LTR 3.20 and the latest QGIS LTR version.
+The plugin has been tested on a range of QGIS versions, on both Windows and Mac operating systems. The recommended versions of QGIS are any LTR (long-term release) between QGIS LTR 3.20 and the latest QGIS LTR version.
 
 The non-LTR versions are likely to work too, however sometimes the Python versions and associated packages in these versions differ from the LTR versions.
 
@@ -439,13 +439,13 @@ Running Simstock and the simulations
 ------------------------------------
 After the input data is setup, Simstock can be run. This will take in all the information (geometry, attribute table, database) and Simstock will produce EnergyPlus models of the area. These model idf files will be output into the cwd. The plugin will then automatically launch the EnergyPlus simulations. The results will be loaded as a new layer in QGIS. The raw results will also be output into the cwd.
 
+.. tip:: \ \ 
+   
+   If you are editing the database between test cases, it could be a good idea to make a copy of the previous `Simstock-Database.gpkg` database file so that you can refer back to the setup when analysing the results.
+
 Built islands
 ^^^^^^^^^^^^^
 The area is initially divided into 'built islands'. A built island is defined as a group of buildings which are physically touching (excluding those which only share a single point). Each built island is given a unique reference number (bi_ref). In the results layer, every polygon is given a bi_ref to indicate which built island it belongs to. The bi_ref can be used to locate the relevant idf file if necessary.
-
-.. admonition:: Tip \ \ 
-   
-   If you are editing the database between test cases, it is a good idea to make a copy of the previous `Simstock-Database.gpkg` database file so that you can refer back to the setup when analysing the results.
 
 
 Results
@@ -474,8 +474,9 @@ Certain settings can be edited in the `config.json` file if necessary. One of th
 
 .. admonition:: Accessing the config file \ \ 
 
-	The config file can be accessed by clicking the link in the plugin interface.
-   If this does not work, you can navigate manually to the plugin directory. To locate this directory, go to Settings -> User Profiles -> Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named `python`. Next, open the folder named `plugins` and then `simstock_qgis`. You should see the `config.json` file in this folder.
+	**The config file can be accessed by clicking the link in the plugin interface.**
+   
+   If this does not work, you can navigate manually to the plugin directory. To locate this directory, go to Settings -> User Profiles -> Open Active Profile Folder from the top bar of QGIS. This will open a file browser showing the QGIS profile folder. Using this file browser, open the folder named 'python'. Next, open the folder named 'plugins' and then 'simstock_qgis'. You should see the `config.json` file in this folder.
 
 
 .. admonition:: Editable config settings \ \ 
@@ -483,7 +484,7 @@ Certain settings can be edited in the `config.json` file if necessary. One of th
    Currently editable fields and what they represent:
 
    *  **Shading buffer radius - m:** The radius within which surrounding buildings from other BIs will be included as shading. A larger radius will increase simulation time (default: 50m).
-   *  **epw:** Name of the weather file used for simulations. The specified file must be located in the cwd.
+   *  **epw:** Name of the `.epw` weather file used for simulations. The specified file must be located in the cwd.
    *  **Low temperature threshold:** Number of hours *below* this operative temperature threshold will be reported in the results (default: 18C).
    *  **High temperature threshold:** Number of hours *above* this operative temperature threshold will be reported in the results (default: 28C).
 
@@ -492,10 +493,6 @@ In the future, it is aimed to move these settings into the main plugin interface
 
 Troubleshooting
 ===============
-
-New layer is incorrectly located/does not overlap with the source
------------------------------------------------------------------
-If the new layers created by the Simstock plugin are in the wrong location, you may need to change the coordinate reference system (CRS). This can be changed in the config file; see Config_.
 
 Python errors
 -------------
