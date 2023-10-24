@@ -17,14 +17,12 @@ Installation
 ------------
 
 1. The Simstock QGIS plugin is available from the official `QGIS Python Plugins Repository <https://plugins.qgis.org/plugins/>`_. It can be installed directly in QGIS by navigating to Plugins -> Manage and install plugins.
-
-2. Also search for 'Plugin Reloader' and install it.
     
-3. After installing these, you may need to restart QGIS.
+2. After installing this, you may need to restart QGIS.
     
-4. If the Simstock QGIS plugin has successfully been installed, you should be able to see it listed under the 'Plugins' list as well as a new icon on the toolbar.
+3. If the Simstock QGIS plugin has successfully been installed, you should be able to see it listed under the 'Plugins' list as well as a new icon on the toolbar.
 
-5. The plugin will now need to be setup - see the next section for information.
+4. The plugin will now need to be setup - see the next section for information.
 
 
 Initial setup
@@ -48,7 +46,6 @@ There are some important things to note when using the plugin:
 
 * **Python Console**: When using the plugin, always have the Python console open. This will output information about what the plugin is doing. It should open by default when the plugin is launched, but if not, you can do this by clicking Plugins -> Python Console in the top bar of QGIS.
 * **Python Errors**: If an error occurs, a yellow notification appears in QGIS. The Python error can be viewed by clicking 'Stack Trace'. This should give information about what is causing the error.
-* **Plugin Reloader**: Make sure the `Plugin Reloader <https://plugins.qgis.org/plugins/plugin_reloader/>`_ is also installed. The Simstock plugin will need to be reloaded after each use.
 
 .. figure:: Figures/QG-pyconsole.png
    :width: 720px
@@ -228,16 +225,15 @@ The project database file will be called `Simstock-Database.gpkg`:
 Therefore if you want to save any changes you've made to the database, you can backup the `Simstock-Database.gpkg` file. This file, if present, will be reloaded when the cwd is set in the future. This file can also be shared with others.
 
 
-.. _Important config settings:
+.. _Weather file:
 
-Important config settings
+Weather file
 -------------------------
-There are two vital pieces of information that need to be specified in order for the simulations to perform correctly. These only need to be specified once and the settings will be saved, unless the project requires these to be changed.
+The weather file is a vital piece of information that need to be specified in order for the simulations to perform correctly. This must be in the format `.epw`; this is a commonly used format for weather data. These can be found freely available online, covering many locations around the world. The `.epw` file must be saved in the cwd, and the name of the file must be specified in the config file. This only needs to be specified once and the settings will be saved, unless the project requires these to be changed.
 
 Open the `config.json` file by clicking on the link in the plugin interface. The following settings must be specified:
 
-*  **CRS:** Coordinate reference system for the current project (default: `epsg:27700`).
-*  **epw:** Name of the weather epw file used for simulations. The specified file must be located in the cwd. The epw file is a commonly used format for weather data; these can be found freely available online, covering many locations around the world.
+*  **epw:** Name of the weather epw file used for simulations. The specified file must be located in the cwd.
 
 For information about the other settings in the config file, see: :ref:`Config`.
 
@@ -416,6 +412,8 @@ Edit mode can be activated by selecting the pencil icon in the top-left corner (
 .. admonition:: Saving your changes \ \ 
 
    **When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.** If yes is selected, the changes will be saved to the `Simstock-Database.gpkg` file within your cwd.
+   
+   You can backup this file to allow you to reload the setup at a future date. To reload an old database, simply set your cwd to the folder which contains the `Simstock-Database.gpkg` file.
 
 
 .. warning:: \ \ 
@@ -445,12 +443,9 @@ Built islands
 ^^^^^^^^^^^^^
 The area is initially divided into 'built islands'. A built island is defined as a group of buildings which are physically touching (excluding those which only share a single point). Each built island is given a unique reference number (bi_ref). In the results layer, every polygon is given a bi_ref to indicate which built island it belongs to. The bi_ref can be used to locate the relevant idf file if necessary.
 
-Re-running
-^^^^^^^^^^
-There are two things to note before re-running the plugin:
-
-*  The Simstock QGIS plugin will need to be reloaded (using the plugin reloader) before it can be run again.
-*  If you are editing the database between test cases, it is a good idea to make a copy of the previous database file (and give it a useful name) so that you can refer back to the setup when analysing the results.
+.. admonition:: Tip \ \ 
+   
+   If you are editing the database between test cases, it is a good idea to make a copy of the previous `Simstock-Database.gpkg` database file so that you can refer back to the setup when analysing the results.
 
 
 Results
@@ -475,7 +470,7 @@ The results will appear as a new layer in QGIS. This results layer is **not** sa
 
 Config file
 -----------
-Certain settings can be edited in the `config.json` file if necessary. Some of thee have already been mentioned in the section on :ref:`Important config settings`, however for completeness they are listed here again.
+Certain settings can be edited in the `config.json` file if necessary. One of these has already been mentioned in the :ref:`Weather file` section, however for completeness they are listed here again.
 
 .. admonition:: Accessing the config file \ \ 
 
@@ -487,7 +482,6 @@ Certain settings can be edited in the `config.json` file if necessary. Some of t
 
    Currently editable fields and what they represent:
 
-   *  **CRS:** Coordinate reference system for the current project (default: `epsg:27700`).
    *  **Shading buffer radius - m:** The radius within which surrounding buildings from other BIs will be included as shading. A larger radius will increase simulation time (default: 50m).
    *  **epw:** Name of the weather file used for simulations. The specified file must be located in the cwd.
    *  **Low temperature threshold:** Number of hours *below* this operative temperature threshold will be reported in the results (default: 18C).
@@ -525,10 +519,15 @@ If EnergyPlus failed to complete the simulation, the plugin will halt and a Pyth
 
 To understand what the problem was, the EnergyPlus .err file needs to be checked. Within the specified cwd, a folder will exist called `idf_files`. In here, there will be sub-directories for each .idf, within which the EnergyPlus .err files can be found.
 
+Other
+-----
+If the plugin is behaving strangely, it could be worth reloading it. To do this, the `Plugin Reloader <https://plugins.qgis.org/plugins/plugin_reloader/>`_ can be used. Alternatively, you can just restart QGIS.
 
 Contact & feedback
 ==================
-We hope you have a smooth and enjoyable experience using the Simstock QGIS plugin! If you have any feedback, issues or other comments, please email me at: shyam.amrith.14@ucl.ac.uk
+We hope you have a smooth and enjoyable experience using the Simstock QGIS plugin! The plugin is very new and we are still trying to improve the user experience, add features and fix bugs. If you have any feedback, issues or other comments, please email me at: shyam.amrith.14@ucl.ac.uk
+
+The GitHub page for the Simstock QGIS Plugin can be found here: https://github.com/UCL/simstock_qgis
 
 
 Credit
@@ -543,5 +542,4 @@ Eppy is packaged as part of the Simstock QGIS Plugin. The project's homepage on 
 .. * Add notes to say what features are planned
 .. * Do not delete use objects
 .. * Update interface screenshot
-.. * Shading buffer radius
 .. * Mention glazing const
