@@ -1044,9 +1044,9 @@ def adiabatic_external_walls(
             # adjacent object. If yes, than check the relation of floor height
             # to adjacent object height. If it is above than the whole wall is
             # adiabatic external; if not than only part of the wall is external
-            if ceiling_height > adjacent_height:
+            if ceiling_height > adjacent_height + 1e-6:
                 ceil_h = ceiling_height
-                if floor_height > adjacent_height:
+                if floor_height > adjacent_height - 1e-6:
                     floor_h = floor_height
                 else:
                     floor_h = adjacent_height
