@@ -73,7 +73,7 @@ def _remove_items_from_list(coords: list, items: list) -> list:
     return coords
 
 
-def _radial_dist_simplify(coords: list, tol: float) -> tuple:
+def _radial_dist_simplify(coords: list, tol: float):
     """
     Function that goes through a list of coordinated and tests
     each connsecutive pair to see if they are closer to each other
@@ -99,7 +99,7 @@ def _radial_dist_simplify(coords: list, tol: float) -> tuple:
 
 # Could potentially simplify
 # Add tolerance to state 
-def _coords_cleaning(coords: list, remove_leave_pairs: list) -> tuple:
+def _coords_cleaning(coords: list, remove_leave_pairs: list):
     """
     Function that keeps applying radial distance simplification
     until the list of coordinates settles to a fixed state.

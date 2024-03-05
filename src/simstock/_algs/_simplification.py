@@ -23,7 +23,7 @@ def _simplified_coords(
         polygon: Polygon,
         ring_position: str,
         remove_leave_pairs: list
-        ) -> tuple[list, list]:
+        ):
         """
         Function that simplifies either the outer
         or inner ring of a polygon, as specified by
@@ -127,7 +127,7 @@ def _not_valid_polygons(
         outer_coords: list,
         polygon_within_hole: Polygon,
         remove_leave_pairs: list
-        ) -> tuple[DataFrame, Polygon]:
+        ):
     """
     Recursive function that attempts to rectify polygons where
     their interiors are intersecting with their exteriors. This

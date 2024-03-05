@@ -566,7 +566,7 @@ def _wall_width_height(
         i: int,
         ceil_coord: list,
         floor_coord: list
-        ) -> tuple[float, float]:
+        ):
     '''
     Internal function which calculates wall width and height
     '''
