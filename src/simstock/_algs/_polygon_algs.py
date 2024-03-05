@@ -26,8 +26,8 @@ from shapely.ops import unary_union
 
 
 def _check_for_multi(
-        polygon: Union[Polygon, MultiPolygon]
-        ) -> tuple[bool, Polygon]:
+        polygon
+        ):
     """
     Hand-drawn polygons can be multipolygons with len 1, i.e. a nested 
     polygon within a multipolygon wrapper. This aims to extract them.
