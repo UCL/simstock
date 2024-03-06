@@ -77,7 +77,7 @@ def _simplification_affects_inner_ring(
 def _remove_hole_if_inner_is_removed(
                 df: DataFrame,
                 inner_polygon: Polygon,
-                polygon_within_hole: list[Polygon]
+                polygon_within_hole
                 ) -> DataFrame:
             """
             Function to remove hole within each 
@@ -102,7 +102,7 @@ def _remove_hole_if_inner_is_removed(
 
 def _remove_holes(
         df: DataFrame,
-        polygon_within_hole: list[Polygon]
+        polygon_within_hole
         ) -> DataFrame:
         """
         Recursive function to remove holes from 
@@ -126,7 +126,7 @@ def _not_valid_polygons(
         df: DataFrame,
         outer_coords: list,
         polygon_within_hole: Polygon,
-        remove_leave_pairs: list
+        remove_leave_pairs
         ):
     """
     Recursive function that attempts to rectify polygons where
