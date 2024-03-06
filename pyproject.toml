@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "simstock"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Python package for building stock simulations"
 authors = [
     "Olly Smith <olly.smith@ucl.ac.uk>",
