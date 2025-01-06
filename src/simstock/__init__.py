@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 from simstock.io import (
     read_csv,
     read_parquet,
@@ -12,6 +14,8 @@ from simstock.base import (
 from simstock.plotting import (
     plot
 )
+
+
 
 __version__ = "0.2.4"
 

@@ -3,7 +3,8 @@ Module containing the base simstock objects:
 - :class:`SimstockDataframe`
 - :class:`IDFcreator`
 """
-
+import warnings
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 import os
 import shutil
 import json
@@ -38,6 +39,11 @@ from simstock._utils._dirmanager import (
     _copy_directory_contents,
     _delete_directory_contents,
     _compile_csvs_to_idf
+)
+from simstock._utils._output_handling import (
+    _make_output_csvs,
+    _get_building_file_dict,
+    _build_summary_database
 )
 
 
@@ -284,6 +290,10 @@ class SimstockDataframe:
                 os.path.join(self.simstock_directory, "settings", "settings.idf")
             )
         self.settings_csv_path = None
+        
+        # Also set the rvi program path
+        s = self._idd_file[:-12]
+        self._readVarsESO_path = os.path.join(s, "PostProcess", "ReadVarsESO")
         
         # If it is already a valid simstock dataframe
         # then nothing further needs to be done
@@ -1250,7 +1260,7 @@ class SimstockDataframe:
             non_shading_gdf = self._df[self._df["shading"] == False]["bi"]
             modal_bi = non_shading_gdf.mode().values
             modal_bi_num = sum(non_shading_gdf.isin([modal_bi[0]]).values)
-            print("The BI(s) with the most buildings: %s with %s thermally simulated buildings" % (modal_bi, modal_bi_num))
+            print(f"The BI(s) with the most buildings: {modal_bi} with {modal_bi_num} thermally simulated buildings.")
         except:
             pass
 
@@ -1379,7 +1389,16 @@ class IDFmanager:
 
     # Required column names
     _col_names = [
-        'polygon', 'osgb', 'shading', 'height', 'wwr', 'nofloors','construction', 'interiors', 'touching', 'polygon_exposed_wall',
+        'polygon',
+        'osgb',
+        'shading',
+        'height',
+        'wwr',
+        'nofloors',
+        'construction',
+        'interiors',
+        'touching',
+        'polygon_exposed_wall',
         'polygon_horizontal'
     ]
 
@@ -1463,6 +1482,9 @@ class IDFmanager:
                 self.infiltration_dict = json.load(json_file)
         else:
             self.infiltration_dict = infiltration_dict
+            
+        # Get the readvarseso path
+        self._readVarsESO_path = copy.copy(data._readVarsESO_path)
 
 
     def __str__(self) -> str:
@@ -1732,7 +1754,18 @@ class IDFmanager:
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = bi_df.loc[bi_df['shading'] == False]
         zone_use_dict = {} 
-        zones_df.apply(ialgs._thermal_zones, args=(bi_df, temp_idf, origin, self.min_avail_width_for_window, self.min_avail_height, zone_use_dict,), axis=1)
+        zones_df.apply(
+            ialgs._thermal_zones,
+            args=(
+                bi_df,
+                temp_idf,
+                origin,
+                self.min_avail_width_for_window,
+                self.min_avail_height,
+                zone_use_dict,
+                ),
+            axis=1
+            )
 
         # Extract names of thermal zones:
         zones = temp_idf.idfobjects['ZONE']
@@ -1826,7 +1859,7 @@ class IDFmanager:
                 Please call create_model_idf() first.
                 """
             )
-            raise SimstockException()
+            raise SimstockException(msg)
 
         # Iterate over the list of idfs that have been created
         # and save each in a seperate file in out_dir
@@ -1863,8 +1896,6 @@ class IDFmanager:
             # This will have created, by default a directory called outs/
             # containing at least one subdirectory containing E+ outputs
         """
-
-
         self.__dict__.update(kwargs)
 
         # Iterate over the list of idfs that have been created
@@ -1886,4 +1917,23 @@ class IDFmanager:
 
             # Run energy plus
             idf.epw = self.epw
-            idf.run(output_directory=new_dir_path)
+            idf.run(output_directory=new_dir_path, verbose="q")
+
+        # Now do output handling by default
+        _make_output_csvs(self.out_dir, self._readVarsESO_path)
+        building_dict = _get_building_file_dict(self.out_dir)
+
+        # Populate a summary database
+        _build_summary_database(self.out_dir, building_dict)
+
+        # Optionally aggregate dom / nondom
+
+        # Optionally add overheating data
+
+        # Add some summary stats back into the dataframe and return that
+
+        
+        
+        
+        
+

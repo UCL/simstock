@@ -2,7 +2,8 @@
 Module containing routines for generating 
 objects for E+
 """
-
+import warnings
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 from typing import Any, Union
 import math
 from shapely.geometry import LineString
@@ -1054,9 +1055,6 @@ def adiabatic_external_walls(
                 adiabatic_walls(idf, polygon_name, ajd_wall_parti_surf_coord,
                                 ceil_h, floor_h, wall_name)
     return
-
-
-
 
 
 def adiabatic_external_walls(

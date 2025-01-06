@@ -1,5 +1,5 @@
 """
-Module containing internal functions for modifying and copyong files.
+Module containing internal functions for modifying and copying files.
 Mostly used to allow users to create and modify csv files for settings
 """
 

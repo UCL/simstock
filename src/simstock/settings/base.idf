@@ -292,13 +292,13 @@ OutputControl:Table:Style,
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLE ===========
 
-Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
-Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
+Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Hourly;
+Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Hourly;
 Output:Variable,*,Zone Operative Temperature,Hourly;
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:METER ===========
 
-Output:Meter,Electricity:Zone:*,annual;
+Output:Meter,Electricity:Zone:*,Hourly;
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
 
