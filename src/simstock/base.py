@@ -43,8 +43,10 @@ from simstock._utils._dirmanager import (
 from simstock._utils._output_handling import (
     _make_output_csvs,
     _get_building_file_dict,
-    _build_summary_database
+    _build_summary_database,
+    _add_building_totals
 )
+from simstock._utils._overheating import _add_overheating_flags
 
 
 class SimstockDataframe:
@@ -1868,7 +1870,7 @@ class IDFmanager:
             idf.saveas(fname)
     
 
-    def run(self, **kwargs) -> None:
+    def run(self, **kwargs) -> pd.Series:
         """
         Function to run an EnergyPlus simulation on each of the model
         IDF objects created by :py:meth:`create_model_idf`. The settings
@@ -1924,16 +1926,17 @@ class IDFmanager:
         building_dict = _get_building_file_dict(self.out_dir)
 
         # Populate a summary database
-        _build_summary_database(self.out_dir, building_dict)
-
-        # Optionally aggregate dom / nondom
-
-        # Optionally add overheating data
+        power_ts = _build_summary_database(self.out_dir, building_dict)
 
         # Add some summary stats back into the dataframe and return that
+        self.df = _add_building_totals(self.out_dir, self.df)
+        self.df = _add_overheating_flags(
+            self.out_dir,
+            self.df,
+            28.0,
+            10.0,
+            6.0,
+            6.0
+            )
 
-        
-        
-        
-        
-
+        return power_ts, self.df

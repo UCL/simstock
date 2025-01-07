@@ -29,6 +29,33 @@ def _is_domestic(input_string):
     return True if closest_match else False
 
 
+def _timeseries_to_schedule_compact(name, schedule_series, schedule_type_limits_name='Fraction'):
+    """
+    Converts a pandas Series into a Schedule:Compact string.
+    """
+    schedule_compact_str = f"Schedule:Compact,\n    {name},       !- Name\n    {schedule_type_limits_name},  !- Schedule Type Limits Name\n"
+
+    current_month = None
+    previous_value = None
+    for timestamp, value in schedule_series.iteritems():
+        month_day = f"{timestamp.month}/{timestamp.day}"
+        if timestamp.hour == 0 and timestamp.minute == 0:
+            # Start of a new day
+            if current_month != month_day:
+                if previous_value is not None:
+                    schedule_compact_str += f"    Until: 24:00, {previous_value};\n"
+                schedule_compact_str += f"    Through: {month_day},\n    For: AllDays,\n"
+                current_month = month_day
+            schedule_compact_str += f"    Until: {timestamp.hour + 1}:00, {value},\n"
+        else:
+            schedule_compact_str += f"    Until: {timestamp.hour + 1}:00, {value},\n"
+        previous_value = value
+
+    schedule_compact_str += f"    Until: 24:00, {previous_value};\n"
+    return schedule_compact_str
+
+
+
 def _extract_timeseries(
         file_path: str,
         scu: Union[str, int],

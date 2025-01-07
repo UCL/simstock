@@ -1,64 +1,117 @@
-import numpy as np
+import os
 import pandas as pd
+import numpy as np
+from abc import ABC, abstractmethod
 
-class Schedule:
-    def __init__(self, name, csv_path=None, seed=None):
-        """
-        Initialise the Schedule object.
 
-        Parameters:
-            name (str): Name of the schedule.
-            csv_path (str, optional): Path to the CSV file for archetypal schedules.
-            seed (int, optional): Seed for random number generator (for reproducibility).
-        """
-        self.name = name
-        self.csv_path = csv_path
-        self.seed = seed
-        self.rng = np.random.default_rng(seed)
+class ScheduleManager(ABC):
+    """
+    Abstract base class defining the interface for schedule managers.
+    """
 
-    def generate(self, building_properties=None):
-        """
-        Generate schedule data.
+    @abstractmethod
+    def get_occupancy_schedule(self, usage_type):
+        pass
 
-        Parameters:
-            building_properties (dict, optional): Properties of the building or zone.
+    @abstractmethod
+    def get_equipment_schedule(self, usage_type):
+        pass
 
-        Returns:
-            list: A list of 24 hourly schedule values.
-        """
-        if self.csv_path:
-            return self._read_csv_schedule()
+    @abstractmethod
+    def get_lighting_schedule(self, usage_type):
+        pass
+
+    @abstractmethod
+    def get_heating_schedule(self, usage_type):
+        pass
+
+    @abstractmethod
+    def get_cooling_schedule(self, usage_type):
+        pass
+    
+
+class CSVScheduleManager(ScheduleManager):
+    """
+    ScheduleManager implementation that reads schedules from CSV files.
+    """
+
+    def __init__(self, csv_directory):
+        self.csv_directory = csv_directory
+        self.schedules = {}
+        self.load_schedules_from_csv()
+
+    def load_schedules_from_csv(self):
+        # Load the schedules from 'DB-Schedules-SCHEDULE_COMPACT.csv'
+        schedules_file = os.path.join(self.csv_directory, 'DB-Schedules-SCHEDULE_COMPACT.csv')
+        schedules_df = pd.read_csv(schedules_file)
+        self.schedules = {}
+
+        # Group schedules by Name
+        for name, group in schedules_df.groupby('Name'):
+            self.schedules[name] = group
+
+    def get_schedule(self, schedule_name):
+        if schedule_name in self.schedules:
+            return self.schedules[schedule_name]
         else:
-            return self._default_random_schedule()
+            raise ValueError(f"Schedule '{schedule_name}' not found in CSV files.")
 
-    def _read_csv_schedule(self):
-        """
-        Read schedule data from a CSV file.
+    def get_occupancy_schedule(self, usage_type):
+        schedule_name = f"{usage_type}_Occ"
+        return self.get_schedule(schedule_name)
 
-        Returns:
-            list: A list of 24 hourly schedule values.
-        """
-        try:
-            df = pd.read_csv(self.csv_path)
-            # Assume the CSV has a single row with 24 columns for each hour
-            if df.shape[0] < 1:
-                raise ValueError(f"CSV file {self.csv_path} is empty.")
-            schedule_data = df.iloc[0].tolist()
-            if len(schedule_data) != 24:
-                raise ValueError(f"CSV file {self.csv_path} must contain 24 hourly values.")
-            return schedule_data
-        except Exception as e:
-            print(f"Error reading CSV schedule from {self.csv_path}: {e}")
-            # Fallback to default random schedule
-            return self._default_random_schedule()
+    def get_equipment_schedule(self, usage_type):
+        schedule_name = f"{usage_type}_Equip"
+        return self.get_schedule(schedule_name)
 
-    def _default_random_schedule(self):
-        """
-        Generate a default random schedule.
+    def get_lighting_schedule(self, usage_type):
+        schedule_name = f"{usage_type}_Light"
+        return self.get_schedule(schedule_name)
 
-        Returns:
-            list: A list of 24 hourly schedule values.
-        """
-        # Example: Random occupancy fractions between 0 and 1
-        occupancy_levels = self.rng.uniform(0, 1, 24)
-        return occupancy_levels.tolist()
+    def get_heating_schedule(self, usage_type):
+        schedule_name = f"{usage_type}_Heat"
+        return self.get_schedule(schedule_name)
+
+    def get_cooling_schedule(self, usage_type):
+        schedule_name = f"{usage_type}_Cool"
+        return self.get_schedule(schedule_name)
+
+
+class StochasticScheduleManager(ScheduleManager):
+    """
+    ScheduleManager implementation that generates stochastic schedules.
+    """
+
+    def __init__(self, random_seed=None):
+        self.random_seed = random_seed
+        if self.random_seed is not None:
+            np.random.seed(self.random_seed)
+        self.schedule_rules = {}
+
+    def set_schedule_rule(self, usage_type, schedule_type, rule_function):
+        if usage_type not in self.schedule_rules:
+            self.schedule_rules[usage_type] = {}
+        self.schedule_rules[usage_type][schedule_type] = rule_function
+
+    def get_schedule(self, usage_type, schedule_type):
+        rule = self.schedule_rules.get(usage_type, {}).get(schedule_type)
+        if rule:
+            return rule()
+        else:
+            raise ValueError(f"No rule defined for usage type '{usage_type}' and schedule type '{schedule_type}'.")
+
+    def get_occupancy_schedule(self, usage_type):
+        return self.get_schedule(usage_type, 'occupancy')
+
+    def get_equipment_schedule(self, usage_type):
+        return self.get_schedule(usage_type, 'equipment')
+
+    def get_lighting_schedule(self, usage_type):
+        return self.get_schedule(usage_type, 'lighting')
+
+    def get_heating_schedule(self, usage_type):
+        return self.get_schedule(usage_type, 'heating')
+
+    def get_cooling_schedule(self, usage_type):
+        return self.get_schedule(usage_type, 'cooling')
+

@@ -1,158 +1,201 @@
+import os
+import sqlite3
 import pandas as pd
 import numpy as np
-from simstock import SimstockDataframe
-from simstock._utils._output_handling import _get_building_file_dict
-from simstock._utils._timeseries_methods import _extract_timeseries
 
 
-def add_overheating_columns(sdf: SimstockDataframe) -> None:
+def _compute_criterion1(series, threshold, percentage_threshold):
+    """
+    Computes whether the percentage of time a temperature series exceeds a threshold
+    is greater than a given percentage threshold.
 
-    d = _get_building_file_dict("outs")
+    Args:
+        series (pd.Series): Timeseries of temperature data.
+        threshold (float): Temperature threshold above which a value is considered "overheated."
+        percentage_threshold (float): Percentage of time above the threshold required to meet this criterion.
 
-    # Add some columns
-    totfloors = 0
-    for column_name in sdf.columns:
-        if str(column_name).startswith("FLOOR_"):
-            totfloors += 1
-    for i in range(totfloors):
-        sdf[f"FLOOR_{i+1}: max_temp"] = None
-        sdf[f"FLOOR_{i+1}: perc_above_26"] = None
-        sdf[f"FLOOR_{i+1}: criterion1"] = None
-        sdf[f"FLOOR_{i+1}: criterion2"] = None
-        sdf[f"FLOOR_{i+1}: criterion3"] = None
-        sdf[f"FLOOR_{i+1}: overheated"] = None
-        sdf[f"SCU_overheated"] = None
-     
-    # Iterate over the SCUs
-    for j, scu in enumerate(sdf.osgb):
-        print(f"\r{j+1} of {len(sdf.osgb)}", flush=True, end="")
+    Returns:
+        bool: True if the percentage of time above the threshold exceeds the percentage threshold, False otherwise.
+    """
+    # Identify values in the series that exceed the threshold
+    over_threshold = series[series > threshold]
 
-        # Find how many floors the scu has
-        row = sdf[sdf["osgb"]==scu]
-        num_floors = count_floor_columns_without_nan(row)
-
-        # Iterate over the floors and for each one extract a timeseries of 
-        # the operative temperature
-        is_scu_overheated = False
-        for i in range(num_floors):
-            attribute = f"{scu}_FLOOR_{i+1}:Zone Operative Temperature [C](Hourly)"
-            op_temp_ts = _extract_timeseries("outs", scu, attribute, d)
-
-            # Calculate the max value
-            max_val = op_temp_ts.max()
-            sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: max_temp"] = max_val
-
-            # Calculate criterion 1: percentage of time that Top>26, is it more than 3%
-            percent_over_thresh = criterion1(op_temp_ts, 30.0, 5, 9)
-            sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: perc_above_26"] = percent_over_thresh
-            if percent_over_thresh > 3.0:
-                crit1 = True
-            else:
-                crit1 = False
-            sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: criterion1"] = crit1
-
-            # Calculate criterion 2: the integral measure
-            crit2 = criterion2(op_temp_ts, 30.0, 5, 9, 6.0)
-            sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: criterion2"] = crit2
-
-            # Calculate criterion 3: the moving window thing
-            crit3 = criterion3(scu, i+1, d)
-            sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: criterion3"] = crit3
-
-            # See if the criteria for overheating are met
-            if (crit1 + crit2 + crit3) >= 2:
-                sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: overheated"] = True
-                is_scu_overheated = True
-            else:
-                sdf.loc[sdf["osgb"] == scu, f"FLOOR_{i+1}: overheated"] = False
-        
-        # Determing if the building contains any overheating
-        sdf.loc[sdf["osgb"] == scu, "SCU_overheated"] = is_scu_overheated
-
-
-def criterion1(series, threshold, start_month, end_month):
-
-    # Filter the Series to include only data within the specified months
-    summer_series = series[(series.index.month >= start_month) & (series.index.month <= end_month)]
-
-    # Filter the Series to include only values greater than the threshold
-    over_threshold = summer_series[summer_series > threshold]
-
-    # Calculate the percentage of entries over the threshold
+    # Calculate the percentage of time the series exceeds the threshold
     percentage_over_threshold = (len(over_threshold) / len(series)) * 100
 
-    return percentage_over_threshold
+    # Return True if the percentage exceeds the threshold, False otherwise
+    return percentage_over_threshold > percentage_threshold
 
 
-def criterion2(series, threshold, start_month, end_month, threshold_integral):
+def _compute_criterion2(series, threshold, integral_threshold):
+    """
+    Computes whether the daily integral of excess temperature above a threshold exceeds
+    a specified threshold on any day.
 
-    integral_exceeds_threshold = False
+    Args:
+        series (pd.Series): Timeseries of temperature data.
+        threshold (float): Temperature threshold above which a value contributes to the integral.
+        integral_threshold (float): Threshold for the daily integral to meet this criterion.
 
-    # Filter the Series to include only data within the specified months
-    summer_series = series[(series.index.month >= start_month) & (series.index.month <= end_month)]
+    Returns:
+        bool: True if the integral threshold is exceeded on any day, False otherwise.
+    """
+    # Calculate excess temperatures above the threshold
+    excess_temperatures = series - threshold
 
-    # Calculate the excess temperatures above the threshold for each time interval
-    excess_temperatures = summer_series - threshold
-    excess_temperatures[excess_temperatures < 0] = 0  # Set negative values to 0    
+    # Set any negative values (below the threshold) to 0
+    excess_temperatures[excess_temperatures < 0] = 0
 
-    # Iterate over each day in the specified date range
-    unique_days = summer_series.index.floor('D').unique()
-    for day in unique_days:
+    # Resample to daily frequency and calculate the daily integral of excess temperatures
+    daily_integrals = excess_temperatures.resample("D").sum()
 
-        # Convert the day to an integer index
-        day_index = np.where(series.index == day)[0][0]
-
-        # Select the excess temperatures and time intervals for the current day
-        day_excess_temperatures = excess_temperatures[day_index: day_index + 24]
-        daily_integral = sum(day_excess_temperatures)
-
-        # Check if the integral for the current day exceeds the threshold
-        if daily_integral > threshold_integral:
-            integral_exceeds_threshold = True
-            break  # No need to check other days if one day exceeds the threshold
-
-    return integral_exceeds_threshold
+    # Check if any day's integral exceeds the threshold
+    return (daily_integrals > integral_threshold).any()
 
 
-def compute_trm(daily_max_ts):
-    # Create a DataFrame with columns representing the daily maximum temperatures for preceding days
+def _compute_trm(daily_max_ts):
+    """
+    Computes the running mean temperature (Trm) based on daily maximum outdoor temperatures
+    over the past 7 days, using a weighted formula.
+
+    Args:
+        daily_max_ts (pd.Series): Timeseries of daily maximum outdoor temperatures.
+
+    Returns:
+        pd.Series: Timeseries of running mean temperatures (Trm).
+    """
+    # Create a DataFrame to hold the shifted values of the daily maximum temperatures
     df = pd.DataFrame()
-    for i in range(1, 8):
-        df[f'Tod_{i}'] = daily_max_ts.shift(i, fill_value=0)
 
-    # Compute the value of Trm using the specified formula
-    trm = (df['Tod_1'] + 0.8 * df['Tod_2'] + 0.6 * df['Tod_3'] + 
-           0.5 * df['Tod_4'] + 0.4 * df['Tod_5'] + 0.3 * df['Tod_6'] + 
-           0.2 * df['Tod_7']) / 3.8
+    # Shift the timeseries to create columns for the past 7 days
+    for i in range(1, 8):
+        df[f"Tod_{i}"] = daily_max_ts.shift(i, fill_value=0)
+
+    # Calculate the weighted running mean temperature
+    trm = (df["Tod_1"] + 0.8 * df["Tod_2"] + 0.6 * df["Tod_3"] +
+           0.5 * df["Tod_4"] + 0.4 * df["Tod_5"] + 0.3 * df["Tod_6"] +
+           0.2 * df["Tod_7"]) / 3.8
 
     return trm
 
 
-def criterion3(scu, floornum, d):
+def _compute_criterion3(outdoor_temp, indoor_temp, offset):
+    """
+    Computes whether the maximum daily indoor temperature exceeds the adaptive comfort threshold
+    on any day. The adaptive comfort threshold is based on the running mean outdoor temperature (Trm).
 
-    # Get the outdoor air temp timseries
-    attribute = f"{scu}_FLOOR_{floornum}:Zone Outdoor Air Drybulb Temperature [C](Hourly)"
-    od_temp_ts = _extract_timeseries("outs", scu, attribute, d)
+    Args:
+        outdoor_temp (pd.Series): Timeseries of outdoor temperatures.
+        indoor_temp (pd.Series): Timeseries of indoor temperatures.
+        offset (float): Offset added to the adaptive comfort threshold.
 
-    # Resample it to get max daily values
-    daily_max = od_temp_ts.resample('D').max()
+    Returns:
+        bool: True if the maximum daily indoor temperature exceeds the threshold on any day, False otherwise.
+    """
+    # Calculate the daily maximum outdoor temperatures
+    daily_max_outdoor = outdoor_temp.resample("D").max()
 
-    # Make another time series that performs the moving window thing
-    trm_ts = compute_trm(daily_max)
-    
-    # Make another time series that computes the max for each day via the formula
-    tmax = 0.33*trm_ts + 21.8 + 6.0
+    # Compute the running mean temperature (Trm) based on the outdoor temperatures
+    trm = _compute_trm(daily_max_outdoor)
 
-    # Get the op temp timeseries and limit it to just may to september
-    attribute = f"{scu}_FLOOR_{floornum}:Zone Operative Temperature [C](Hourly)"
-    op_temp_ts = _extract_timeseries("outs", scu, attribute, d)
-    # summer_series = od_temp_ts[(od_temp_ts.index.month >= 5) & (od_temp_ts.index.month <= 9)]
+    # Calculate the adaptive comfort threshold (Tmax) using Trm
+    tmax = 0.33 * trm + 21.8 + offset
 
-    # Check if any values are over the computed max
-    # Align the timestamps of od_temp_ts and trm to the same daily frequency
-    op_temp_ts_daily = op_temp_ts.resample('D').max()
-    tmax = tmax.reindex(op_temp_ts_daily.index, method='ffill')
+    # Calculate the daily maximum indoor temperatures
+    daily_max_indoor = indoor_temp.resample("D").max()
 
-    # Check if any od_temp_ts values exceed the corresponding trm values
-    exceeds_trm = op_temp_ts_daily >= tmax
-    return exceeds_trm.any()
+    # Align the Tmax index with the indoor temperature index
+    tmax = tmax.reindex(daily_max_indoor.index, method="ffill")
+
+    # Check if the indoor temperature exceeds the threshold on any day
+    return (daily_max_indoor >= tmax).any()
+
+
+
+def _add_overheating_flags(
+        out_dir: str,
+        df: pd.DataFrame,
+        threshold: float,
+        percentage_threshold: float,
+        integral_threshold: float,
+        offset: float,
+    ) -> pd.DataFrame:
+    """
+    Adds overheating flags for each floor of each building in the DataFrame.
+
+    Args:
+        out_dir (str): Directory where the SQLite database is located.
+        df (pd.DataFrame): DataFrame containing a column 'osgb' for building IDs.
+        threshold (float): Temperature threshold for overheating criteria.
+        percentage_threshold (float): Percentage of time above the threshold for criterion 1.
+        integral_threshold (float): Daily integral threshold for criterion 2.
+        offset (float): Offset for criterion 3 (adaptive comfort model).
+
+    Returns:
+        pd.DataFrame: The input DataFrame with overheating flags for each floor.
+    """
+
+    # Connect to the SQLite database
+    db_path = os.path.join(out_dir, "summary_database.db")
+    conn = sqlite3.connect(db_path)
+
+    try:
+        for index, row in df.iterrows():
+            building_id = row["osgb"]
+            overheating_flags = []
+
+            # Dynamically determine the floors for the building
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(indoor_temperature);")
+            all_columns = [col[1] for col in cursor.fetchall()]
+            floor_columns = [col for col in all_columns if col.startswith(f"{building_id.upper()}_FLOOR_")]
+
+            if not floor_columns:
+                print(f"Warning: No floors found for building {building_id}. Skipping.")
+                continue
+
+            # Iterate over the floors
+            for floor_col in floor_columns:
+                overheating_criteria = []
+
+                try:
+                    # Fetch the temperature timeseries for the floor
+                    temp_series = pd.read_sql_query(
+                        f"SELECT timestamp, {floor_col} AS value FROM indoor_temperature;",
+                        conn,
+                        index_col="timestamp"
+                    )["value"]
+
+                    # Ensure the index is a DatetimeIndex
+                    temp_series.index = pd.to_datetime(temp_series.index)
+
+                    # Apply Criterion 1
+                    c1 = _compute_criterion1(temp_series, threshold, percentage_threshold)
+                    overheating_criteria.append(c1)
+
+                    # Apply Criterion 2
+                    c2 = _compute_criterion2(temp_series, threshold, integral_threshold)
+                    overheating_criteria.append(c2)
+
+                    # Criterion 3 (adaptive comfort model) not applicable due to lack of outdoor temperature.
+                    # Assuming Criterion 3 is skipped.
+                    c3 = False  # Replace this if outdoor data becomes available.
+                    overheating_criteria.append(c3)
+
+                    # Overheated if at least 2 criteria are met
+                    is_overheated = sum(overheating_criteria) >= 2
+                    overheating_flags.append(is_overheated)
+
+                except Exception as e:
+                    print(f"Warning: Failed to process data for {building_id}, {floor_col}. Error: {e}")
+                    overheating_flags.append(False)
+
+            # Add overheating flags for the building's floors to the DataFrame
+            for floor_index, is_overheated in enumerate(overheating_flags, start=1):
+                column_name = f"FLOOR_{floor_index}_overheated"
+                df.loc[index, column_name] = is_overheated
+
+    finally:
+        conn.close()
+
+    return df
