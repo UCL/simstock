@@ -14,6 +14,7 @@ from simstock.base import (
 from simstock.plotting import (
     plot
 )
+from simstock.schedule_generators import UnifiedScheduleManager
 
 
 
@@ -28,5 +29,6 @@ __all__ = [
     "get_gpkg_layer_names",
     "IDFmanager",
     "create_idf",
-    "plot"
+    "plot",
+    "UnifiedScheduleManager"
     ]

@@ -1,12 +1,7 @@
-import os
+import numpy as np
 import pandas as pd
 from difflib import get_close_matches
-from typing import Union
-from _utils._output_handling import (
-    _preprocess_datetime_column,
-    _get_building_file_dict
-)
-from simstock import SimstockDataframe
+
 
 domestic_keywords = {
     "dwell",
@@ -55,102 +50,353 @@ def _timeseries_to_schedule_compact(name, schedule_series, schedule_type_limits_
     return schedule_compact_str
 
 
+def _timeseries_to_schedule_fields_lumped_daily_repeat(
+    schedule_series: pd.Series,
+    schedule_type_limits: str = "Fraction",
+    repeat_days: int = 365
+    ) -> list[str]:
+    """
+    Convert a *short* time-indexed schedule (e.g. 7 days) into a repeated 
+    pattern up to `repeat_days` total, and then produce daily lumps in 
+    SCHEDULE:COMPACT format.
 
-def _extract_timeseries(
-        file_path: str,
-        scu: Union[str, int],
-        attribute: str,
-        scu_to_bi: dict
-        ) -> pd.Series:
-    
-    try:
-        bi_num = scu_to_bi[str(scu)]
-    except KeyError as e:
-        raise KeyError(f"SCU {scu} not found in results.")
-    
-    res_path = os.path.join(file_path,
-                            f"built_island_{bi_num}_ep_outputs",
-                            "eplusout.csv"
-                            )
-    try:
-        df = pd.read_csv(res_path)
-    except Exception as e:
-        raise FileNotFoundError(f"Could not open {res_path}.") from e
-    
-    # Preprocess "Date/Time" column
-    df["Date/Time"] = df["Date/Time"].apply(_preprocess_datetime_column)
+    For example, if schedule_series covers 7 distinct calendar days 
+    (e.g. 2025-01-01 through 2025-01-07), we replicate that daily pattern 
+    ~52 times so that we end up with ~365 days of lumps from 
+    2025-01-01 through (2025-01-01 + repeat_days - 1).
 
-    # Convert "Date/Time" column to datetime format
-    df["Date/Time"] = pd.to_datetime(df["Date/Time"], format="%m/%d  %H:%M:%S")
+    :param schedule_series: 
+        A short multi-day time-indexed schedule (like 7 or 14 days).
+    :param schedule_type_limits: 
+        "Fraction" (default) => clamp 0..1, 
+        otherwise "Temperature" etc.
+    :param repeat_days:
+        How many total days you want in the final schedule.
+    :return:
+        A list of lines suitable for building SCHEDULE:COMPACT. 
+        For example:
+          [
+            "Through: 1/1",
+            "For: AllDays",
+            "Until: 07:00, 0.0",
+            "Until: 19:00, 0.4",
+            ...
+            "Through: 12/31",
+            "For: AllDays",
+            "Until: 24:00, 0.0"
+          ]
+    """
 
-    # Set the index to the "Date/Time" column
-    df.set_index("Date/Time", inplace=True)
+    # 1) clamp if fraction
+    if schedule_type_limits.lower() == "fraction":
+        schedule_series = schedule_series.clip(0.0, 1.0)
 
-    # Return just the attibute of interest
-    try:
-        ts = df[attribute]
-    except KeyError as e:
-        raise KeyError(f"Column {attribute} not found in results.")
-    return ts
+    # 2) ensure ascending chronological order
+    schedule_series = schedule_series.sort_index()
+
+    # 3) figure out how many distinct days are in the original short schedule
+    unique_days = sorted(set(schedule_series.index.normalize()))
+    if len(unique_days) == 0:
+        # no data => just return empty
+        return []
+
+    # The start date we'll call day0
+    start_day = unique_days[0]  # e.g. 2025-01-01
+    # We'll define an end_day for the short schedule:
+    end_day = unique_days[-1]   # e.g. 2025-01-07
+    short_n_days = (end_day - start_day).days + 1
+
+    # If the user already generated e.g. 14 days but wants 365 repeated, 
+    # we will replicate the entire chunk as many times as needed.
+    # We'll build a new "long_series" that repeats the short pattern
+    # enough times to fill `repeat_days`.
+
+    # 4) Build repeated index
+    # The short schedule has short_n_days. We want repeat_days total.
+    # We'll replicate the numeric data. 
+    short_vals = schedule_series.values
+    short_len = len(short_vals)  # total number of points
+
+    # figure out how many times we replicate
+    reps_needed = (repeat_days // short_n_days) + 1  # a bit of over-shoot
+    # e.g. if short_n_days=7 and repeat_days=365 => reps_needed=53
+
+    import numpy as np
+    import pandas as pd
+
+    # replicate the entire array
+    repeated_vals = np.tile(short_vals, reps_needed)  
+    # e.g. if short_vals had length=1008 (7days@10min steps), 
+    # repeated_vals might have 1008*53 = 53424
+
+    # We'll build a new DatetimeIndex that starts exactly at 
+    # "start_day 00:00" and extends for repeat_days, 
+    # in the same freq as the original schedule_series. 
+    # We'll deduce freq from the original index if possible:
+    freq_str = schedule_series.index.inferred_freq
+    if freq_str is None:
+        # fallback => guess 10T or let user pass freq
+        freq_str = "10T"
+
+    repeated_len = len(repeated_vals)
+    # define a new index from start_day for repeated_len steps
+    # We interpret start_day as midnight of that calendar day:
+    start_dt = pd.Timestamp(start_day.year, start_day.month, start_day.day, 0, 0)
+    new_index = pd.date_range(
+        start=start_dt, 
+        periods=repeated_len, 
+        freq=freq_str
+    )
+
+    # Now we only want the first `repeat_days` worth of calendar days 
+    # from that new_index. Let's figure out the cutoff date:
+    final_day = start_day + pd.Timedelta(days=repeat_days - 1)
+    # We'll keep data up to final_day + 23:59
+    final_dt = pd.Timestamp(final_day.year, final_day.month, final_day.day, 23, 59)
+
+    # Build the repeated series, then slice
+    long_series = pd.Series(repeated_vals, index=new_index)
+    # slice to final_dt
+    long_series = long_series[long_series.index <= final_dt]
+
+    # Now `long_series` covers from day0 to day0+(repeat_days-1), 
+    # with lumps repeated from the short pattern.
+
+    # 5) Lump day-by-day into lines
+    return _build_daily_lumped_lines(long_series, schedule_type_limits)
 
 
-def extract_cooling_loads(sdf: SimstockDataframe, file_path: str):
+def _build_daily_lumped_lines(
+    full_series: pd.Series, 
+    schedule_type_limits="Fraction"
+    ) -> list[str]:
+    """
+    Like your original "timeseries_to_schedule_fields_lumped_daily" 
+    but without repeating logic. Just lumps day by day.
+    """
+    # ensure ascending
+    full_series = full_series.sort_index()
 
-    # Make the dictionary
-    d = _get_building_file_dict(file_path)
+    lines = []
+    unique_dates = sorted(set(full_series.index.normalize()))
 
-    # Iteratare over SCUs
-    domiter = 0
-    nondomiter = 0
-    for _, row in sdf.iterrows():
-        
-        # Get the BI
-        scu = row["osgb"]
-        try:
-            bi_num = d[str(scu)]
-        except KeyError as e:
-            raise KeyError(f"SCU {scu} not found in results.")
+    for day in unique_dates:
+        day_slice = full_series[full_series.index.normalize() == day]
+        if day_slice.empty:
+            continue
 
-        # Get the file path of the results for this scu
-        res_path = os.path.join(file_path,
-                                f"built_island_{bi_num}_ep_outputs",
-                                "eplusout.csv"
-                                )
-        
-        # Open the results file
-        try:
-            df = pd.read_csv(res_path)
-        except Exception as e:
-            raise FileNotFoundError(f"Could not open {res_path}.") from e
-        
-        # Preprocess "Date/Time" column
-        df["Date/Time"] = df["Date/Time"].apply(_preprocess_datetime_column)
+        # "Through: M/D"
+        m = day.month
+        d = day.day
+        lines.append(f"Through: {m}/{d}")
+        # "For: AllDays"
+        lines.append("For: AllDays")
 
-        # Convert "Date/Time" column to datetime format
-        df["Date/Time"] = pd.to_datetime(df["Date/Time"], format="%m/%d  %H:%M:%S")
+        # day_00, day_24
+        day_00 = pd.Timestamp(day.year, day.month, day.day, 0, 0)
+        day_24 = day_00 + pd.Timedelta(hours=24)
 
-        # Set the index to the "Date/Time" column
-        df.set_index("Date/Time", inplace=True)
+        # if first record is after day_00 => add a point at day_00
+        if day_slice.index[0] > day_00:
+            first_val = day_slice.iloc[0]
+            day_slice = pd.concat([
+                pd.Series([first_val], index=[day_00]),
+                day_slice
+            ])
 
-        # Iterate over the floors
-        for i in range(1,7):
+        # if last record is < day_24 => add a point at day_24
+        if day_slice.index[-1] < day_24:
+            last_val = day_slice.iloc[-1]
+            day_slice = pd.concat([
+                day_slice,
+                pd.Series([last_val], index=[day_24])
+            ])
 
-            # Get the floor usage type
-            floor_use = row[f"FLOOR_{i}: use"]
-            if not pd.isna(floor_use):
+        # lump the intervals
+        current_val = day_slice.iloc[0]
+        current_start = day_slice.index[0]
 
-                # If its domestic then add it to the running domestic sum
-                if _is_domestic(floor_use):
-                    if domiter == 0:
-                        running_domsum = df[f"{scu}_FLOOR_{i}_HVAC:Zone Ideal Loads Zone Total Cooling Energy [J](Hourly)"]/(5.4*3600*10**6)
-                    else:
-                        running_domsum = running_domsum + df[f"{scu}_FLOOR_{i}_HVAC:Zone Ideal Loads Zone Total Cooling Energy [J](Hourly)"]/(5.4*3600*10**6)
-                    domiter += 1
-                else:
-                    if nondomiter == 0:
-                        running_nondomsum = df[f"{scu}_FLOOR_{i}_HVAC:Zone Ideal Loads Zone Total Cooling Energy [J](Hourly)"]/(5.4*3600*10**6)
-                    else:
-                        running_nondomsum = running_nondomsum + df[f"{scu}_FLOOR_{i}_HVAC:Zone Ideal Loads Zone Total Cooling Energy [J](Hourly)"]/(5.4*3600*10**6)
-                    nondomiter += 1
+        for i in range(1, len(day_slice)):
+            t = day_slice.index[i]
+            v = day_slice.iloc[i]
+            if not np.isclose(v, current_val, atol=1e-9):
+                # close out [current_start, t)
+                line = _build_until_line(current_start, t, current_val)
+                lines.append(line)
+                current_val = v
+                current_start = t
 
-    return running_domsum, running_nondomsum
+        # final close
+        final_t = day_slice.index[-1]
+        line = _build_until_line(current_start, final_t, current_val, last_segment=True)
+        lines.append(line)
+
+    return lines
+
+
+def _build_until_line(start_ts, end_ts, val, last_segment=False) -> str:
+    """
+    Return a string like "Until: HH:MM, value".
+    We'll decide commas vs semicolons later.
+    """
+    hh = end_ts.hour
+    mm = end_ts.minute
+    # If end_ts is exactly next day 00:00 => interpret as 24:00
+    if hh == 0 and mm == 0 and (end_ts.normalize() > start_ts.normalize()):
+        hh = 24
+        mm = 0
+
+    return f"Until: {hh:02d}:{mm:02d}, {val}"
+
+
+
+
+
+def _build_until_field(start_ts, end_ts, val, last=False) -> str:
+    """
+    Return something like "Until: HH:MM, VAL"
+    *without* the trailing comma or semicolon appended here.
+
+    We'll let the top-level code decide how to place commas vs semicolons.
+
+    If you want to interpret 'end_ts' = next day 00:00 as 24:00,
+    do so in the hour extraction.
+
+    If 'last=True', the caller might interpret that as
+    "this is the last line in this daily block".
+    """
+    # figure out hour:minute for end_ts
+    # if hour=0 and minute=0 and the date is next day -> treat as 24:00
+    # A simpler approach:
+    hh = end_ts.hour
+    mm = end_ts.minute
+    # If we do see exactly 00:00 and it's the next day, call that 24:00
+    if hh == 0 and mm == 0:
+        # check if end_ts.date() > start_ts.date()
+        if end_ts.normalize() > pd.Timestamp(start_ts.date()):
+            hh = 24
+            mm = 0
+
+    time_str = f"{hh:02d}:{mm:02d}"
+    return f"Until: {time_str}, {val}"
+
+
+def finalize_schedule_compact_block(
+    schedule_name: str,
+    schedule_type: str,
+    fields: list[str]
+) -> list[str]:
+    """
+    Given a schedule name, schedule type, and the raw fields
+    (like "Through: 1/1", "For: AllDays", "Until: 07:00, 0.6", ...),
+    build a canonical IDF SCHEDULE:COMPACT block with commas/semicolons
+    in standard format:
+
+    [
+       "SCHEDULE:COMPACT,",
+       "    MyScheduleName,",
+       "    Fraction,",
+       "    Through: 1/1,",
+       "    For: AllDays,",
+       "    Until: 07:00, 0.0,",
+       "    Until: 17:00, 0.65;",
+    ]
+
+    The caller can then do '\n'.join(...) on that if desired.
+    """
+    result = []
+    # The object header
+    result.append("SCHEDULE:COMPACT,")
+    # field 1: the schedule name
+    # field 2: schedule type
+    # afterwards: all the lines from 'fields'
+    # but we need to carefully put commas vs. semicolons
+    all_fields = [schedule_name, schedule_type] + fields
+
+    for i, fval in enumerate(all_fields):
+        # If not last => comma, if last => semicolon
+        if i < len(all_fields) - 1:
+            result.append(f"    {fval},")
+        else:
+            result.append(f"    {fval};")
+    return result
+
+
+
+def _create_until_line(start_time, end_time, val, last_segment=False):
+    """
+    Build a line of the form:
+      "Until: HH:MM, val" (ends with comma),
+    or final line ends with semicolon if last_segment=True.
+
+    We interpret 'end_time' for the "Until: HH:MM".
+    If end_time is e.g. day + 24:00, we produce "Until: 24:00, val;"
+    """
+    # figure out the (hour, minute)
+    if hasattr(end_time, "hour"):
+        hh = end_time.hour
+        mm = end_time.minute
+        # If this is e.g. 00:00 of the next day => 24:00
+        if hh == 0 and mm == 0:
+            # probably 24:00 from the previous day
+            hh = 24
+    else:
+        # fallback if numeric
+        hh = int(end_time)
+        mm = 0
+
+    time_str = f"{hh:02d}:{mm:02d}"
+    # build line
+    line = f"Until: {time_str}, {val}"
+    line += ";" if last_segment else ","
+    return line
+
+
+def _create_until_line(start_time, end_time, val, last_segment=False):
+    """
+    Build something like "Until: HH:MM, val," 
+    or final line with a semicolon. 
+    We approximate the 'Until' time as the end_time 
+    in HH:MM format.
+
+    If you want daily breaks, you'd add logic to 
+    handle day boundaries, etc.
+    """
+    # We'll do "Until: HH:MM, val," 
+    # if not last_segment, else we end with ";"
+
+    time_str = _timestamp_to_hhmm(end_time)
+    line = f"Until: {time_str}, {val}"
+    if last_segment:
+        line += ";"
+    else:
+        line += ","
+    return line
+
+def _timestamp_to_hhmm(ts):
+    """
+    Convert a timestamp or partial timestamp to HH:MM string.
+    If you want to consider multi-day, you'll need more advanced logic:
+    e.g., "Through: 1/31, For: AllDays".
+    """
+    if hasattr(ts, "hour"):
+        hh = ts.hour
+        mm = ts.minute
+        return f"{hh:02d}:{mm:02d}"
+    # fallback if numeric
+    return f"{int(ts):02d}:00"
+
+
+def _time_to_str(timestamp):
+    """
+    Convert a timestamp to "HH:MM" for the IDF line. 
+    If you want to handle multi-day properly, you'd 
+    need a more robust approach (like 'Through: 1/30, For: AllDays, ...').
+    """
+    if hasattr(timestamp, "hour"):
+        hh = timestamp.hour
+        mm = timestamp.minute
+        return f"{hh:02d}:{mm:02d}"
+    else:
+        # fallback if numeric
+        return f"{timestamp}:00"

@@ -38,7 +38,12 @@ import simstock._algs._idf_algs as ialgs
 from simstock._utils._dirmanager import (
     _copy_directory_contents,
     _delete_directory_contents,
-    _compile_csvs_to_idf
+    _compile_csvs_to_idf,
+    _add_or_modify_idfobject,
+    _create_schedule_compact_obj,
+    _replicate_archetype_objects_for_zones,
+    _cleanup_infiltration_and_ventilation,
+    _fix_infiltration_vent_schedules
 )
 from simstock._utils._output_handling import (
     _make_output_csvs,
@@ -47,6 +52,7 @@ from simstock._utils._output_handling import (
     _add_building_totals
 )
 from simstock._utils._overheating import _add_overheating_flags
+from simstock._utils._timeseries_methods import _timeseries_to_schedule_fields_lumped_daily_repeat
 
 
 class SimstockDataframe:
@@ -233,6 +239,8 @@ class SimstockDataframe:
             self,
             inputobject: Any,
             polygon_column_name: str = None,
+            schedule_manager: Any = None,
+            csv_directory: str = None,
             uid_column_name: str = None,
             epw_file: str = None,
             tol: float = 0.1,
@@ -342,7 +350,16 @@ class SimstockDataframe:
         if epw_file:
             self.epw = epw_file
         else:
-            self.epw = os.path.join(self.simstock_directory, "settings", "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+            self.epw = os.path.join(
+                self.simstock_directory,
+                "settings",
+                "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw"
+                )
+        
+        # Set schedule manager
+        self.settings_csv_path = csv_directory
+        self.schedule_manager = schedule_manager
+        
 
     def __getattr__(self, attr: str) -> Any:
         """
@@ -767,38 +784,189 @@ class SimstockDataframe:
         )
 
 
-    def override_settings_with_csv(self, **kwargs) -> None:
+    def read_settings_from_csv(self):
         """
-        Function that reads in the settings stored in the csv files in the directory ``settings_csv_path`` (default `` simulation_settings``) and uses them to set the internal SimstockDataframe settings, such as materials etc. 
-
-        An ``FileNotFoundError`` will be raised if the ``settings_csv_path`` directory cannot be found. In this case, either call the :py:meth:`create_csv_folder` method to create it, or specify the path to one that already exists using the SimstockDataframe's ``settings_csv_path`` property. Equivalently, you could specify this as a key word argument when calling the :py:meth:`override_settings_with_csv`.
-
-        :param \**kwargs:
-            Optional keyword parameters, such as `settings_csv_path` or any of
-            the other SimstockDataframe properties
-        
-        :raises FileNotFoundError:
-            If the `settings_csv_path` does not exist or has not been specified.
-        :raises KeyError:
-            If the input csv data contains unrecognised fields. Try running :py:meth:`create_csv_folder` to generate correctly formated files.
-
-        **See also**: :py:meth:`create_csv_folder`
-
-        Example
-        ~~~~~~~
-        .. code-block:: python 
-
-            # If you already have settings csv files saved in a directory 
-            # called my_directory within your working directory, you could call:
-            sdf.override_settings_with_csv(settings_csv_path="my_directory")
+        Reads all standard IDF objects from CSV (people, materials, etc.) 
+        but SKIPS 'Schedule:Compact' objects.
         """
-        self.__dict__.update(kwargs)
-        if self.settings_csv_path == None:
-            msg = "No csv folder found. Call create_csv_folder() first."
-            raise FileNotFoundError(msg)
+        if not self.settings_csv_path:
+            raise FileNotFoundError("Settings CSV path not specified.")
+        # This loads everything except schedule:compact.
         _compile_csvs_to_idf(self.settings, self.settings_csv_path)
+        
+        
+    def read_schedule_compact_from_csv(self, filename="DB-Schedules-SCHEDULE_COMPACT.csv"):
+        """
+        Explicitly read 'Schedule:Compact' definitions from a CSV 
+        and add them to self.settings. 
+        This is for the user who wants a single schedule for all 'dwell' usage, etc.
+        """
+        fullpath = os.path.join(self.settings_csv_path, filename)
+        if not os.path.exists(fullpath):
+            raise FileNotFoundError(f"Schedule file {filename} not found in {self.settings_csv_path}")
+        
+        df = pd.read_csv(fullpath)
+        for _, row in df.iterrows():
+            _add_or_modify_idfobject("SCHEDULE:COMPACT", row, self.settings)
 
-    
+        
+    def generate_schedules(self):
+        """
+        For each building/floor, call schedule_manager.get_schedules_for_zone(...) 
+        to get correlated time series (occupancy, lighting, etc.).
+        Then create lumped SCHEDULE:COMPACT objects and 
+        referencing IDF objects (PEOPLE, LIGHTS, etc.).
+        """
+        if not self.schedule_manager:
+            # user wants CSV approach or no schedule generation
+            return
+
+        for _, row in self._df.iterrows():
+            building_id = row.get("osgb")
+            nofloors = int(row.get("nofloors", 0))
+            for floor_idx in range(1, nofloors + 1):
+                usage_type = row.get(f"FLOOR_{floor_idx}: use")
+                if usage_type:
+                    zone_name = f"{building_id}_floor_{floor_idx}"
+
+                    # Single method => correlated schedules
+                    schedules_dict = self.schedule_manager.get_schedules_for_zone(usage_type, zone_name)
+
+                    # 1) Occupancy
+                    occ_series = schedules_dict["occupancy"]
+                    occ_sched_name = f"{usage_type}_Occ_{zone_name}"
+                    lines_occ = _timeseries_to_schedule_fields_lumped_daily_repeat(occ_series, "Fraction")
+                    _create_schedule_compact_obj(
+                        self.settings, 
+                        occ_sched_name, 
+                        "Fraction", 
+                        lines_occ
+                    )
+                    occupant_count = self._get_archetypal_occupant_count(usage_type)
+                    self.settings.newidfobject(
+                        "PEOPLE",
+                        Name=f"People_{usage_type}_{zone_name}",
+                        Zone_or_ZoneList_Name=zone_name,
+                        Number_of_People_Schedule_Name=occ_sched_name,
+                        Number_of_People_Calculation_Method="People",
+                        Number_of_People=occupant_count,
+                        Fraction_Radiant="AutoCalculate",
+                        Sensible_Heat_Fraction="AutoCalculate",
+                        Activity_Level_Schedule_Name="Activity Schedule 98779"
+                    )
+
+                    # 2) Lighting
+                    light_series = schedules_dict["lighting"]
+                    light_sched_name = f"{usage_type}_Light_{zone_name}"
+                    lines_light = _timeseries_to_schedule_fields_lumped_daily_repeat(light_series, "Fraction")
+                    _create_schedule_compact_obj(
+                        self.settings, 
+                        light_sched_name, 
+                        "Fraction", 
+                        lines_light
+                    )
+                    lighting_power = self._get_archetypal_lighting_power(usage_type)
+                    self.settings.newidfobject(
+                        "LIGHTS",
+                        Name=f"Lights_{usage_type}_{zone_name}",
+                        Zone_or_ZoneList_Name=zone_name,
+                        Schedule_Name=light_sched_name,
+                        Design_Level_Calculation_Method="Watts/Area",
+                        Watts_per_Zone_Floor_Area=lighting_power,
+                        Fraction_Radiant=0.42,
+                        Fraction_Visible=0.18,
+                        EndUse_Subcategory="GeneralLights"
+                    )
+
+                    # 3) Equipment
+                    equip_series = schedules_dict["equipment"]
+                    equip_sched_name = f"{usage_type}_Equip_{zone_name}"
+                    lines_equip = _timeseries_to_schedule_fields_lumped_daily_repeat(equip_series, "Fraction")
+                    _create_schedule_compact_obj(
+                        self.settings, 
+                        equip_sched_name, 
+                        "Fraction", 
+                        lines_equip
+                    )
+                    equipment_power = self._get_archetypal_equipment_power(usage_type)
+                    self.settings.newidfobject(
+                        "ELECTRICEQUIPMENT",
+                        Name=f"Equip_{usage_type}_{zone_name}",
+                        Zone_or_ZoneList_Name=zone_name,
+                        Schedule_Name=equip_sched_name,
+                        Design_Level_Calculation_Method="Watts/Area",
+                        Watts_per_Zone_Floor_Area=equipment_power,
+                        Fraction_Latent=0.0,
+                        Fraction_Radiant=0.2,
+                        Fraction_Lost=0.0,
+                        EndUse_Subcategory="PlugLoads"
+                    )
+
+                    # 4) Heating
+                    heat_series = schedules_dict["heating"]
+                    heat_sched_name = f"{usage_type}_Heat_{zone_name}"
+                    lines_heat = _timeseries_to_schedule_fields_lumped_daily_repeat(heat_series, "Temperature")
+                    _create_schedule_compact_obj(
+                        self.settings, 
+                        heat_sched_name, 
+                        "Temperature", 
+                        lines_heat
+                    )
+
+                    # 5) Cooling
+                    cool_series = schedules_dict["cooling"]
+                    cool_sched_name = f"{usage_type}_Cool_{zone_name}"
+                    lines_cool = _timeseries_to_schedule_fields_lumped_daily_repeat(cool_series, "Temperature")
+                    _create_schedule_compact_obj(
+                        self.settings, 
+                        cool_sched_name, 
+                        "Temperature", 
+                        lines_cool
+                    )
+
+                    # Create ThermostatSetpoint:DualSetpoint & ZoneControl:Thermostat
+                    thermostat_name = f"{zone_name}_Thermostat"
+                    self.settings.newidfobject(
+                        "THERMOSTATSETPOINT:DUALSETPOINT",
+                        Name=thermostat_name,
+                        Heating_Setpoint_Temperature_Schedule_Name=heat_sched_name,
+                        Cooling_Setpoint_Temperature_Schedule_Name=cool_sched_name
+                    )
+                    self.settings.newidfobject(
+                        "ZONECONTROL:THERMOSTAT",
+                        Name=f"{thermostat_name}_Controller",
+                        Zone_or_ZoneList_Name=zone_name,
+                        Control_Type_Schedule_Name="Always 4",
+                        Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
+                        Control_1_Name=thermostat_name
+                    )
+
+    def _get_archetypal_occupant_count(self, usage_type):
+        # Example fallback
+        if usage_type.lower() == "dwell":
+            return 4.0
+        elif usage_type.lower() == "commercial":
+            return 6.0
+        else:
+            return 2.0
+
+    def _get_archetypal_lighting_power(self, usage_type):
+        if usage_type.lower() == "dwell":
+            return 12.0
+        elif usage_type.lower() == "commercial":
+            return 15.0
+        else:
+            return 10.0
+
+    def _get_archetypal_equipment_power(self, usage_type):
+        if usage_type.lower() == "dwell":
+            return 8.0
+        elif usage_type.lower() == "commercial":
+            return 10.0
+        else:
+            return 5.0
+
+
     def _validate_osgb_column(self) -> None:
         """
         Function to check the existance of a column named ``osgb``.
@@ -809,6 +977,7 @@ class SimstockDataframe:
         if len(cols) == 0:
             raise KeyError("No \"osgb\" column dectected!")
         self._df = self._df.rename(columns={cols[0] : "osgb"})
+
 
     def _validate_polygon_column(self) -> None:
         """
@@ -833,6 +1002,7 @@ class SimstockDataframe:
             errmsg = "Unable to find valid shapely data in \"polygon\""
             raise TypeError(errmsg) from exc
 
+
     def _add_missing_cols(self) -> None:
         missing = []
         for col in self._required_cols:
@@ -843,6 +1013,7 @@ class SimstockDataframe:
         if len(missing) > 0:
             print(f"Please populate the following columsn with data:")
             print(missing)
+    
     
     def _add_interiors_column(self) -> None:
         self._df['interiors'] = self._df['polygon'].map(algs._has_interior)
@@ -1674,6 +1845,11 @@ class IDFmanager:
                 else:
                     continue
                 
+                print("Replicating")
+                _replicate_archetype_objects_for_zones(temp_idf)
+                _cleanup_infiltration_and_ventilation(temp_idf)
+                _fix_infiltration_vent_schedules(temp_idf)
+                
                 # Store the idf object for this built island
                 self.bi_idf_list.append(temp_idf)
                 
@@ -1919,7 +2095,7 @@ class IDFmanager:
 
             # Run energy plus
             idf.epw = self.epw
-            idf.run(output_directory=new_dir_path, verbose="q")
+            idf.run(output_directory=new_dir_path)
 
         # Now do output handling by default
         _make_output_csvs(self.out_dir, self._readVarsESO_path)
