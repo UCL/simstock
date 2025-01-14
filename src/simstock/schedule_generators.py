@@ -1,166 +1,174 @@
-import pandas as pd
 import numpy as np
 
 class UnifiedScheduleManager:
     """
-    A schedule manager that, for each day in a (user-specified) date range,
-    uses one daily occupancy block if it's a weekday (Mon-Fri),
-    and another daily occupancy block if it's weekend (Sat/Sun).
-    Lighting/equipment are scaled from occupancy. Heating/cooling remain constant.
+    A lumps-based schedule manager that, for each day-of-week 
+    (Mon..Sun), generates one occupant/lighting/equipment block 
+    and a single all-day heating/cooling setpoint.
 
-    The daily pattern is repeated for each day in the range,
-    but the weekday pattern is chosen randomly once, and
-    the weekend pattern is chosen randomly once (in __init__).
+    It returns lines that look like valid SCHEDULE:COMPACT lines, for example:
+
+      Through: 12/31,
+      For: Monday,
+         Until: 06:00, 0.0,
+         Until: 12:00, 0.6,
+         Until: 24:00, 0.0,
+      For: Tuesday,
+         ...
+      For: Sunday,
+         Until: 24:00, 0.0;
+
+    Notice each day is ended with a trailing comma, except Sunday 
+    ends with a semicolon.
     """
 
-    def __init__(self, random_seed=None, freq="10T", days=14):
+    def __init__(self, random_seed=None):
         """
-        :param random_seed: for reproducible randomness
-        :param freq: e.g. "10T" for 10-minute intervals
-        :param days: how many total days you want to generate 
-                     starting from 2025-01-01
+        :param random_seed: optional integer to fix the random generator 
+                            for reproducible runs.
         """
-        self.random_seed = random_seed
         if random_seed is not None:
             np.random.seed(random_seed)
-        self.freq = freq
-        self.days = days
-
-        # Pre-generate the occupant "template" for weekdays vs. weekends:
-        #   self.weekday_block = (start_hour, end_hour, amplitude)
-        #   self.weekend_block = (start_hour, end_hour, amplitude)
-        self.weekday_block = self._random_daily_block_params("weekday")
-        self.weekend_block = self._random_daily_block_params("weekend")
 
     def get_schedules_for_zone(self, usage_type: str, zone_name: str):
         """
-        Return a dictionary of time series:
-          { "occupancy", "lighting", "equipment",
-            "heating", "cooling" }
-        each with freq resolution over 'days' days.
+        Return a dict of lumps-based lines, suitable for direct injection 
+        into SCHEDULE:COMPACT objects in EnergyPlus:
 
-        Occ. = 1 daily block for weekday vs. 1 daily block for weekend.
-        Lighting/equipment scale from occupancy.
-        Heating/cooling are constant.
+          {
+             "occupancy": [...],
+             "lighting":  [...],
+             "equipment": [...],
+             "heating":   [...],
+             "cooling":   [...]
+          }
+
+        Each value is a list of lines for lumps-based schedules. 
         """
-        # 1) build the date/time index
-        self.weekday_block = self._random_daily_block_params("weekday")
-        self.weekend_block = self._random_daily_block_params("weekend")
-        index = self._build_index()
 
-        # 2) occupant fraction
-        occ_series = self._gen_occupancy(usage_type, index)
-
-        # 3) other schedules
-        light_series = self._gen_lighting(usage_type, index, occ_series)
-        equip_series = self._gen_equipment(usage_type, index, occ_series)
-        heat_series = self._gen_heating(usage_type, index)
-        cool_series = self._gen_cooling(usage_type, index)
+        # occupant lumps
+        occ_lines    = self._build_weekly_lumps_fraction(usage_type)
+        # lighting lumps (base=0.1, scale depends on usage_type)
+        if usage_type.lower() == "dwell":
+            light_lines  = self._build_weekly_lumps_fraction(usage_type, base_val=0.1, scale=0.8)
+        else:
+            light_lines  = self._build_weekly_lumps_fraction(usage_type, base_val=0.1, scale=0.9)
+        # equipment lumps (base=0.05, scale=0.5)
+        equip_lines  = self._build_weekly_lumps_fraction(usage_type, base_val=0.05, scale=0.5)
+        # heating lumps
+        heat_lines   = self._build_weekly_lumps_setpoint(usage_type, is_cooling=False)
+        # cooling lumps
+        cool_lines   = self._build_weekly_lumps_setpoint(usage_type, is_cooling=True)
 
         return {
-            "occupancy": occ_series,
-            "lighting": light_series,
-            "equipment": equip_series,
-            "heating": heat_series,
-            "cooling": cool_series
+            "occupancy": occ_lines,
+            "lighting":  light_lines,
+            "equipment": equip_lines,
+            "heating":   heat_lines,
+            "cooling":   cool_lines
         }
 
     # ----------------------------------------------------------------
-    # Internal helpers
+    # Example lumps-based methods
     # ----------------------------------------------------------------
 
-    def _build_index(self):
-        """Build a date range from 2025-01-01 up to N days, at given freq."""
-        steps_per_day = (24 * 60) // self._freq_to_minutes()
-        total_steps = steps_per_day * self.days
-        return pd.date_range("2025-01-01", periods=total_steps, freq=self.freq)
-
-    def _freq_to_minutes(self):
-        return int(self.freq.replace("T", ""))
-
-    def _random_daily_block_params(self, usage_type="weekday"):
+    def _build_weekly_lumps_fraction(self, usage_type, base_val=0.0, scale=0.6):
         """
-        Returns (start_hour, end_hour, amplitude).
+        Build lumps for occupant/lighting/equipment fraction:
+        One random block each day-of-week. 
+        Produces lines that are valid for SCHEDULE:COMPACT, for instance:
 
-        If usage_type == 'weekday', we do one random block 
-        (e.g. 7..9 start, 16..20 end, amplitude 0.4..0.8).
-        If usage_type == 'weekend', do a different range.
+        [
+          "Through: 12/31,",
+          "For: Monday,",
+          "   Until: 06:00, 0.0,",
+          "   Until: 12:00, 0.5,",
+          "   Until: 24:00, 0.0,",
+          "For: Tuesday,",
+          ...
+          "For: Sunday,",
+          "   Until: 24:00, 0.0;"
+        ]
+
+        We select a random start_hour..end_hour block per day 
+        (Monday..Friday one style, Saturday/Sunday another), 
+        and an amplitude = base_val + scale*(random in [0.3..0.7]).
         """
-        if usage_type == "weekday":
-            start_hour = np.random.randint(7, 10)     # e.g. 7..9
-            end_hour   = np.random.randint(16, 21)   # e.g. 16..20
-            amp = np.random.uniform(0.4, 0.8)
-        else:
-            # weekend
-            start_hour = np.random.randint(9, 12)    # e.g. 9..11
-            end_hour   = np.random.randint(14, 20)   # e.g. 14..19
-            amp = np.random.uniform(0.2, 0.6)
+        lines = []
+        # The top line
+        lines.append("Through: 12/31")
 
-        if end_hour <= start_hour:
-            end_hour = start_hour + 4
-        return (start_hour, end_hour, amp)
+        day_names = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 
-    def _gen_occupancy(self, usage_type, index):
-        """
-        For each day in index:
-          If day_of_week < 5 => weekday, use self.weekday_block
-          else => weekend_block
-
-        Fill occupant fraction start_hour..end_hour = amplitude, else 0.
-        """
-        values = np.zeros(len(index))
-
-        for day in sorted(set(index.date)):
-            # Monday=0, Sunday=6 => day_of_week
-            day_of_week = pd.Timestamp(day).dayofweek
-            if day_of_week < 5:
+        for i, day_name in enumerate(day_names):
+            # For Monday..Friday => e.g. start ~ 6..9, for weekend => ~ 8..12
+            if i < 5:
                 # weekday
-                (start_hour, end_hour, amp) = self.weekday_block
+                start_hour = np.random.randint(6, 10)
             else:
                 # weekend
-                (start_hour, end_hour, amp) = self.weekend_block
+                start_hour = np.random.randint(8, 12)
 
-            # fill occupant fraction for that day
-            mask = (
-                (index.date == day)
-                & (index.hour >= start_hour)
-                & (index.hour < end_hour)
-            )
-            values[mask] = amp
+            # random duration 4..6 hours
+            duration   = np.random.randint(4, 7)
+            end_hour   = start_hour + duration
+            if end_hour > 24:
+                end_hour = 24
 
-        return pd.Series(values, index=index)
+            # random amplitude in ~ [0.3..1.0], scaled by base_val
+            rand_amp   = np.random.uniform(0.3, 0.7)
+            block_amp  = base_val + scale * rand_amp
 
-    def _gen_lighting(self, usage_type, index, occupancy_series):
+            # "For: Monday," line
+            lines.append(f"For: {day_name}")
+
+            # from 00:00..start => base_val
+            if start_hour > 0:
+                lines.append(f"   Until: {start_hour:02d}:00, {base_val}")
+            # from start..end => block_amp
+            lines.append(f"   Until: {end_hour:02d}:00, {block_amp}")
+            # from end..24 => base_val
+            if i == len(day_names) - 1:
+                # last day => semicolon
+                lines.append(f"   Until: 24:00, {base_val}")
+            else:
+                lines.append(f"   Until: 24:00, {base_val}")
+
+        return lines
+
+
+    def _build_weekly_lumps_setpoint(self, usage_type, is_cooling=False):
         """
-        e.g. lighting fraction = 0.1 + factor * occupancy
-        for dwell => factor=0.8, otherwise factor=0.9
+        Build lumps for a single setpoint all day for each day-of-week.
+
+        E.g. for dwell usage => 20C heating, 26C cooling, 
+             for commercial => 19C heating, 25C cooling, etc.
         """
-        base = 0.1
-        factor = 0.8 if usage_type.lower() == "dwell" else 0.9
-        arr = base + factor * occupancy_series.values
-        return pd.Series(np.clip(arr, 0.0, 1.0), index=index)
-
-    def _gen_equipment(self, usage_type, index, occupancy_series):
-        """eq fraction = 0.05 + 0.5 * occupant"""
-        base = 0.05
-        factor = 0.5
-        arr = base + factor * occupancy_series.values
-        return pd.Series(np.clip(arr, 0.0, 1.0), index=index)
-
-    def _gen_heating(self, usage_type, index):
-        """constant setpoint by usage_type"""
+        # pick setpoints by usage
         if usage_type.lower() == "dwell":
-            return pd.Series(20.0, index=index)
+            heat_sp = 20.0
+            cool_sp = 26.0
         elif usage_type.lower() == "commercial":
-            return pd.Series(19.0, index=index)
+            heat_sp = 19.0
+            cool_sp = 25.0
         else:
-            return pd.Series(19.5, index=index)
+            heat_sp = 19.5
+            cool_sp = 25.5
 
-    def _gen_cooling(self, usage_type, index):
-        """constant setpoint by usage_type"""
-        if usage_type.lower() == "dwell":
-            return pd.Series(26.0, index=index)
-        elif usage_type.lower() == "commercial":
-            return pd.Series(25.0, index=index)
-        else:
-            return pd.Series(25.5, index=index)
+        sp_val = cool_sp if is_cooling else heat_sp
+
+        lines = []
+        lines.append("Through: 12/31")
+
+        day_names = ["Monday","Tuesday","Wednesday","Thursday",
+                     "Friday","Saturday","Sunday"]
+
+        for i, day_name in enumerate(day_names):
+            lines.append(f"For: {day_name}")
+            # same setpoint the entire day
+            if i == len(day_names) - 1:
+                # final line => semicolon
+                lines.append(f"   Until: 24:00, {sp_val}")
+            else:
+                lines.append(f"   Until: 24:00, {sp_val}")
+        return lines

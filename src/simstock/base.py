@@ -813,9 +813,9 @@ class SimstockDataframe:
     def generate_schedules(self):
         """
         For each building/floor, call schedule_manager.get_schedules_for_zone(...) 
-        to get correlated time series (occupancy, lighting, etc.).
-        Then create lumped SCHEDULE:COMPACT objects and 
-        referencing IDF objects (PEOPLE, LIGHTS, etc.).
+        to get lumps-based schedule lines (occupancy, lighting, etc.).
+        Then create SCHEDULE:COMPACT objects from those lumps,
+        and referencing IDF objects (PEOPLE, LIGHTS, etc.).
         """
         if not self.schedule_manager:
             # user wants CSV approach or no schedule generation
@@ -829,19 +829,22 @@ class SimstockDataframe:
                 if usage_type:
                     zone_name = f"{building_id}_floor_{floor_idx}"
 
-                    # Single method => correlated schedules
+                    # Single method => lumps-based schedules
                     schedules_dict = self.schedule_manager.get_schedules_for_zone(usage_type, zone_name)
+                    # The manager now returns lines like:
+                    #   schedules_dict["occupancy"] = [ "Through: 12/31,", "For: Monday,", "  Until: 07:00, 0.0,", ... ]
 
-                    # 1) Occupancy
-                    occ_series = schedules_dict["occupancy"]
+                    # 1) Occupancy lumps
+                    occ_lines = schedules_dict["occupancy"]
                     occ_sched_name = f"{usage_type}_Occ_{zone_name}"
-                    lines_occ = _timeseries_to_schedule_fields_lumped_daily_repeat(occ_series, "Fraction")
                     _create_schedule_compact_obj(
                         self.settings, 
                         occ_sched_name, 
                         "Fraction", 
-                        lines_occ
+                        occ_lines
                     )
+
+                    # Create PEOPLE object referencing occ_sched_name
                     occupant_count = self._get_archetypal_occupant_count(usage_type)
                     self.settings.newidfobject(
                         "PEOPLE",
@@ -855,15 +858,14 @@ class SimstockDataframe:
                         Activity_Level_Schedule_Name="Activity Schedule 98779"
                     )
 
-                    # 2) Lighting
-                    light_series = schedules_dict["lighting"]
+                    # 2) Lighting lumps
+                    light_lines = schedules_dict["lighting"]
                     light_sched_name = f"{usage_type}_Light_{zone_name}"
-                    lines_light = _timeseries_to_schedule_fields_lumped_daily_repeat(light_series, "Fraction")
                     _create_schedule_compact_obj(
                         self.settings, 
                         light_sched_name, 
                         "Fraction", 
-                        lines_light
+                        light_lines
                     )
                     lighting_power = self._get_archetypal_lighting_power(usage_type)
                     self.settings.newidfobject(
@@ -878,15 +880,14 @@ class SimstockDataframe:
                         EndUse_Subcategory="GeneralLights"
                     )
 
-                    # 3) Equipment
-                    equip_series = schedules_dict["equipment"]
+                    # 3) Equipment lumps
+                    equip_lines = schedules_dict["equipment"]
                     equip_sched_name = f"{usage_type}_Equip_{zone_name}"
-                    lines_equip = _timeseries_to_schedule_fields_lumped_daily_repeat(equip_series, "Fraction")
                     _create_schedule_compact_obj(
                         self.settings, 
                         equip_sched_name, 
                         "Fraction", 
-                        lines_equip
+                        equip_lines
                     )
                     equipment_power = self._get_archetypal_equipment_power(usage_type)
                     self.settings.newidfobject(
@@ -902,26 +903,24 @@ class SimstockDataframe:
                         EndUse_Subcategory="PlugLoads"
                     )
 
-                    # 4) Heating
-                    heat_series = schedules_dict["heating"]
+                    # 4) Heating lumps
+                    heat_lines = schedules_dict["heating"]
                     heat_sched_name = f"{usage_type}_Heat_{zone_name}"
-                    lines_heat = _timeseries_to_schedule_fields_lumped_daily_repeat(heat_series, "Temperature")
                     _create_schedule_compact_obj(
                         self.settings, 
                         heat_sched_name, 
                         "Temperature", 
-                        lines_heat
+                        heat_lines
                     )
 
-                    # 5) Cooling
-                    cool_series = schedules_dict["cooling"]
+                    # 5) Cooling lumps
+                    cool_lines = schedules_dict["cooling"]
                     cool_sched_name = f"{usage_type}_Cool_{zone_name}"
-                    lines_cool = _timeseries_to_schedule_fields_lumped_daily_repeat(cool_series, "Temperature")
                     _create_schedule_compact_obj(
                         self.settings, 
                         cool_sched_name, 
                         "Temperature", 
-                        lines_cool
+                        cool_lines
                     )
 
                     # Create ThermostatSetpoint:DualSetpoint & ZoneControl:Thermostat
@@ -936,10 +935,11 @@ class SimstockDataframe:
                         "ZONECONTROL:THERMOSTAT",
                         Name=f"{thermostat_name}_Controller",
                         Zone_or_ZoneList_Name=zone_name,
-                        Control_Type_Schedule_Name="Always 4",
+                        Control_Type_Schedule_Name="Always 4",  # or e.g. "ControlTypeSchedule"
                         Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
                         Control_1_Name=thermostat_name
                     )
+
 
     def _get_archetypal_occupant_count(self, usage_type):
         # Example fallback
@@ -2095,7 +2095,7 @@ class IDFmanager:
 
             # Run energy plus
             idf.epw = self.epw
-            idf.run(output_directory=new_dir_path)
+            idf.run(output_directory=new_dir_path, verbose="q")
 
         # Now do output handling by default
         _make_output_csvs(self.out_dir, self._readVarsESO_path)
