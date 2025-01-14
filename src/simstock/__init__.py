@@ -14,8 +14,11 @@ from simstock.base import (
 from simstock.plotting import (
     plot
 )
-from simstock.schedule_generators import UnifiedScheduleManager
-
+from simstock.schedule_generators import (
+    ScheduleManager,
+    TimeseriesUsageRule,
+    UnifiedScheduleManager
+)
 
 
 __version__ = "0.2.4"
@@ -30,5 +33,7 @@ __all__ = [
     "IDFmanager",
     "create_idf",
     "plot",
+    "ScheduleManager",
+    "TimeseriesUsageRule",
     "UnifiedScheduleManager"
     ]
