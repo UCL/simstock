@@ -52,7 +52,6 @@ from simstock._utils._output_handling import (
     _add_building_totals
 )
 from simstock._utils._overheating import _add_overheating_flags
-from simstock._utils._timeseries_methods import _timeseries_to_schedule_fields_lumped_daily_repeat
 
 
 class SimstockDataframe:
@@ -246,6 +245,13 @@ class SimstockDataframe:
             tol: float = 0.1,
             use_base_idf: str = False,
             idd_file: str = None,
+            ventilation_dict: dict = None,
+            infiltration_dict: dict = None,
+            out_dir: str = "outs",
+            bi_mode: bool = True,
+            buffer_radius: Union[float, int] = 50,
+            min_avail_width_for_window: Union[float, int] = 1,
+            min_avail_height: Union[float, int] = 80,
             **kwargs
             ) -> None:
         """
@@ -288,6 +294,19 @@ class SimstockDataframe:
         current_file_path = inspect.getframeinfo(inspect.currentframe()).filename
         absolute_file_path = os.path.abspath(current_file_path)
         self.simstock_directory = os.path.dirname(absolute_file_path)
+        
+        # Directory for saving outputs
+        self.out_dir = out_dir
+        
+        # Whether to use the bi mode
+        self.bi_mode = bi_mode
+        
+        # The buffer radius for built island creation
+        self.buffer_radius = buffer_radius
+        
+        # Window options
+        self.min_avail_width_for_window = min_avail_width_for_window
+        self.min_avail_height = min_avail_height
 
         # Set default settings
         IDF.setiddname(self._idd_file)
@@ -359,6 +378,25 @@ class SimstockDataframe:
         # Set schedule manager
         self.settings_csv_path = csv_directory
         self.schedule_manager = schedule_manager
+        
+        # Load in the ventilation and infiltration
+        # dictionaries, if now provided by user
+        if ventilation_dict == None:
+            json_fname = os.path.join(
+                self.simstock_directory, "settings", "ventilation_dict.json"
+                )
+            with open(json_fname, 'r') as json_file:
+                self.ventilation_dict = json.load(json_file)
+        else:
+            self.ventilation_dict = ventilation_dict
+        if infiltration_dict == None:
+            json_fname = os.path.join(
+                self.simstock_directory, "settings", "infiltration_dict.json"
+                )
+            with open(json_fname, 'r') as json_file:
+                self.infiltration_dict = json.load(json_file)
+        else:
+            self.infiltration_dict = infiltration_dict
         
 
     def __getattr__(self, attr: str) -> Any:
@@ -1477,280 +1515,8 @@ class SimstockDataframe:
         self.collinear_exterior()
         self.polygon_topology()
         self.bi_adj()
-
-
-class IDFmanager:
-    """
-    An ``IDFmanager`` is a container object used to create elements
-    for an EnergyPlus simulation. The object contains functions to
-    take geometric and contextual data in the form of a 
-    SimstockDataframe, and create an IDF file or Eppy IDF
-    object for an E+ run.
-
-    :param data:
-        The input data containing polygon information, and optionally built-island data.
-    :type data: 
-        :class:`simstock.SimstockDataframe`
-    :param min_avail_width_for_window: 
-        *Optional*. Do not place window if the wall width is less than this number
-    :type min_avail_width_for_window:
-        float, int
-    :param min_avail_height: 
-        *Optional*. Do not place window if partially exposed external wall is less than this number % of zone height
-    :type min_avail_height: 
-        float, int
-    :param out_dir:
-        *Optional*. The directory (including full file path) into which to place the EnergyPlus output files, defaults to ``outs/``
-    :type out_dir: 
-        str
-    :param bi_mode:
-        *Optional*. Whether or not to group buildings into built islands (BIs)
-    :type bi_mode: 
-        bool
-    :param data_fname: 
-        *Optional*. Unique name for this simuation project. Only necessary if you want to save the building count, in which case that information will be saved to a file called data_fname within the out_dir directory
-    :type data_fname:
-        str
-    :param save_building_count:
-        *Optional*. Whether or not to save the number of buildings being simulated to a file called data_fname within out_dir. If not data_fname is supplied, then a unique string will be generated for the file name instead
-    :type save_building_count:
-        bool
-    :param epw:
-        *Optional*. Path and file name of an epw weather file to use for the weather settings. If none is specified, the St. James's park weather data will be used instead
-    :type epw:
-        str
-    :param buffer_radius:
-        *Optional*. The distance in metres of building buffers
-    :type buffer_radius:
-        float, int
-    :param ventilation_dict:
-        *Optional*. Dictioary containing ventilation settings. If none is specified, then default settings will be used
-    :type ventilation_dict:
-        dict
-    :param infiltration_dict:
-        *Optional*. Dictionary containing infiltration settings. If none is specified, then default settings will be used
-    :type infiltration_dict:
-        dict
-
-    :raises TypeError:
-        If the input data is not of type *str*, :class:`simstock.SimstockDataframe`, or :class:`DataFrame`
-    :raises FileNotFoundError: 
-        If the input data is a file name and path, but that file cannot be found
-    :raises IOError: 
-        If the input data is a file name and path, but that file cannot be read
-    :raises SimstockException:
-        If the input data does not contain the necessary fields. (See data specification above)
-
-    Example
-    ~~~~~~~
-    .. code-block:: python
-
-        # Basic usage example
-        # given a SimstockDataframe sdf
-        simulation = sim.IDFmanager(sdf)
-
-        # Now compute model IDFs for each built island
-        simulation.create_model_idf(bi_mode=True)
-
-        # Run E+ simulation, this will put outputs into outs/ folder by default
-        simulation.run()
-    
-    
-
-    **See also**: :py:class:`SimstockDataframe`
-    """
-
-    # Required column names
-    _col_names = [
-        'polygon',
-        'osgb',
-        'shading',
-        'height',
-        'wwr',
-        'nofloors',
-        'construction',
-        'interiors',
-        'touching',
-        'polygon_exposed_wall',
-        'polygon_horizontal'
-    ]
-
-    def __init__(self,
-                 data: SimstockDataframe,
-                 min_avail_width_for_window: Union[float, int] = 1,
-                 min_avail_height: Union[float, int] = 80,
-                 out_dir: str = "outs",
-                 bi_mode: bool = True,
-                 data_fname: str = None,
-                 save_building_count: bool = False,
-                 epw: str = None,
-                 buffer_radius: Union[float, int] = 50,
-                 ventilation_dict: dict = None, 
-                 infiltration_dict: dict = None
-                 ) -> None:
-        """
-        Constructor method
-        """
-
-        self.min_avail_width_for_window = min_avail_width_for_window
-        self.min_avail_height = min_avail_height
-        self.buffer_radius = buffer_radius
-        self.out_dir = out_dir
-        self.bi_mode = bi_mode
-        self.data_fname = data_fname
-        self.save_building_count = save_building_count
-
-        # Try and load data from simstockdataframe
-        try:
-            self._get_df(data)
-        except TypeError as exc:
-            msg = f"Type: {type(data)} cannot be loaded."
-            raise TypeError(msg) from exc
-        except FileNotFoundError as exc:
-            msg = f"File {data} not found."
-            raise FileNotFoundError(msg) from exc
-        except IOError as exc:
-            msg = f"Data in {data} cannot be read."
-            raise IOError(msg) from exc
         
-        # Validate the df
-        if not self.is_valid:
-            msg = (
-                "Error: the following columns are missing from the data: \n"
-                f"{self.missing_columns} \n"
-                "Please pre-process the data accordingly using the SimstockDataframe and its methods."
-            )
-            raise SimstockException(msg)
-
-        # Set the settings IDF to be the one specified 
-        # in the SimstockDataframe
-        self.idf = data.settings.copyidf()
-
-        # Set the weather file to be the one specified in the 
-        # SimstockDataframe, unless user has specified it 
-        # as a keyword argument at initialisation
-        if epw == None:
-            self.epw = data.epw
-
-        # Get simstock directory
-        current_file_path = inspect.getframeinfo(inspect.currentframe()).filename
-        absolute_file_path = os.path.abspath(current_file_path)
-        self.simstock_directory = os.path.dirname(absolute_file_path)
-
-        # Load in the ventilation and infiltration
-        # dictionaries, if now provided by user
-        if ventilation_dict == None:
-            json_fname = os.path.join(
-                self.simstock_directory, "settings", "ventilation_dict.json"
-                )
-            with open(json_fname, 'r') as json_file:
-                self.ventilation_dict = json.load(json_file)
-        else:
-            self.ventilation_dict = ventilation_dict
-        if infiltration_dict == None:
-            json_fname = os.path.join(
-                self.simstock_directory, "settings", "infiltration_dict.json"
-                )
-            with open(json_fname, 'r') as json_file:
-                self.infiltration_dict = json.load(json_file)
-        else:
-            self.infiltration_dict = infiltration_dict
-            
-        # Get the readvarseso path
-        self._readVarsESO_path = copy.copy(data._readVarsESO_path)
-
-
-    def __str__(self) -> str:
-        msg = (
-            "This is an IDFmanager, it's function is to create and handle IDF files."
-        )
-        return msg
-
-    def __repr__(self) -> str:
-        return "IDFobject()"
-
-    def _get_df(self,
-                data: Union[SimstockDataframe, DataFrame, str]
-                ) -> None:
-        """
-        Function to extract the simstock or pandas
-        data frame from `data` and store it in 
-        the IDFcreator object.
-
-        :param data:
-            The data that should contain somehow a dataframe.
-            This data can either already be a simstock or 
-            pandas data frame, or it can be a filename 
-            (including path) containing such.
-        :type data: 
-            :class:`simstock.SimstockDataframe`, :class:`DataFrame`, str
-
-        :Raises TypeError:
-            If the data is an invalid format.
-        """
-
-        # Extract the data frame using the appropriate
-        # method based on type
-        if type(data) == SimstockDataframe:
-            self._sdf_to_df(data)
-        elif type(data) == DataFrame:
-            self._df_to_df(data)
-        elif type(data) == str:
-            self._str_to_df(data)
-        else:
-            raise TypeError  
-    
-    def _sdf_to_df(self, data: SimstockDataframe) -> None:
-        self.df = data._df.copy()
-
-    def _df_to_df(self, data: DataFrame) -> None:
-        self.df = data.copy()
-
-    def _str_to_df(self, data: str) -> None:
-        if not os.path.exists(data):
-            raise FileNotFoundError
-        try:
-            if data["-3:"] == "csv":
-                self.df = pd.read_csv(data)
-            elif data["-7:"] == "parquet":
-                self.df = pd.read_parquet(data)
-            elif data["-4:"] == "json":
-                self.df = pd.read_json(data)
-            else:
-                raise IOError
-        except IOError as exc:
-            raise IOError from exc
         
-    @property
-    def is_valid(self) -> bool:
-        """
-        Are all of the necessary column names present
-        """
-        return all(col in self.df.columns for col in self._col_names)
-    
-    @property
-    def missing_columns(self) -> list:
-        """
-        Necessary column names that are missing from the data
-        """
-        return list(set(self._col_names).difference(set(self.df.columns)))
-    
-
-    def _get_osgb_value(
-            self,
-            val_name: str,
-            zones_df: DataFrame,
-            zone: str
-            ) -> float:
-        """Gets the value of a specified attribute for the zone"""
-        try:
-            osgb_from_zone = "_".join(zone.split("_")[:-2])
-            value = zones_df[zones_df["osgb"]==osgb_from_zone][val_name]
-            return value.to_numpy()[0]
-        except KeyError:
-            return 0.0
-    
-
     def create_model_idf(self, **kwargs) -> None:
         """
         Function to create IDF objects for each built island (if bi_mode=True), or else a single IDF for the entire model. 
@@ -1793,8 +1559,7 @@ class IDFmanager:
         self.__dict__.update(kwargs)
 
         # Ensure unique data file name
-        if not self.data_fname:
-            self.data_fname = _generate_unique_string()
+        self.data_fname = _generate_unique_string()
 
         if os.path.exists(self.out_dir):
                 shutil.rmtree(self.out_dir)
@@ -1804,29 +1569,22 @@ class IDFmanager:
         # If the dataframe contains a built island column
         if self.bi_mode:
 
-            # Calculate how many thermally simulated buildings are in each BI and output info as csv
-            bi_bldg_count = self.df[self.df["shading"]!=True]["bi"].value_counts()
-            if self.save_building_count:
-                bi_bldg_count.to_csv(
-                    os.path.join(self.out_dir, f"{self.data_fname}_bi_bldg_count.csv")
-                    )
-
             # Iterate over unique building islands
             self.bi_idf_list = []
-            for bi in self.df['bi'].unique().tolist():
+            for bi in self._df['bi'].unique().tolist():
 
                 # Revert idf to settings idf
-                temp_idf = self.idf.copyidf()
+                temp_idf = self.settings.copyidf()
             
                 # Change the name field of the building object
                 building_object = temp_idf.idfobjects['BUILDING'][0]
                 building_object.Name = bi
                 
                 # Get the data for the BI
-                bi_df = self.df[self.df['bi'] == bi]
+                bi_df = self._df[self._df['bi'] == bi]
 
                 # Get the data for other BIs to use as shading
-                rest  = self.df[self.df['bi'] != bi]
+                rest  = self._df[self._df['bi'] != bi]
 
                 # Include other polygons which fall under the specified shading buffer radius
                 bi_df = pd.concat(
@@ -1857,24 +1615,24 @@ class IDFmanager:
         else: # Not built island mode
 
             # Revert idf to settings idf
-            temp_idf = self.idf.copyidf()
+            temp_idf = self.settings.copyidf()
 
             # Change the name field of the building object
             building_object = temp_idf.idfobjects['BUILDING'][0]
             building_object.Name = self.data_fname
 
              # Get non-shading data
-            df1 = self.df[self.df['shading'] == False]
+            df1 = self._df[self._df['shading'] == False]
             bi_list = df1["bi"].unique()
             
             # Get the data for other BIs to use as shading
-            rest = self.df[self.df['shading'] == True]
+            rest = self._df[self._df['shading'] == True]
 
             # Include other polygons which fall under the specified shading buffer radius
             shading_dfs = []
             for bi in bi_list:
                 # Get the data for the BI
-                bi_df = self.df[self.df['bi'] == bi]
+                bi_df = self._df[self._df['bi'] == bi]
 
                 # Buffer each BI to specified radius and include shading which falls within this
                 shading_dfs.append(algs._shading_buffer(self.buffer_radius, bi_df, rest))
@@ -1927,7 +1685,7 @@ class IDFmanager:
         
         # Shading volumes converted to shading objects
         shading_df = bi_df.loc[bi_df['shading'] == True]
-        shading_df.apply(ialgs._shading_volumes, args=(self.df, temp_idf, origin,), axis=1)
+        shading_df.apply(ialgs._shading_volumes, args=(self._df, temp_idf, origin,), axis=1)
 
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = bi_df.loc[bi_df['shading'] == False]
@@ -2005,6 +1763,21 @@ class IDFmanager:
             temp_idf.newidfobject(**zone_infiltration_dict)
 
 
+    def _get_osgb_value(
+            self,
+            val_name: str,
+            zones_df: DataFrame,
+            zone: str
+            ) -> float:
+        """Gets the value of a specified attribute for the zone"""
+        try:
+            osgb_from_zone = "_".join(zone.split("_")[:-2])
+            value = zones_df[zones_df["osgb"]==osgb_from_zone][val_name]
+            return value.to_numpy()[0]
+        except KeyError:
+            return 0.0
+        
+        
     def save_idfs(self, **kwargs) -> None:
         """
         Function to save the IDF objects in a directory. By default, this directory will be called "outs/" and be located in the working directory. A different directory can be specified by the parameter or keyword argument "out_dir".
@@ -2044,7 +1817,7 @@ class IDFmanager:
         for j, idf in enumerate(self.bi_idf_list):
             fname = os.path.join(self.out_dir, f"built_island_{j}.idf")
             idf.saveas(fname)
-    
+
 
     def run(self, **kwargs) -> pd.Series:
         """
@@ -2061,7 +1834,7 @@ class IDFmanager:
         .. code-block:: python
 
             # Assuming creat_model_idf() has already been called to 
-            # create the model IDFs. We can check how many IDFs, 
+            # create the model IDFs. We can check how many IDFs,
             # corresponding to the number of built islands there
             # are by doing
             no_bi = len(simulation.bi_idf_list)
@@ -2105,14 +1878,14 @@ class IDFmanager:
         power_ts = _build_summary_database(self.out_dir, building_dict)
 
         # Add some summary stats back into the dataframe and return that
-        self.df = _add_building_totals(self.out_dir, self.df)
-        self.df = _add_overheating_flags(
+        self._df = _add_building_totals(self.out_dir, self._df)
+        self._df = _add_overheating_flags(
             self.out_dir,
-            self.df,
+            self._df,
             28.0,
             10.0,
             6.0,
             6.0
             )
 
-        return power_ts, self.df
+        return power_ts, self._df

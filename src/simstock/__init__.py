@@ -8,8 +8,7 @@ from simstock.io import (
     get_gpkg_layer_names
 )
 from simstock.base import (
-    SimstockDataframe,
-    IDFmanager
+    SimstockDataframe
 )
 from simstock.plotting import (
     plot
@@ -20,7 +19,6 @@ from simstock.schedule_generators import (
     UnifiedScheduleManager
 )
 
-
 __version__ = "0.2.4"
 
 __all__ = [
@@ -29,8 +27,7 @@ __all__ = [
     "read_geopackage_layer",
     "read_parquet",
     "read_json",
-    "get_gpkg_layer_names",
-    "IDFmanager",
+    "get_gpkg_layer_names"
     "create_idf",
     "plot",
     "ScheduleManager",
