@@ -137,7 +137,7 @@ def _compile_csvs_to_idf(idf: IDF, path: str) -> None:
 
             # Get idf class name
             idf_class = _extract_class_name(csv_file[:-4])
-            if idf_class != "OnOff" and idf_class.casefold() != "schedule:compact":
+            if idf_class != "OnOff" and idf_class.casefold() not in ["schedule:compact", "lights", "people", "electricequipment"]:
 
                 # load as pandas dataframe
                 try:
@@ -499,6 +499,7 @@ def _cleanup_infiltration_and_ventilation(
             else:
                 print(f"Fix ventilation '{vent.Name}' referencing missing sched '{sched}' => fallback '{fallback_schedule_name}'.")
                 vent.Schedule_Name = fallback_schedule_name
+
 
 def _fix_infiltration_vent_schedules(
     idf,

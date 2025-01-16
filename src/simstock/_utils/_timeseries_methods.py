@@ -24,6 +24,65 @@ def _is_domestic(input_string):
     return True if closest_match else False
 
 
+def _timeseries_day_to_lumps(day_series: pd.Series, clamp_0_1: bool=False) -> list[str]:
+    """
+    Convert a single-day Pandas Series with a DatetimeIndex 
+    (covering e.g. 2025-01-06 00:00..23:59) into lumps lines:
+       [
+         "   Until: 06:00, 0.0,",
+         "   Until: 12:30, 0.5,",
+         "   Until: 24:00, 0.0,"
+       ]
+
+    We assume all times lie within the same calendar day. 
+    If clamp_0_1=True, clip values to [0,1].
+    """
+    # 1) sort, clamp if fraction
+    s = day_series.sort_index()
+    if clamp_0_1:
+        s = s.clip(0,1)
+
+    # 2) ensure coverage up to day+24:00
+    day_date = s.index[0].normalize()  # e.g. 2025-01-06 00:00
+    day_24   = day_date + pd.Timedelta(hours=24)
+
+    # if not ending at 24:00, append final value
+    if s.index[-1] < day_24:
+        s.loc[day_24] = s.iloc[-1]
+
+    s = s.sort_index()
+
+    # 3) lumps
+    lumps = []
+    current_val   = s.iloc[0]
+
+    # step through
+    for i in range(1, len(s)):
+        t = s.index[i]
+        v = s.iloc[i]
+        if not np.isclose(v, current_val, atol=1e-12):
+            # close out from current_start..t
+            lumps.append(f"   Until: {_fmt_time(t, day_date)}, {current_val}")
+            current_val   = v
+
+    # close final from current_start..24:00
+    # note we guaranteed there's a 24:00 point
+    lumps.append(f"   Until: 24:00, {current_val}")
+    return lumps
+
+
+def _fmt_time(ts: pd.Timestamp, day_start: pd.Timestamp) -> str:
+    """
+    Return "HH:MM" or "24:00" if it’s exactly midnight next day.
+    """
+    hh = ts.hour
+    mm = ts.minute
+    # if dt is day_start+24 => 24:00
+    if hh == 0 and mm == 0 and ts > day_start:
+        return "24:00"
+    return f"{hh:02d}:{mm:02d}"
+
+
 def _timeseries_to_schedule_compact(name, schedule_series, schedule_type_limits_name='Fraction'):
     """
     Converts a pandas Series into a Schedule:Compact string.
@@ -247,9 +306,6 @@ def _build_until_line(start_ts, end_ts, val, last_segment=False) -> str:
         mm = 0
 
     return f"Until: {hh:02d}:{mm:02d}, {val}"
-
-
-
 
 
 def _build_until_field(start_ts, end_ts, val, last=False) -> str:

@@ -41,9 +41,9 @@ from simstock._utils._dirmanager import (
     _compile_csvs_to_idf,
     _add_or_modify_idfobject,
     _create_schedule_compact_obj,
-    _replicate_archetype_objects_for_zones,
     _cleanup_infiltration_and_ventilation,
-    _fix_infiltration_vent_schedules
+    _fix_infiltration_vent_schedules,
+    _extract_class_name
 )
 from simstock._utils._output_handling import (
     _make_output_csvs,
@@ -248,7 +248,6 @@ class SimstockDataframe:
             ventilation_dict: dict = None,
             infiltration_dict: dict = None,
             out_dir: str = "outs",
-            bi_mode: bool = True,
             buffer_radius: Union[float, int] = 50,
             min_avail_width_for_window: Union[float, int] = 1,
             min_avail_height: Union[float, int] = 80,
@@ -297,9 +296,6 @@ class SimstockDataframe:
         
         # Directory for saving outputs
         self.out_dir = out_dir
-        
-        # Whether to use the bi mode
-        self.bi_mode = bi_mode
         
         # The buffer radius for built island creation
         self.buffer_radius = buffer_radius
@@ -379,25 +375,11 @@ class SimstockDataframe:
         self.settings_csv_path = csv_directory
         self.schedule_manager = schedule_manager
         
-        # Load in the ventilation and infiltration
-        # dictionaries, if now provided by user
-        if ventilation_dict == None:
-            json_fname = os.path.join(
-                self.simstock_directory, "settings", "ventilation_dict.json"
-                )
-            with open(json_fname, 'r') as json_file:
-                self.ventilation_dict = json.load(json_file)
+        # Set internal state regarding whether diversity is to be used
+        if self.schedule_manager:
+            self._diversity = True
         else:
-            self.ventilation_dict = ventilation_dict
-        if infiltration_dict == None:
-            json_fname = os.path.join(
-                self.simstock_directory, "settings", "infiltration_dict.json"
-                )
-            with open(json_fname, 'r') as json_file:
-                self.infiltration_dict = json.load(json_file)
-        else:
-            self.infiltration_dict = infiltration_dict
-        
+            self._diversity = False
 
     def __getattr__(self, attr: str) -> Any:
         """
@@ -822,18 +804,21 @@ class SimstockDataframe:
         )
 
 
-    def read_settings_from_csv(self):
+    def read_materials_and_constructions_from_csv(self) -> None:
         """
         Reads all standard IDF objects from CSV (people, materials, etc.) 
         but SKIPS 'Schedule:Compact' objects.
         """
         if not self.settings_csv_path:
             raise FileNotFoundError("Settings CSV path not specified.")
-        # This loads everything except schedule:compact.
+        # This loads in the materials and constructions.
         _compile_csvs_to_idf(self.settings, self.settings_csv_path)
-        
-        
-    def read_schedule_compact_from_csv(self, filename="DB-Schedules-SCHEDULE_COMPACT.csv"):
+
+
+    def read_schedules_and_settings_from_csv(
+        self,
+        filename: str ="DB-Schedules-SCHEDULE_COMPACT.csv",
+        ) -> None:
         """
         Explicitly read 'Schedule:Compact' definitions from a CSV 
         and add them to self.settings. 
@@ -842,167 +827,64 @@ class SimstockDataframe:
         fullpath = os.path.join(self.settings_csv_path, filename)
         if not os.path.exists(fullpath):
             raise FileNotFoundError(f"Schedule file {filename} not found in {self.settings_csv_path}")
-        
-        df = pd.read_csv(fullpath)
+
+        # Read in the compact schedule
+        df = pd.read_csv(
+            fullpath,
+            na_values=["", "N/A", "NA", "NaN", "NULL", "None"],
+            on_bad_lines='skip'
+            )
         for _, row in df.iterrows():
             _add_or_modify_idfobject("SCHEDULE:COMPACT", row, self.settings)
+            
+        # Now read in the lights, people, and equipment
+        for csv_file in os.listdir(self.settings_csv_path):
+            
+            # Get the idf class name
+            idf_class = _extract_class_name(csv_file[:-4])
+            if idf_class.casefold() in ["lights", "people", "electricequipment"]:
+                
+                # load as pandas dataframe
+                try:
+                    na_values = ["", "N/A", "NA", "NaN", "NULL", "None"]
+                    df = pd.read_csv(
+                        os.path.join(self.settings_csv_path, csv_file),
+                        na_values=na_values,
+                        on_bad_lines='skip'
+                        )
+                except FileNotFoundError:
+                    print(f"File '{csv_file}' not found.")
+                except pd.errors.EmptyDataError:
+                    print(f"File '{csv_file}' is empty.")
+                except pd.errors.ParserError as pe:
+                    print(f"Error parsing '{csv_file}': {pe}")
+                except Exception as e:
+                    print(f"An error occurred while loading '{csv_file}': {e}")
+            
+                # Iterate over rows of df
+                for _, row in df.iterrows():
 
-        
-    def generate_schedules(self):
-        """
-        For each building/floor, call schedule_manager.get_schedules_for_zone(...) 
-        to get lumps-based schedule lines (occupancy, lighting, etc.).
-        Then create SCHEDULE:COMPACT objects from those lumps,
-        and referencing IDF objects (PEOPLE, LIGHTS, etc.).
-        """
-        if not self.schedule_manager:
-            # user wants CSV approach or no schedule generation
-            return
+                    # Add each entry as a new idf object
+                    try:
+                        _add_or_modify_idfobject(idf_class, row, self.settings)
+                    except Exception as e:
+                        raise Exception(f"Cause: class {idf_class}") from e
 
-        for _, row in self._df.iterrows():
-            building_id = row.get("osgb")
-            nofloors = int(row.get("nofloors", 0))
-            for floor_idx in range(1, nofloors + 1):
-                usage_type = row.get(f"FLOOR_{floor_idx}: use")
-                if usage_type:
-                    zone_name = f"{building_id}_floor_{floor_idx}"
+        # Load in the ventilation and infiltration
+        json_fname = os.path.join(
+            self.simstock_directory, "settings", "ventilation_dict.json"
+            )
+        with open(json_fname, 'r') as json_file:
+            self.ventilation_dict = json.load(json_file)
+        json_fname = os.path.join(
+            self.simstock_directory, "settings", "infiltration_dict.json"
+            )
+        with open(json_fname, 'r') as json_file:
+            self.infiltration_dict = json.load(json_file)
 
-                    # Single method => lumps-based schedules
-                    schedules_dict = self.schedule_manager.get_schedules_for_zone(usage_type, zone_name)
-                    # The manager now returns lines like:
-                    #   schedules_dict["occupancy"] = [ "Through: 12/31,", "For: Monday,", "  Until: 07:00, 0.0,", ... ]
-
-                    # 1) Occupancy lumps
-                    occ_lines = schedules_dict["occupancy"]
-                    occ_sched_name = f"{usage_type}_Occ_{zone_name}"
-                    _create_schedule_compact_obj(
-                        self.settings, 
-                        occ_sched_name, 
-                        "Fraction", 
-                        occ_lines
-                    )
-
-                    # Create PEOPLE object referencing occ_sched_name
-                    occupant_count = self._get_archetypal_occupant_count(usage_type)
-                    self.settings.newidfobject(
-                        "PEOPLE",
-                        Name=f"People_{usage_type}_{zone_name}",
-                        Zone_or_ZoneList_Name=zone_name,
-                        Number_of_People_Schedule_Name=occ_sched_name,
-                        Number_of_People_Calculation_Method="People",
-                        Number_of_People=occupant_count,
-                        Fraction_Radiant="AutoCalculate",
-                        Sensible_Heat_Fraction="AutoCalculate",
-                        Activity_Level_Schedule_Name="Activity Schedule 98779"
-                    )
-
-                    # 2) Lighting lumps
-                    light_lines = schedules_dict["lighting"]
-                    light_sched_name = f"{usage_type}_Light_{zone_name}"
-                    _create_schedule_compact_obj(
-                        self.settings, 
-                        light_sched_name, 
-                        "Fraction", 
-                        light_lines
-                    )
-                    lighting_power = self._get_archetypal_lighting_power(usage_type)
-                    self.settings.newidfobject(
-                        "LIGHTS",
-                        Name=f"Lights_{usage_type}_{zone_name}",
-                        Zone_or_ZoneList_Name=zone_name,
-                        Schedule_Name=light_sched_name,
-                        Design_Level_Calculation_Method="Watts/Area",
-                        Watts_per_Zone_Floor_Area=lighting_power,
-                        Fraction_Radiant=0.42,
-                        Fraction_Visible=0.18,
-                        EndUse_Subcategory="GeneralLights"
-                    )
-
-                    # 3) Equipment lumps
-                    equip_lines = schedules_dict["equipment"]
-                    equip_sched_name = f"{usage_type}_Equip_{zone_name}"
-                    _create_schedule_compact_obj(
-                        self.settings, 
-                        equip_sched_name, 
-                        "Fraction", 
-                        equip_lines
-                    )
-                    equipment_power = self._get_archetypal_equipment_power(usage_type)
-                    self.settings.newidfobject(
-                        "ELECTRICEQUIPMENT",
-                        Name=f"Equip_{usage_type}_{zone_name}",
-                        Zone_or_ZoneList_Name=zone_name,
-                        Schedule_Name=equip_sched_name,
-                        Design_Level_Calculation_Method="Watts/Area",
-                        Watts_per_Zone_Floor_Area=equipment_power,
-                        Fraction_Latent=0.0,
-                        Fraction_Radiant=0.2,
-                        Fraction_Lost=0.0,
-                        EndUse_Subcategory="PlugLoads"
-                    )
-
-                    # 4) Heating lumps
-                    heat_lines = schedules_dict["heating"]
-                    heat_sched_name = f"{usage_type}_Heat_{zone_name}"
-                    _create_schedule_compact_obj(
-                        self.settings, 
-                        heat_sched_name, 
-                        "Temperature", 
-                        heat_lines
-                    )
-
-                    # 5) Cooling lumps
-                    cool_lines = schedules_dict["cooling"]
-                    cool_sched_name = f"{usage_type}_Cool_{zone_name}"
-                    _create_schedule_compact_obj(
-                        self.settings, 
-                        cool_sched_name, 
-                        "Temperature", 
-                        cool_lines
-                    )
-
-                    # Create ThermostatSetpoint:DualSetpoint & ZoneControl:Thermostat
-                    thermostat_name = f"{zone_name}_Thermostat"
-                    self.settings.newidfobject(
-                        "THERMOSTATSETPOINT:DUALSETPOINT",
-                        Name=thermostat_name,
-                        Heating_Setpoint_Temperature_Schedule_Name=heat_sched_name,
-                        Cooling_Setpoint_Temperature_Schedule_Name=cool_sched_name
-                    )
-                    self.settings.newidfobject(
-                        "ZONECONTROL:THERMOSTAT",
-                        Name=f"{thermostat_name}_Controller",
-                        Zone_or_ZoneList_Name=zone_name,
-                        Control_Type_Schedule_Name="Always 4",  # or e.g. "ControlTypeSchedule"
-                        Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
-                        Control_1_Name=thermostat_name
-                    )
-
-
-    def _get_archetypal_occupant_count(self, usage_type):
-        # Example fallback
-        if usage_type.lower() == "dwell":
-            return 4.0
-        elif usage_type.lower() == "commercial":
-            return 6.0
-        else:
-            return 2.0
-
-    def _get_archetypal_lighting_power(self, usage_type):
-        if usage_type.lower() == "dwell":
-            return 12.0
-        elif usage_type.lower() == "commercial":
-            return 15.0
-        else:
-            return 10.0
-
-    def _get_archetypal_equipment_power(self, usage_type):
-        if usage_type.lower() == "dwell":
-            return 8.0
-        elif usage_type.lower() == "commercial":
-            return 10.0
-        else:
-            return 5.0
+        # Ensure state reflects that schedules have been read
+        self._diversity = False
+        self._read_schedules = True
 
 
     def _validate_osgb_column(self) -> None:
@@ -1174,6 +1056,7 @@ class SimstockDataframe:
                 errmsg = f"Warning: OSGB {osgb_i} intersects {osgb_j}"
                 raise ValueError(errmsg) from exc
 
+
     def polygon_tolerance(self, **kwargs) -> None:
         """
         A function to assess which polygons need simplifying, based on a user-specifed tolerance. This can be set via the `tol` property, 
@@ -1265,7 +1148,7 @@ class SimstockDataframe:
                             self._df['osgb'] == osgb_touching, 'polygon'
                             ] = algs._buffered_polygon(t_poly, new_coords, removed_coords)
 
-    # This function seems redundant                   
+                
     def _touching_poly(self,
                        osgb: str,
                        polygon: Polygon, 
@@ -1280,6 +1163,7 @@ class SimstockDataframe:
                     if polygon.touches(t_polygon):
                         osgb_touching.append(t)
         return osgb_touching
+                  
                         
     def _polygon_simplify(self) -> None:
         """
@@ -1429,6 +1313,7 @@ class SimstockDataframe:
                 ] = horizontal
         self.processed = True
 
+
     def bi_adj(self, **kwargs) -> None:
         """
         Function to group buildings into built islands (BIs). E.g. 
@@ -1566,106 +1451,191 @@ class SimstockDataframe:
         else:
             os.makedirs(self.out_dir)
             
-        # If the dataframe contains a built island column
-        if self.bi_mode:
-
-            # Iterate over unique building islands
-            self.bi_idf_list = []
-            for bi in self._df['bi'].unique().tolist():
-
-                # Revert idf to settings idf
-                temp_idf = self.settings.copyidf()
-            
-                # Change the name field of the building object
-                building_object = temp_idf.idfobjects['BUILDING'][0]
-                building_object.Name = bi
-                
-                # Get the data for the BI
-                bi_df = self._df[self._df['bi'] == bi]
-
-                # Get the data for other BIs to use as shading
-                rest  = self._df[self._df['bi'] != bi]
-
-                # Include other polygons which fall under the specified shading buffer radius
-                bi_df = pd.concat(
-                        [
-                        bi_df, 
-                        algs._shading_buffer(self.buffer_radius, bi_df, rest)
-                        ]
-                    )
-                
-                # Only create idf if the BI is 
-                # not entirely composed of shading blocks
-                shading_vals_temp = bi_df['shading'].to_numpy()
-                shading_vals = [_assert_bool(v) for v in shading_vals_temp]
-                if not np.asarray(shading_vals).all():
-                    self._createidfs(temp_idf, bi_df)
-                else:
-                    continue
-                
-                print("Replicating")
-                _replicate_archetype_objects_for_zones(temp_idf)
-                _cleanup_infiltration_and_ventilation(temp_idf)
-                _fix_infiltration_vent_schedules(temp_idf)
-                
-                # Store the idf object for this built island
-                self.bi_idf_list.append(temp_idf)
-                
-
-        else: # Not built island mode
+        # Iterate over unique building islands
+        self.bi_idf_list = []
+        for bi in self._df['bi'].unique().tolist():
 
             # Revert idf to settings idf
             temp_idf = self.settings.copyidf()
-
+        
             # Change the name field of the building object
             building_object = temp_idf.idfobjects['BUILDING'][0]
-            building_object.Name = self.data_fname
-
-             # Get non-shading data
-            df1 = self._df[self._df['shading'] == False]
-            bi_list = df1["bi"].unique()
+            building_object.Name = bi
             
+            # Get the data for the BI
+            bi_df = self._df[self._df['bi'] == bi]
+
             # Get the data for other BIs to use as shading
-            rest = self._df[self._df['shading'] == True]
+            rest  = self._df[self._df['bi'] != bi]
 
             # Include other polygons which fall under the specified shading buffer radius
-            shading_dfs = []
-            for bi in bi_list:
-                # Get the data for the BI
-                bi_df = self._df[self._df['bi'] == bi]
+            bi_df = pd.concat(
+                    [
+                    bi_df, 
+                    algs._shading_buffer(self.buffer_radius, bi_df, rest)
+                    ]
+                )
 
-                # Buffer each BI to specified radius and include shading which falls within this
-                shading_dfs.append(algs._shading_buffer(self.buffer_radius, bi_df, rest))
-
-            # Combine these separate shading DataFrames and drop duplicate rows
-            shading_df = pd.concat(shading_dfs)
-            shading_df = shading_df.drop_duplicates()
-
-            # Append the shading to the main DataFrame
-            if self.buffer_radius != 0:
-                df1 = pd.concat([df1, shading_df]).drop_duplicates(subset="osgb", keep="first")
-
-            # If shading radius is zero, i.e. no shading is to be included
-            elif self.buffer_radius == 0:
-                # Overwrite touching column with empty data to avoid errors
-                df1.loc[:, "touching"] = ["[]"] * len(df1)
-
-            # Only create idf if it is not entirely composed of shading blocks
-            shading_vals_temp = df1['shading'].to_numpy()
+            # Only create idf if the BI is 
+            # not entirely composed of shading blocks
+            shading_vals_temp = bi_df['shading'].to_numpy()
             shading_vals = [_assert_bool(v) for v in shading_vals_temp]
             if not np.asarray(shading_vals).all():
-
-                # If requested, output csv which excludes any buildings not within the shading buffer
-                df1.to_csv(os.path.join(self.out_dir, f"{self.data_fname}_final.csv"))
-
-                # Generate the idf file
-                self._createidfs(temp_idf, df1)
-
+                self._createidfs(temp_idf, bi_df)
             else:
-                raise Exception("There are no thermal zones to create! All zones are shading.")
-            
-            self.bi_idf_list.append(temp_idf)
+                continue
 
+            # Check that if we are not using diveristy, 
+            # that the schedules have already been read from file
+            if not self._diversity and not self._read_schedules:
+                raise ValueError("Schedules must be read from file before creating IDFs.")
+            
+            # If we want to use diveristy then start using the schedule manager
+            if self._diversity:
+                
+                # Iterate over the non-shading buildings in this BI
+                for _, row in bi_df[bi_df["shading"]==False].iterrows():
+                    
+                    # Get the building id and number of floors
+                    building_id = row.get("osgb")
+                    nofloors = int(row.get("nofloors", 0))
+                    
+                    # Iterate over the floors
+                    for floor_idx in range(1, nofloors+1):
+                        
+                        # Get the usage type for this floor
+                        usage_type = row.get(f"FLOOR_{floor_idx}: use")
+                        
+                        # Check it has a usage type
+                        if usage_type:
+
+                            # Get the zone name, e.g. "osgb8687234627_floor_1"
+                            zone_name = f"{building_id}_floor_{floor_idx}"
+
+                            # Get the schedule dict and rule for this zone
+                            schedules_dict = self.schedule_manager.get_schedules_for_zone(usage_type, zone_name)
+                            rule_obj = self.schedule_manager.get_rule_obj(usage_type)
+
+                            # occupant fraction lumps
+                            occ_sched_name = f"{usage_type}_Occ_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf,
+                                occ_sched_name,
+                                "Fraction",
+                                schedules_dict["occupancy"]
+                            )
+
+                            # occupant gains lumps
+                            activity_sched_name= f"{usage_type}_Activity_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf,
+                                activity_sched_name,
+                                "Any Number",
+                                schedules_dict["activity"]
+                            )
+                            
+                            # Now create a PEOPLE object with “People/Area” = rule_obj.occupant_density
+                            # and referencing those two schedule names:
+                            temp_idf.newidfobject(
+                                "PEOPLE",
+                                Name=f"People_{usage_type}_{zone_name}",
+                                Zone_or_ZoneList_Name=zone_name,
+                                Number_of_People_Schedule_Name=occ_sched_name,
+                                Number_of_People_Calculation_Method="People/Area",
+                                People_per_Zone_Floor_Area=rule_obj.occupant_density,
+                                Fraction_Radiant=0.3,
+                                Sensible_Heat_Fraction="AutoCalculate",
+                                Activity_Level_Schedule_Name=activity_sched_name
+                            )
+
+                            # lighting lumps
+                            light_sched_name = f"{usage_type}_Light_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf, 
+                                light_sched_name, 
+                                "Fraction", 
+                                schedules_dict["lighting"]
+                            )
+                            
+                            # And now create a lights object that references that schedule
+                            temp_idf.newidfobject(
+                                "LIGHTS",
+                                Name=f"Lights_{usage_type}_{zone_name}",
+                                Zone_or_ZoneList_Name=zone_name,
+                                Schedule_Name=light_sched_name,
+                                Design_Level_Calculation_Method="Watts/Area",
+                                Watts_per_Zone_Floor_Area=rule_obj.lighting_power,
+                                Return_Air_Fraction=0.0,
+                                Fraction_Radiant=0.42,
+                                Fraction_Visible=0.18,
+                                Fraction_Replaceable=1.0,
+                                EndUse_Subcategory="General"
+                            )
+                            
+                            # equipment lumps
+                            equip_sched_name = f"{usage_type}_Equip_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf, 
+                                equip_sched_name, 
+                                "Fraction", 
+                                schedules_dict["equipment"]
+                            )
+                            
+                            # And now create an electric equipment object that references that schedule
+                            temp_idf.newidfobject(
+                                "ELECTRICEQUIPMENT",
+                                Name=f"Equip_{usage_type}_{zone_name}",
+                                Zone_or_ZoneList_Name=zone_name,
+                                Schedule_Name=equip_sched_name,
+                                Design_Level_Calculation_Method="Watts/Area",
+                                Watts_per_Zone_Floor_Area=rule_obj.equipment_power,
+                                Fraction_Latent=0.0,
+                                Fraction_Radiant=0.2,
+                                Fraction_Lost=0.0
+                            )
+                            
+                            # heating lumps
+                            heat_sched_name = f"{usage_type}_Heat_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf, 
+                                heat_sched_name, 
+                                "Temperature", 
+                                schedules_dict["heating"]
+                            )
+
+                            # cooling lumps
+                            cool_sched_name = f"{usage_type}_Cool_{zone_name}"
+                            _create_schedule_compact_obj(
+                                temp_idf, 
+                                cool_sched_name, 
+                                "Temperature", 
+                                schedules_dict["cooling"]
+                            )
+                            
+                            # Create ThermostatSetpoint:DualSetpoint & ZoneControl:Thermostat
+                            thermostat_name = f"{zone_name}_Thermostat"
+                            temp_idf.newidfobject(
+                                "THERMOSTATSETPOINT:DUALSETPOINT",
+                                Name=thermostat_name,
+                                Heating_Setpoint_Temperature_Schedule_Name=heat_sched_name,
+                                Cooling_Setpoint_Temperature_Schedule_Name=cool_sched_name
+                            )
+                            temp_idf.newidfobject(
+                                "ZONECONTROL:THERMOSTAT",
+                                Name=f"{thermostat_name}_Controller",
+                                Zone_or_ZoneList_Name=zone_name,
+                                Control_Type_Schedule_Name="Always 4",  # or e.g. "ControlTypeSchedule"
+                                Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
+                                Control_1_Name=thermostat_name
+                            )
+            
+            # print("Replicating")
+            # _replicate_archetype_objects_for_zones(temp_idf)
+            _cleanup_infiltration_and_ventilation(temp_idf)
+            _fix_infiltration_vent_schedules(temp_idf)
+            
+            # Store the idf object for this built island
+            self.bi_idf_list.append(temp_idf)
 
     def _createidfs(
             self,
@@ -1738,7 +1708,7 @@ class SimstockDataframe:
                                 Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
-        
+
             # Get specified inputs for zone
             ventilation_rate = self._get_osgb_value("ventilation_rate", zones_df, zone)
             infiltration_rate = self._get_osgb_value("infiltration_rate", zones_df, zone)
@@ -1853,7 +1823,8 @@ class SimstockDataframe:
         # and run them, putting the results of each into 
         # a new subdirectory
         for j, idf in enumerate(self.bi_idf_list):
-
+            print(f"Running simulation for built island {j} of {len(self.bi_idf_list)} ...")
+            
             # Create a new subdirectory for this build island
             # idf within the out_dir directory.
             # If the directory already exists, then 
@@ -1871,6 +1842,7 @@ class SimstockDataframe:
             idf.run(output_directory=new_dir_path, verbose="q")
 
         # Now do output handling by default
+        print("Compiling outputs")
         _make_output_csvs(self.out_dir, self._readVarsESO_path)
         building_dict = _get_building_file_dict(self.out_dir)
 
@@ -1887,5 +1859,6 @@ class SimstockDataframe:
             6.0,
             6.0
             )
+        print("Simulations complete.")
 
         return power_ts, self._df
