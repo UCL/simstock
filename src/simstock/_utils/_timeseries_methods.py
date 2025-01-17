@@ -3,27 +3,6 @@ import pandas as pd
 from difflib import get_close_matches
 
 
-domestic_keywords = {
-    "dwell",
-    "dwelling",
-    "domestic",
-    "domecile",
-    "house",
-    "home",
-    "residence", 
-    "apartment",
-    "flat",
-    "bungalow",
-    "residential"
-    }
-
-
-def _is_domestic(input_string):
-    input_string = input_string.lower().strip()
-    closest_match = get_close_matches(input_string, domestic_keywords, n=1, cutoff=0.7)
-    return True if closest_match else False
-
-
 def _timeseries_day_to_lumps(day_series: pd.Series, clamp_0_1: bool=False) -> list[str]:
     """
     Convert a single-day Pandas Series with a DatetimeIndex 
