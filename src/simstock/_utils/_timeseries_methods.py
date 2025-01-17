@@ -378,36 +378,6 @@ def finalise_schedule_compact_block(
     return result
 
 
-
-def _create_until_line(start_time, end_time, val, last_segment=False):
-    """
-    Build a line of the form:
-      "Until: HH:MM, val" (ends with comma),
-    or final line ends with semicolon if last_segment=True.
-
-    We interpret 'end_time' for the "Until: HH:MM".
-    If end_time is e.g. day + 24:00, we produce "Until: 24:00, val;"
-    """
-    # figure out the (hour, minute)
-    if hasattr(end_time, "hour"):
-        hh = end_time.hour
-        mm = end_time.minute
-        # If this is e.g. 00:00 of the next day => 24:00
-        if hh == 0 and mm == 0:
-            # probably 24:00 from the previous day
-            hh = 24
-    else:
-        # fallback if numeric
-        hh = int(end_time)
-        mm = 0
-
-    time_str = f"{hh:02d}:{mm:02d}"
-    # build line
-    line = f"Until: {time_str}, {val}"
-    line += ";" if last_segment else ","
-    return line
-
-
 def _create_until_line(start_time, end_time, val, last_segment=False):
     """
     Build something like "Until: HH:MM, val," 
