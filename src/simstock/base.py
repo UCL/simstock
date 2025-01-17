@@ -245,8 +245,6 @@ class SimstockDataframe:
             tol: float = 0.1,
             use_base_idf: str = False,
             idd_file: str = None,
-            ventilation_dict: dict = None,
-            infiltration_dict: dict = None,
             out_dir: str = "outs",
             buffer_radius: Union[float, int] = 50,
             min_avail_width_for_window: Union[float, int] = 1,
@@ -374,6 +372,18 @@ class SimstockDataframe:
         # Set schedule manager
         self.settings_csv_path = csv_directory
         self.schedule_manager = schedule_manager
+        
+        # Load in the ventilation and infiltration
+        json_fname = os.path.join(
+            self.simstock_directory, "settings", "ventilation_dict.json"
+            )
+        with open(json_fname, 'r') as json_file:
+            self.ventilation_dict = json.load(json_file)
+        json_fname = os.path.join(
+            self.simstock_directory, "settings", "infiltration_dict.json"
+            )
+        with open(json_fname, 'r') as json_file:
+            self.infiltration_dict = json.load(json_file)
         
         # Set internal state regarding whether diversity is to be used
         if self.schedule_manager:
@@ -870,18 +880,6 @@ class SimstockDataframe:
                     except Exception as e:
                         raise Exception(f"Cause: class {idf_class}") from e
 
-        # Load in the ventilation and infiltration
-        json_fname = os.path.join(
-            self.simstock_directory, "settings", "ventilation_dict.json"
-            )
-        with open(json_fname, 'r') as json_file:
-            self.ventilation_dict = json.load(json_file)
-        json_fname = os.path.join(
-            self.simstock_directory, "settings", "infiltration_dict.json"
-            )
-        with open(json_fname, 'r') as json_file:
-            self.infiltration_dict = json.load(json_file)
-
         # Ensure state reflects that schedules have been read
         self._diversity = False
         self._read_schedules = True
@@ -1377,7 +1375,9 @@ class SimstockDataframe:
             8. :py:meth:`polygon_topology`
             9. :py:meth:`bi_adj`
 
-        In essence, this function first checks that all polygons are correctly orientated. It then proceeds to remove duplicate coordinates and simplify polygons while ensuring that polygons do not intersect each other.
+        In essence, this function first checks that all polygons are correctly orientated. 
+        It then proceeds to remove duplicate coordinates and simplify polygons while 
+        ensuring that polygons do not intersect each other.
 
         :param \**kwargs:
             Optional keyword parameters: any of the  
@@ -1481,8 +1481,10 @@ class SimstockDataframe:
             shading_vals_temp = bi_df['shading'].to_numpy()
             shading_vals = [_assert_bool(v) for v in shading_vals_temp]
             if not np.asarray(shading_vals).all():
+                # -> create geometry
                 self._createidfs(temp_idf, bi_df)
             else:
+                # if it's all shading, skip
                 continue
 
             # Check that if we are not using diveristy, 
@@ -1628,14 +1630,127 @@ class SimstockDataframe:
                                 Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
                                 Control_1_Name=thermostat_name
                             )
+                            
+                            # --- (b) Add infiltration/vent if user’s rule overrides
+                            # get infiltration schedules from user rule, if any
+                            user_infil_series = rule_obj.infiltration_series_for_day(0)
+                            user_infil_ach = rule_obj.infiltration_ach()
+
+                            user_vent_series = rule_obj.ventilation_series_for_day(0)
+                            user_vent_ach = rule_obj.ventilation_ach()
+                            
+                            # We create infiltration from either user or fallback
+                            if (user_infil_series is not None) or (user_infil_ach is not None):
+                                # user wants custom infiltration
+                                # infiltration lumps schedule
+                                if user_infil_series is not None:
+                                    # build lumps from schedule manager or custom approach
+                                    # let’s do lumps for day_of_week in [0..6]
+                                    lumps = self.schedule_manager._build_weekly_lumps(
+                                        rule_obj,
+                                        what="infiltration",
+                                        clamp_fraction=False
+                                    )
+                                    infil_sched_name = f"{usage_type}_Infil_{zone_name}"
+                                    _create_schedule_compact_obj(
+                                        temp_idf,
+                                        infil_sched_name,
+                                        "Fraction",  # or “Any Number”
+                                        lumps
+                                    )
+                                else:
+                                    # fallback single all-day schedule if you prefer
+                                    infil_sched_name = "On 24/7"
+
+                                # infiltration ACH value
+                                if user_infil_ach is not None:
+                                    infiltration_rate = user_infil_ach
+                                else:
+                                    infiltration_rate = 0.3
+
+                                temp_idf.newidfobject(
+                                    "ZONEINFILTRATION:DESIGNFLOWRATE",
+                                    Name=f"{zone_name}_infiltration",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Schedule_Name=infil_sched_name,
+                                    Design_Flow_Rate_Calculation_Method="AirChanges/Hour",
+                                    Air_Changes_per_Hour=infiltration_rate,
+                                    Constant_Term_Coefficient=1.0,
+                                    Temperature_Term_Coefficient=0.0,
+                                    Velocity_Term_Coefficient=0.0,
+                                    Velocity_Squared_Term_Coefficient=0.0
+                                )
+                            else:
+                                # fallback infiltration from JSON
+                                zone_infiltration_dict = copy.deepcopy(self.infiltration_dict)
+                                zone_infiltration_dict["Name"] = zone_name + "_infiltration"
+                                zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone_name
+                                # use occupant schedule or “On 24/7”
+                                zone_infiltration_dict["Schedule_Name"] = "On 24/7"
+                                # etc. or fill in from row or from a column
+                                # Example:
+                                infiltration_rate = row.get("infiltration_rate", 0.2)
+                                zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
+
+                                temp_idf.newidfobject(**zone_infiltration_dict)
+
+                            # Similarly for ventilation
+                            if (user_vent_series is not None) or (user_vent_ach is not None):
+                                # user wants custom ventilation
+                                if user_vent_series is not None:
+                                    lumps = self.schedule_manager._build_weekly_lumps(
+                                        rule_obj,
+                                        what="ventilation",  # you define in rule
+                                        clamp_fraction=False
+                                    )
+                                    vent_sched_name = f"{usage_type}_Vent_{zone_name}"
+                                    _create_schedule_compact_obj(
+                                        temp_idf,
+                                        vent_sched_name,
+                                        "Fraction",
+                                        lumps
+                                    )
+                                else:
+                                    vent_sched_name = "On 24/7"
+
+                                if user_vent_ach is not None:
+                                    ventilation_rate = user_vent_ach
+                                else:
+                                    ventilation_rate = 0.3
+
+                                temp_idf.newidfobject(
+                                    "ZONEVENTILATION:DESIGNFLOWRATE",
+                                    Name=f"{zone_name}_ventilation",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Schedule_Name=vent_sched_name,
+                                    Design_Flow_Rate_Calculation_Method="AirChanges/Hour",
+                                    Air_Changes_per_Hour=ventilation_rate,
+                                    Ventilation_Type="Natural",
+                                    Constant_Term_Coefficient=1.0
+                                )
+                            else:
+                                # fallback ventilation from JSON
+                                zone_ventilation_dict = copy.deepcopy(self.ventilation_dict)
+                                zone_ventilation_dict["Name"] = zone_name + "_ventilation"
+                                zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone_name
+                                # occupant schedule or “On 24/7”
+                                zone_ventilation_dict["Schedule_Name"] = occ_sched_name
+                                # e.g. get from row or a column
+                                ventilation_rate = row.get("ventilation_rate", 0.2)
+                                zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
+
+                                temp_idf.newidfobject(**zone_ventilation_dict)
             
-            # print("Replicating")
-            # _replicate_archetype_objects_for_zones(temp_idf)
+            # After building occupant schedules, infiltration, etc, 
+            # clean up the infiltration and ventilation objects
+            # This is just belt and braces really; if things have
+            # gone wrong, this will fix them
             _cleanup_infiltration_and_ventilation(temp_idf)
             _fix_infiltration_vent_schedules(temp_idf)
             
             # Store the idf object for this built island
             self.bi_idf_list.append(temp_idf)
+
 
     def _createidfs(
             self,
@@ -1655,11 +1770,17 @@ class SimstockDataframe:
         
         # Shading volumes converted to shading objects
         shading_df = bi_df.loc[bi_df['shading'] == True]
-        shading_df.apply(ialgs._shading_volumes, args=(self._df, temp_idf, origin,), axis=1)
+        shading_df.apply(
+            ialgs._shading_volumes,
+            args=(self._df, temp_idf, origin,),
+            axis=1
+            )
 
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = bi_df.loc[bi_df['shading'] == False]
-        zone_use_dict = {} 
+        zone_use_dict = {}
+        
+        # Built the thermal zone geometry
         zones_df.apply(
             ialgs._thermal_zones,
             args=(
@@ -1675,62 +1796,68 @@ class SimstockDataframe:
 
         # Extract names of thermal zones:
         zones = temp_idf.idfobjects['ZONE']
-        zone_names = list()
-        for zone in zones:
-            zone_names.append(zone.Name)
+        zone_names = [z.Name for z in zones]
 
-        # Plugin feature: mixed-use
+        # Handle mixed use by grouping zones
         ialgs._mixed_use(temp_idf, zone_use_dict)
 
         # Ideal loads system
-        for zone in zone_names:
-            system_name = f"{zone}_HVAC"
-            eq_name = f"{zone}_Eq"
-            supp_air_node = f"{zone}_supply"
-            air_node = f"{zone}_air_node"
-            ret_air_node = f"{zone}_return"
+        for zone_name in zone_names:
+            system_name = f"{zone_name}_HVAC"
+            eq_name = f"{zone_name}_Eq"
+            supp_air_node = f"{zone_name}_supply"
+            air_node = f"{zone_name}_air_node"
+            ret_air_node = f"{zone_name}_return"
 
-            temp_idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                                Name=system_name,
-                                Zone_Supply_Air_Node_Name=supp_air_node,
-                                Dehumidification_Control_Type='None')
+            temp_idf.newidfobject(
+                'ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                Name=system_name,
+                Zone_Supply_Air_Node_Name=supp_air_node,
+                Dehumidification_Control_Type='None'
+                )
 
-            temp_idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
-                                Name=eq_name,
-                                Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                                Zone_Equipment_1_Name=system_name,
-                                Zone_Equipment_1_Cooling_Sequence=1,
-                                Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
+            temp_idf.newidfobject(
+                'ZONEHVAC:EQUIPMENTLIST',
+                Name=eq_name,
+                Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                Zone_Equipment_1_Name=system_name,
+                Zone_Equipment_1_Cooling_Sequence=1,
+                Zone_Equipment_1_Heating_or_NoLoad_Sequence=1
+                )
 
-            temp_idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
-                                Zone_Name=zone,
-                                Zone_Conditioning_Equipment_List_Name=eq_name,
-                                Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
-                                Zone_Air_Node_Name=air_node,
-                                Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+            temp_idf.newidfobject(
+                'ZONEHVAC:EQUIPMENTCONNECTIONS',
+                Zone_Name=zone_name,
+                Zone_Conditioning_Equipment_List_Name=eq_name,
+                Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
+                Zone_Air_Node_Name=air_node,
+                Zone_Return_Air_Node_or_NodeList_Name=ret_air_node
+                )
+            
+            # If user is *not* in diversity mode, do infiltration fallback here
+            # otherwise, the fallback is done in the create_model_idf function
+            if not self._diversity:
 
-            # Get specified inputs for zone
-            ventilation_rate = self._get_osgb_value("ventilation_rate", zones_df, zone)
-            infiltration_rate = self._get_osgb_value("infiltration_rate", zones_df, zone)
-
-            # Get the rest of the default obj values from dict
-            zone_ventilation_dict = copy.deepcopy(self.ventilation_dict)
-            zone_infiltration_dict = copy.deepcopy(self.infiltration_dict)
-
-            # Set the name, zone name and ventilation rate
-            zone_ventilation_dict["Name"] = zone + "_ventilation"
-            zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
-            zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
-            zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
-
-            # Same for infiltration
-            zone_infiltration_dict["Name"] = zone + "_infiltration"
-            zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone
-            zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
-
-            # Add the ventilation idf object
-            temp_idf.newidfobject(**zone_ventilation_dict)
-            temp_idf.newidfobject(**zone_infiltration_dict)
+                # Get specified inputs for zone
+                infiltration_rate = self._get_osgb_value("infiltration_rate", zones_df, zone_name)
+                ventilation_rate = self._get_osgb_value("ventilation_rate", zones_df, zone_name)
+                
+                # infiltration fallback
+                zone_infil_dict = copy.deepcopy(self.infiltration_dict)
+                zone_infil_dict["Name"] = zone_name + "_infiltration"
+                zone_infil_dict["Zone_or_ZoneList_Name"] = zone_name
+                zone_infil_dict["Air_Changes_per_Hour"] = infiltration_rate
+                zone_infil_dict["Schedule_Name"] = "On 24/7"
+                
+                # ventilation fallback
+                zone_vent_dict = copy.deepcopy(self.ventilation_dict)
+                zone_vent_dict["Name"] = zone_name + "_ventilation"
+                zone_vent_dict["Zone_or_ZoneList_Name"] = zone_name
+                zone_vent_dict["Air_Changes_per_Hour"] = ventilation_rate
+                zone_vent_dict["Schedule_Name"] = "On 24/7"
+                
+                temp_idf.newidfobject(**zone_infil_dict)
+                temp_idf.newidfobject(**zone_vent_dict)
 
 
     def _get_osgb_value(
@@ -1770,7 +1897,6 @@ class SimstockDataframe:
             # Output the idf objects to some folder of your choice
             simulation.save_idfs(out_dir="path/to/some_folder")
         """
-
         self.__dict__.update(kwargs)
 
         if len(self.bi_idf_list) == 0:
@@ -1789,13 +1915,25 @@ class SimstockDataframe:
             idf.saveas(fname)
 
 
-    def run(self, **kwargs) -> pd.Series:
+    def run(
+        self,
+        save_idfs: bool = False,
+        include_cooling: bool = True,
+        include_heating: bool = True,
+        **kwargs
+        ) -> pd.Series:
         """
         Function to run an EnergyPlus simulation on each of the model
         IDF objects created by :py:meth:`create_model_idf`. The settings
         used for the simulation will be those specified within the :class:`SimstockDataframe`.
 
-        The EnergyPlus output files resulting from the simulations will be saved into a directory. By default, this directory will be called "outs/" and be located in the working directory. A different directory can be specified by the parameter or keyword argument "out_dir". Within this directory, a further subdirectory will be made for each simulation (one per built island) containind all E+ files. Each subdirectory will be called "built_island_i_ep_outputs" where "i" will be the index of the built island. If built island mode is not being used (bi_mode=False), then only a single such subdirectory will be created. 
+        The EnergyPlus output files resulting from the simulations will be saved into a directory. 
+        By default, this directory will be called "outs/" and be located in the working directory. 
+        A different directory can be specified by the parameter or keyword argument "out_dir".
+        Within this directory, a further subdirectory will be made for each simulation (one per built island) 
+        containind all E+ files. Each subdirectory will be called "built_island_i_ep_outputs" where "i" 
+        will be the index of the built island. If built island mode is not being used (bi_mode=False), 
+        then only a single such subdirectory will be created. 
 
         :param \**kwargs:
             Optional keyword parameters, such as `out_dir` or any of
@@ -1840,6 +1978,10 @@ class SimstockDataframe:
             # Run energy plus
             idf.epw = self.epw
             idf.run(output_directory=new_dir_path, verbose="q")
+            
+            # Save the idf if requested
+            if save_idfs:
+                idf.saveas(os.path.join(new_dir_path, f"built_island_{j}.idf"))
 
         # Now do output handling by default
         print("Compiling outputs")
@@ -1850,7 +1992,12 @@ class SimstockDataframe:
         power_ts = _build_summary_database(self.out_dir, building_dict)
 
         # Add some summary stats back into the dataframe and return that
-        self._df = _add_building_totals(self.out_dir, self._df)
+        self._df = _add_building_totals(
+            self.out_dir,
+            self._df,
+            include_cooling=include_cooling,
+            include_heating=include_heating
+            )
         self._df = _add_overheating_flags(
             self.out_dir,
             self._df,

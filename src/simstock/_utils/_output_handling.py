@@ -145,305 +145,400 @@ def _process_timestamp(dt: str, year: int) -> pd.Timestamp:
         return pd.NaT
 
 
-def _build_summary_database(out_dir: str, building_dict: dict, efficiency_dict=None) -> pd.Series:
+def _build_summary_database(
+    out_dir: str,
+    building_dict: dict,
+    efficiency_dict=None
+) -> pd.Series:
     """
-    Builds a summary SQLite database with indoor temperature, heating energy, cooling energy,
-    equipment energy, and total energy data collated from simulation results.
+    Builds a summary SQLite database with:
+      - indoor temperature
+      - outdoor temperature
+      - heating energy (kWh)
+      - cooling energy (kWh)
+      - equipment energy (kWh)
+      - totals
 
-    Adds total or mean columns for each building, depending on the table.
-
-    Args:
-        out_dir (str): The directory where the database file will be created.
-        building_dict (dict): A dictionary mapping building IDs to their respective directories.
-        efficiency_dict (dict): A dictionary mapping building IDs to their efficiencies.
-                                Defaults to 5.4 for heating and cooling if not provided.
+    Key points:
+      - We read raw Joules from CSV for heating/cooling/equipment.
+      - We convert per-floor to kWh in the DB itself, *not* storing Joules.
+      - For heating/cooling, we also divide by the building's efficiency
+        (default=3.0). So each floor's numeric value in the DB is electric usage (kWh).
+      - The 'indoor_temperature' and 'outdoor_temperature' remain as °C.
+      - We also accumulate total_cooling, total_heating, total_equipment, and total_energy
+        in the 'totals' table. The returned pd.Series is total_energy (kWh) indexed by timestamp.
 
     Returns:
-        pd.Series: A timeseries of total energy consumption.
+        pd.Series: A time series of total (kWh) at each timestamp.
     """
-    # Ensure the output directory exists
     if not os.path.isdir(out_dir):
         raise ValueError(f"The directory {out_dir} does not exist.")
 
-    # Define the database file path
     db_path = os.path.join(out_dir, "summary_database.db")
 
-    # Default efficiencies
-    default_efficiency = 5.4
-    efficiency_dict = efficiency_dict or {building_id: default_efficiency for building_id in building_dict.keys()}
+    # Default efficiency = 3.0
+    default_efficiency = 3.0
+    if efficiency_dict is None:
+        efficiency_dict = {}
+    # If user didn't provide some building's efficiency, fallback
+    # (We fill all building_ids with 3.0 if missing.)
+    for b_id in building_dict:
+        if b_id not in efficiency_dict:
+            efficiency_dict[b_id] = default_efficiency
 
-    # Connect to the database
     conn = sqlite3.connect(db_path)
-
     try:
         cursor = conn.cursor()
 
         # Create tables if they don't exist
-        for table in ["indoor_temperature", "heating_energy", "cooling_energy", "equipment_energy", "totals"]:
+        tables_to_create = [
+            "indoor_temperature",
+            "outdoor_temperature",
+            "heating_energy",
+            "cooling_energy",
+            "equipment_energy",
+            "totals"
+        ]
+        for table in tables_to_create:
             cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table} (
                     timestamp TEXT PRIMARY KEY
                 );
             """)
 
-        # Add columns for totals in the `totals` table
-        cursor.execute("""
-            ALTER TABLE totals ADD COLUMN total_cooling_energy REAL;
-        """)
-        cursor.execute("""
-            ALTER TABLE totals ADD COLUMN total_heating_energy REAL;
-        """)
-        cursor.execute("""
-            ALTER TABLE totals ADD COLUMN total_equipment_energy REAL;
-        """)
-        cursor.execute("""
-            ALTER TABLE totals ADD COLUMN total_energy REAL;
-        """)
+        # Add columns for totals in the `totals` table if not present
+        try:
+            cursor.execute("ALTER TABLE totals ADD COLUMN total_cooling_energy REAL;")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE totals ADD COLUMN total_heating_energy REAL;")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE totals ADD COLUMN total_equipment_energy REAL;")
+        except:
+            pass
+        try:
+            cursor.execute("ALTER TABLE totals ADD COLUMN total_energy REAL;")
+        except:
+            pass
 
-        # Get the current year for timestamp processing
-        current_year = datetime.now().year
-
-        # Store total values across all buildings as pandas Series
-        total_cooling = pd.Series(dtype=float)
-        total_heating = pd.Series(dtype=float)
+        # We'll accumulate time-series for total usage across all buildings
+        total_cooling   = pd.Series(dtype=float)
+        total_heating   = pd.Series(dtype=float)
         total_equipment = pd.Series(dtype=float)
 
-        # Maintain a sorted list of columns for each table
-        table_columns = {table: [] for table in ["indoor_temperature", "heating_energy", "cooling_energy", "equipment_energy"]}
+        # Keep track of columns we've already created in each table
+        table_columns = {table: set() for table in tables_to_create}
 
-        # Iterate through each building in the dictionary
+        # Current year for timestamp parsing
+        current_year = datetime.now().year
+
+        # For each building
         for building_id, dir_index in building_dict.items():
-            # Construct the file path to the relevant CSV
-            csv_path = os.path.join(out_dir, f"built_island_{dir_index}_ep_outputs", "eplusout.csv")
-
+            # CSV path
+            csv_path = os.path.join(
+                out_dir, f"built_island_{dir_index}_ep_outputs", "eplusout.csv"
+            )
             if not os.path.isfile(csv_path):
                 print(f"Warning: File {csv_path} not found. Skipping building {building_id}.")
                 continue
 
-            # Read the CSV file
+            # Read CSV
             df = pd.read_csv(csv_path, index_col="Date/Time")
-
-            # Preprocess the index to handle 24:00:00 and set the current year
+            # Convert the timestamps
             df.index = df.index.to_series().apply(lambda dt: _process_timestamp(dt, current_year))
 
-            # Define column filters for different data types
+            # Column regex patterns
             column_filters = {
-                "indoor_temperature": f"{building_id}_FLOOR_.*:Zone Operative Temperature \\[C\\]",
-                "heating_energy": f"{building_id}_FLOOR_.*_HVAC:Zone Ideal Loads Zone Total Heating Energy \\[J\\]",
-                "cooling_energy": f"{building_id}_FLOOR_.*_HVAC:Zone Ideal Loads Zone Total Cooling Energy \\[J\\]",
-                "equipment_energy": f"Electricity:Zone:{building_id}_FLOOR_.* \\[J\\]"
+                "indoor_temperature":  f"{building_id}_FLOOR_.*:Zone Operative Temperature \\[C\\]",
+                "outdoor_temperature": f"{building_id}_FLOOR_.*:Zone Outdoor Air Drybulb Temperature \\[C\\]",
+                "heating_energy":      f"{building_id}_FLOOR_.*_HVAC:Zone Ideal Loads Zone Total Heating Energy \\[J\\]",
+                "cooling_energy":      f"{building_id}_FLOOR_.*_HVAC:Zone Ideal Loads Zone Total Cooling Energy \\[J\\]",
+                "equipment_energy":    f"Electricity:Zone:{building_id}_FLOOR_.* \\[J\\]"
             }
 
-            # Process each data type
+            # We'll do floor-by-floor inserts
             for table, pattern in column_filters.items():
+                # Find all columns matching the pattern
                 relevant_columns = [
                     col for col in df.columns if pd.Series(col).str.contains(pattern).any()
                 ]
-
                 if not relevant_columns:
                     print(f"Warning: No relevant columns found for {table} in building {building_id}.")
                     continue
 
-                # Extract floor-specific columns
+                # Extract floor IDs from the column name
                 floor_columns = {}
                 for col in relevant_columns:
                     match = pd.Series(col).str.extract(f"{building_id}_(FLOOR_\\d+)")
-                    floor_id = match.iloc[0, 0] if not match.empty else None
+                    floor_id = match.iloc[0,0] if not match.empty else None
                     if floor_id:
                         floor_columns[floor_id] = col
 
-                # Sort floor columns by floor number
-                sorted_floor_columns = dict(sorted(floor_columns.items(), key=lambda x: int(x[0].split('_')[1])))
+                # Sort floors by floor number
+                sorted_floor_cols = dict(
+                    sorted(floor_columns.items(), key=lambda x: int(x[0].split('_')[1]))
+                )
 
-                # Add columns for each floor dynamically
-                for floor_id in sorted_floor_columns:
-                    column_name = f"{building_id}_{floor_id}"
-                    if column_name not in table_columns[table]:
-                        table_columns[table].append(column_name)
-                        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column_name} REAL;")
+                # Add columns to this table
+                for floor_id in sorted_floor_cols:
+                    col_name = f"{building_id}_{floor_id}"
+                    if col_name not in table_columns[table]:
+                        # record that we've used this col
+                        table_columns[table].add(col_name)
+                        try:
+                            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} REAL;")
+                        except:
+                            pass  # Already exists
 
-                # Compute building total column
-                total_column_name = building_id
-                if total_column_name not in table_columns[table]:
-                    table_columns[table].append(total_column_name)
-                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN {total_column_name} REAL;")
+                # Also add a building-level "total" column
+                building_col_name = building_id
+                if building_col_name not in table_columns[table]:
+                    table_columns[table].add(building_col_name)
+                    try:
+                        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {building_col_name} REAL;")
+                    except:
+                        pass
 
-                # Insert data for each floor and compute total/mean
-                for timestamp, row in df.iterrows():
+                # Efficiency for this building
+                eff = efficiency_dict[building_id]
+                # Insert row by row
+                for timestamp, rowdata in df.iterrows():
                     if pd.isna(timestamp):
                         continue
 
-                    values = [timestamp.strftime("%Y-%m-%d %H:%M:%S")]
-                    floor_values = []
+                    # We'll store floor_kwh in a list
+                    floor_kwh_list = []
+                    # We'll build a param list for the SQL
+                    param_list = [timestamp.strftime("%Y-%m-%d %H:%M:%S")]
 
-                    for floor_id, col in sorted_floor_columns.items():
-                        floor_value = row.get(col, None)
-                        floor_values.append(floor_value)
-                        values.append(floor_value)
+                    for floor_id, col in sorted_floor_cols.items():
+                        raw_joules = rowdata.get(col, 0.0)
+                        if pd.isna(raw_joules):
+                            raw_joules = 0.0
 
-                    # Compute total (sum for most tables, mean for indoor_temperature)
-                    if table == "indoor_temperature":
-                        total_value = pd.Series(floor_values).mean(skipna=True)
+                        # If it's heating/cooling => convert to electric kWh => / eff
+                        # If it's equipment => just J->kWh
+                        # If it's temperature => no conversion
+                        if table == "heating_energy":
+                            val_kwh = (raw_joules / 3.6e6) / eff
+                        elif table == "cooling_energy":
+                            val_kwh = (raw_joules / 3.6e6) / eff
+                        elif table == "equipment_energy":
+                            val_kwh = (raw_joules / 3.6e6)
+                        elif table in ["indoor_temperature", "outdoor_temperature"]:
+                            # These are in Celsius, just store as-is
+                            val_kwh = raw_joules
+                        else:
+                            val_kwh = raw_joules
+
+                        floor_kwh_list.append(val_kwh)
+                        param_list.append(val_kwh)
+
+                    # Now compute the building-level "total" for this row
+                    if table in ["indoor_temperature", "outdoor_temperature"]:
+                        row_total = pd.Series(floor_kwh_list).mean(skipna=True)
                     else:
-                        total_value = pd.Series(floor_values).sum(skipna=True)
+                        row_total = pd.Series(floor_kwh_list).sum(skipna=True)
 
-                    values.append(total_value)  # Append the total/mean value for the building
+                    param_list.append(row_total)
 
-                    placeholders = ", ".join(["?"] * (1 + len(sorted_floor_columns) + 1))  # Include timestamp + total
-                    floor_columns_sql = ", ".join([f"{building_id}_{floor_id}" for floor_id in sorted_floor_columns])
-                    floor_columns_sql += f", {total_column_name}"
+                    # Now build placeholders
+                    placeholders = ", ".join(["?"] * (1 + len(sorted_floor_cols) + 1))
+                    # col_name for each floor
+                    floor_cols_sql = ", ".join([f"{building_id}_{fid}" for fid in sorted_floor_cols])
+                    floor_cols_sql += f", {building_col_name}"
+
+                    # Upsert
+                    update_stmts = []
+                    for fid in sorted_floor_cols:
+                        update_stmts.append(f"{building_id}_{fid} = excluded.{building_id}_{fid}")
+                    update_stmts.append(f"{building_col_name} = excluded.{building_col_name}")
+                    update_sql = ", ".join(update_stmts)
 
                     cursor.execute(f"""
-                        INSERT INTO {table} (timestamp, {floor_columns_sql})
+                        INSERT INTO {table} (timestamp, {floor_cols_sql})
                         VALUES ({placeholders})
                         ON CONFLICT(timestamp) DO UPDATE SET
-                            {', '.join([f'{building_id}_{floor_id} = excluded.{building_id}_{floor_id}' for floor_id in sorted_floor_columns])},
-                            {total_column_name} = excluded.{total_column_name};
-                    """, values)
+                            {update_sql};
+                    """, param_list)
 
-                # Compute totals for the `totals` table
+                # Also accumulate into total_cooling/heating/equipment if relevant
                 if table == "cooling_energy":
-                    cooling_total = df[relevant_columns].sum(axis=1, skipna=True) * efficiency_dict[building_id]
-                    total_cooling = total_cooling.add(cooling_total, fill_value=0)
-                elif table == "heating_energy":
-                    heating_total = df[relevant_columns].sum(axis=1, skipna=True) * efficiency_dict[building_id]
-                    total_heating = total_heating.add(heating_total, fill_value=0)
-                elif table == "equipment_energy":
-                    equipment_total = df[relevant_columns].sum(axis=1, skipna=True)
-                    total_equipment = total_equipment.add(equipment_total, fill_value=0)
+                    # sum over time steps => raw_joules => now we have them in kWh
+                    # but let's do a sum across floors from the DataFrame perspective
+                    # we can just do the same logic we do below by reading the columns
+                    # but simpler is to do it after the loop
+                    # We'll do it in a single pass below:
+                    raw_joules_per_ts = df[relevant_columns].sum(axis=1, skipna=True)
+                    building_eff = efficiency_dict[building_id]
+                    building_kwh = (raw_joules_per_ts / 3.6e6) / building_eff
+                    total_cooling = total_cooling.add(building_kwh, fill_value=0)
 
-        # Compute total energy (sum of cooling, heating, and equipment)
+                elif table == "heating_energy":
+                    raw_joules_per_ts = df[relevant_columns].sum(axis=1, skipna=True)
+                    building_eff = efficiency_dict[building_id]
+                    building_kwh = (raw_joules_per_ts / 3.6e6) / building_eff
+                    total_heating = total_heating.add(building_kwh, fill_value=0)
+
+                elif table == "equipment_energy":
+                    raw_joules_per_ts = df[relevant_columns].sum(axis=1, skipna=True)
+                    building_kwh = (raw_joules_per_ts / 3.6e6)
+                    total_equipment = total_equipment.add(building_kwh, fill_value=0)
+
+        # Now total_energy across all time steps
         total_energy = total_cooling.add(total_heating, fill_value=0).add(total_equipment, fill_value=0)
 
-        # Insert totals into the totals table
-        for timestamp in total_cooling.index.union(total_heating.index).union(total_equipment.index):
+        # Insert time-based totals into 'totals'
+        all_ts = total_cooling.index.union(total_heating.index).union(total_equipment.index)
+        for ts in all_ts:
             cursor.execute("""
-                INSERT INTO totals (timestamp, total_cooling_energy, total_heating_energy, total_equipment_energy, total_energy)
+                INSERT INTO totals (
+                    timestamp,
+                    total_cooling_energy,
+                    total_heating_energy,
+                    total_equipment_energy,
+                    total_energy
+                )
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(timestamp) DO UPDATE SET
-                    total_cooling_energy = excluded.total_cooling_energy,
-                    total_heating_energy = excluded.total_heating_energy,
+                    total_cooling_energy   = excluded.total_cooling_energy,
+                    total_heating_energy   = excluded.total_heating_energy,
                     total_equipment_energy = excluded.total_equipment_energy,
-                    total_energy = excluded.total_energy;
+                    total_energy           = excluded.total_energy;
             """, (
-                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                total_cooling.get(timestamp, 0),
-                total_heating.get(timestamp, 0),
-                total_equipment.get(timestamp, 0),
-                total_energy.get(timestamp, 0),
+                ts.strftime("%Y-%m-%d %H:%M:%S"),
+                total_cooling.get(ts, 0.0),
+                total_heating.get(ts, 0.0),
+                total_equipment.get(ts, 0.0),
+                total_energy.get(ts, 0.0)
             ))
 
-        # Commit changes
         conn.commit()
 
-        # Return the total_energy timeseries
+        # Return the aggregated total energy time-series
         return total_energy
 
     finally:
-        # Close the connection
         conn.close()
 
 
-def _add_building_totals(out_dir: str, df: pd.DataFrame, efficiency_dict=None) -> pd.DataFrame:
+def _add_building_totals(
+    out_dir: str,
+    df: pd.DataFrame,
+    include_heating: bool = True,
+    include_cooling: bool = True
+    ) -> pd.DataFrame:
     """
-    Adds total_cooling, total_heating, total_equipment, total, max_total_energy,
-    max_temperature, and min_temperature columns to the input DataFrame.
+    Reads per-building energy/temperature from 'summary_database.db' 
+    (which already stores usage in kWh), then populates columns in `df`:
+
+      - total_cooling   (kWh)
+      - total_heating   (kWh)
+      - total_equipment (kWh)
+      - total           (kWh) = sum of the above
+      - max_total_energy (kWh) = maximum hourly total usage
+      - max_temperature (°C) = maximum indoor temperature
+      - min_temperature (°C) = minimum indoor temperature
 
     Args:
-        out_dir (str): The directory where the database file is located.
-        df (pd.DataFrame): A DataFrame containing a column 'osgb' with building IDs.
-        efficiency_dict (dict, optional): A dictionary mapping building IDs to their efficiencies.
-                                          Defaults to 5.4 for heating and cooling if not provided.
+        out_dir (str):
+          Directory where 'summary_database.db' is located.
+        df (pd.DataFrame):
+          Must have column 'osgb' with building IDs.
+        include_heating (bool):
+          If False, we set building's heating usage = 0 for the final sums.
+        include_cooling (bool):
+          If False, we set building's cooling usage = 0 for the final sums.
 
     Returns:
-        pd.DataFrame: The updated DataFrame with added total and max/min fields.
+        pd.DataFrame: The same `df`, augmented with total columns.
     """
-    # Ensure the output directory exists
-    if not os.path.isdir(out_dir):
-        raise ValueError(f"The directory {out_dir} does not exist.")
-
-    # Define the database file path
+    # Path to the database file
     db_path = os.path.join(out_dir, "summary_database.db")
+    if not os.path.isfile(db_path):
+        raise FileNotFoundError(f"Could not find database at {db_path}")
 
-    # Default efficiencies
-    default_efficiency = 5.4
-    efficiency_dict = efficiency_dict or {}
-
-    # Conversion factor from Joules to kWh
-    joules_to_kwh = 1 / 3600000
-
-    # Connect to the database
     conn = sqlite3.connect(db_path)
-
     try:
-        # Iterate over each building ID in the DataFrame
-        for index, row in df.iterrows():
-            building_id = row["osgb"]
+        # For each building in df
+        for i, row in df.iterrows():
+            bldg_id = row.get("osgb")
+            if not bldg_id:
+                continue
 
-            # Fetch energy timeseries for this building
+            # Attempt reading kWh timeseries from the DB
             try:
-                cooling_timeseries = pd.read_sql_query(
-                    f"SELECT timestamp, {building_id} AS value FROM cooling_energy;",
-                    conn,
-                    index_col="timestamp"
-                )["value"].fillna(0)
-
-                heating_timeseries = pd.read_sql_query(
-                    f"SELECT timestamp, {building_id} AS value FROM heating_energy;",
-                    conn,
-                    index_col="timestamp"
-                )["value"].fillna(0)
-
-                equipment_timeseries = pd.read_sql_query(
-                    f"SELECT timestamp, {building_id} AS value FROM equipment_energy;",
+                cooling_ts = pd.read_sql_query(
+                    f"SELECT timestamp, {bldg_id} as value FROM cooling_energy;",
                     conn,
                     index_col="timestamp"
                 )["value"].fillna(0)
             except Exception as e:
-                print(f"Warning: Failed to retrieve energy data for building {building_id}. Error: {e}")
-                cooling_timeseries, heating_timeseries, equipment_timeseries = pd.Series(dtype=float), pd.Series(dtype=float), pd.Series(dtype=float)
+                print(f"Warning: No cooling_energy data for building {bldg_id}. ({e})")
+                cooling_ts = pd.Series(dtype=float)
 
-            # Adjust timeseries for efficiency and convert to kWh
-            efficiency = efficiency_dict.get(building_id, default_efficiency)
-            cooling_timeseries = cooling_timeseries * efficiency * joules_to_kwh
-            heating_timeseries = heating_timeseries * efficiency * joules_to_kwh
-            equipment_timeseries = equipment_timeseries * joules_to_kwh
-
-            # Compute total energy timeseries
-            total_energy_timeseries = cooling_timeseries + heating_timeseries + equipment_timeseries
-
-            # Calculate total energy values
-            total_cooling = cooling_timeseries.sum()
-            total_heating = heating_timeseries.sum()
-            total_equipment = equipment_timeseries.sum()
-            max_total_energy = total_energy_timeseries.max()
-
-            # Fetch temperature data for this building
             try:
-                temperature_timeseries = pd.read_sql_query(
-                    f"SELECT timestamp, {building_id} AS value FROM indoor_temperature;",
+                heating_ts = pd.read_sql_query(
+                    f"SELECT timestamp, {bldg_id} as value FROM heating_energy;",
                     conn,
                     index_col="timestamp"
                 )["value"].fillna(0)
             except Exception as e:
-                print(f"Warning: Failed to retrieve temperature data for building {building_id}. Error: {e}")
-                temperature_timeseries = pd.Series(dtype=float)
+                print(f"Warning: No heating_energy data for building {bldg_id}. ({e})")
+                heating_ts = pd.Series(dtype=float)
 
-            # Compute max and min temperatures
-            max_temperature = temperature_timeseries.max()
-            min_temperature = temperature_timeseries.min()
+            try:
+                equipment_ts = pd.read_sql_query(
+                    f"SELECT timestamp, {bldg_id} as value FROM equipment_energy;",
+                    conn,
+                    index_col="timestamp"
+                )["value"].fillna(0)
+            except Exception as e:
+                print(f"Warning: No equipment_energy data for building {bldg_id}. ({e})")
+                equipment_ts = pd.Series(dtype=float)
 
-            # Add totals and max/min values to the DataFrame
-            df.loc[index, "total_cooling"] = total_cooling
-            df.loc[index, "total_heating"] = total_heating
-            df.loc[index, "total_equipment"] = total_equipment
-            df.loc[index, "total"] = total_cooling + total_heating + total_equipment
-            df.loc[index, "max_total_energy"] = max_total_energy
-            df.loc[index, "max_temperature"] = max_temperature
-            df.loc[index, "min_temperature"] = min_temperature
+            # These values are already in kWh. If user wants to exclude heating/cooling:
+            if not include_cooling:
+                cooling_ts[:] = 0.0
+            if not include_heating:
+                heating_ts[:] = 0.0
+
+            # Sum up the time-series
+            total_ts = cooling_ts + heating_ts + equipment_ts
+
+            # Aggregate
+            total_cooling   = cooling_ts.sum()
+            total_heating   = heating_ts.sum()
+            total_equipment = equipment_ts.sum()
+            max_total_usage = total_ts.max() if not total_ts.empty else 0.0
+
+            # Retrieve indoor temperature timeseries
+            try:
+                temp_ts = pd.read_sql_query(
+                    f"SELECT timestamp, {bldg_id} as value FROM indoor_temperature;",
+                    conn,
+                    index_col="timestamp"
+                )["value"].fillna(0)
+                max_temp = temp_ts.max() if not temp_ts.empty else None
+                min_temp = temp_ts.min() if not temp_ts.empty else None
+            except Exception as e:
+                print(f"Warning: No indoor_temperature data for building {bldg_id}. ({e})")
+                max_temp = None
+                min_temp = None
+
+            # Insert aggregated results into df
+            df.loc[i, "total_cooling"]    = total_cooling
+            df.loc[i, "total_heating"]    = total_heating
+            df.loc[i, "total_equipment"]  = total_equipment
+            df.loc[i, "total"]            = total_cooling + total_heating + total_equipment
+            df.loc[i, "max_total_energy"] = max_total_usage
+            df.loc[i, "max_temperature"]  = max_temp
+            df.loc[i, "min_temperature"]  = min_temp
 
     finally:
-        # Close the database connection
         conn.close()
 
     return df

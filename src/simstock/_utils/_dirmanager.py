@@ -393,7 +393,7 @@ def _cleanup_infiltration_and_ventilation(
     remove_if_invalid_schedule=True,
     fallback_schedule_name="Always_ON_1",
     fallback_schedule_value=1.0
-):
+    ):
     """
     Post-processing to ensure each zone has exactly one infiltration object
     and one ventilation object, removing duplicates and/or fixing schedule references.

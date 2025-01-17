@@ -4,8 +4,7 @@ from simstock.io import (
     read_csv,
     read_parquet,
     read_json,
-    read_geopackage_layer,
-    get_gpkg_layer_names
+    read_geopackage_layer
 )
 from simstock.base import (
     SimstockDataframe
