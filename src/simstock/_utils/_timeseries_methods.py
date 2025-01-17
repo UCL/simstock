@@ -230,7 +230,7 @@ def _build_daily_lumped_lines(
     schedule_type_limits="Fraction"
     ) -> list[str]:
     """
-    Like your original "timeseries_to_schedule_fields_lumped_daily" 
+    Like original "timeseries_to_schedule_fields_lumped_daily" 
     but without repeating logic. Just lumps day by day.
     """
     # ensure ascending
@@ -337,11 +337,11 @@ def _build_until_field(start_ts, end_ts, val, last=False) -> str:
     return f"Until: {time_str}, {val}"
 
 
-def finalize_schedule_compact_block(
+def finalise_schedule_compact_block(
     schedule_name: str,
     schedule_type: str,
     fields: list[str]
-) -> list[str]:
+    ) -> list[str]:
     """
     Given a schedule name, schedule type, and the raw fields
     (like "Through: 1/1", "For: AllDays", "Until: 07:00, 0.6", ...),
