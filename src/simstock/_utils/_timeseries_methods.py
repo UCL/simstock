@@ -159,9 +159,6 @@ def _timeseries_to_schedule_fields_lumped_daily_repeat(
     reps_needed = (repeat_days // short_n_days) + 1  # a bit of over-shoot
     # e.g. if short_n_days=7 and repeat_days=365 => reps_needed=53
 
-    import numpy as np
-    import pandas as pd
-
     # replicate the entire array
     repeated_vals = np.tile(short_vals, reps_needed)  
     # e.g. if short_vals had length=1008 (7days@10min steps), 

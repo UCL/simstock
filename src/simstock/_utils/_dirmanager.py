@@ -506,7 +506,7 @@ def _fix_infiltration_vent_schedules(
     remove_if_missing_schedule=True,
     fallback_schedule="Always_ON_1",
     fallback_value=1.0
-):
+    ):
     """
     Post-processing step that fixes infiltration/vent schedules and removes duplicates.
     """

@@ -149,7 +149,7 @@ def _build_summary_database(
     out_dir: str,
     building_dict: dict,
     efficiency_dict=None
-) -> pd.Series:
+    ) -> pd.Series:
     """
     Builds a summary SQLite database with:
       - indoor temperature

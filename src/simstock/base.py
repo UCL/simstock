@@ -352,6 +352,10 @@ class SimstockDataframe:
 
         # Check for any multipolygons with length > 1
         self._check_for_multipolygons()
+        
+        # Add area column if it does not exist
+        if "area" not in self._df.columns:
+            self._df["area"] = self._df["polygon"].map(lambda x: x.area)
 
         # Add any missing columns
         self._add_missing_cols()
@@ -1400,125 +1404,90 @@ class SimstockDataframe:
         self.collinear_exterior()
         self.polygon_topology()
         self.bi_adj()
-        
-        
+
+
     def create_model_idf(self, **kwargs) -> None:
         """
-        Function to create IDF objects for each built island (if bi_mode=True), or else a single IDF for the entire model. 
-
-        Creates a new attibute called bi_idf_list containing all the created IDF objects. Each of these can be used to run a simulation.
-
-        Example
-        ~~~~~~~
-
-        .. code-block:: python
-
-            # Assuming we have a correctly processed SimstockDataframe sdf,
-            # instantiate a IDFmanager object
-            simulation = sim.IDFmanager(sdf)
-
-            # Now compute IDFs for each built island
-            simulation.create_model_idf(bi_mode=True)
-
-            # This will create a list constaining the IDFs for each BI
-            # This can be accessed via
-            idf_list = simulation.bi_idf_list
-            print(idf_list)
-
-            # Alternatively, we can create a single IDF for the whole 
-            # model using the command
-            simulation.create_model_idf(bi_mode=False)
-
-            # This will create a list of length 1 called bi_idf_list
-            # which will contain the single IDF for the model
-            # This can be accessed via
-            model_idf = simulation.bi_idf_list[0]
-
-        :param \**kwargs:
-            Optional keyword parameters, such as `bi_mode` or any of
-            the other IDFmanager properties
-
-        **See also**: :py:meth:`save_idfs` -- Used to save the IDF objects
+        Function to create IDF objects for each built island (if bi_mode=True), or
+        else a single IDF for the entire model. 
+        Creates a new attribute called bi_idf_list containing all the created 
+        IDF objects. Each of these can be used to run a simulation.
         """
-
+        # Update any kwargs into self
         self.__dict__.update(kwargs)
 
         # Ensure unique data file name
         self.data_fname = _generate_unique_string()
 
+        # Clean out existing output directory (if it exists), else create
         if os.path.exists(self.out_dir):
-                shutil.rmtree(self.out_dir)
+            shutil.rmtree(self.out_dir)
         else:
             os.makedirs(self.out_dir)
-            
-        # Iterate over unique building islands
+                
+        # Create the list that will hold each island's IDF
         self.bi_idf_list = []
+
+        # Iterate over unique building islands
         for bi in self._df['bi'].unique().tolist():
 
             # Revert idf to settings idf
             temp_idf = self.settings.copyidf()
-        
+            
             # Change the name field of the building object
             building_object = temp_idf.idfobjects['BUILDING'][0]
             building_object.Name = bi
-            
-            # Get the data for the BI
+                
+            # Get the data for this BI
             bi_df = self._df[self._df['bi'] == bi]
-
-            # Get the data for other BIs to use as shading
+            # Also get the rest for shading buffer
             rest  = self._df[self._df['bi'] != bi]
 
-            # Include other polygons which fall under the specified shading buffer radius
+            # Include additional shading blocks within buffer radius
             bi_df = pd.concat(
-                    [
-                    bi_df, 
+                [
+                    bi_df,
                     algs._shading_buffer(self.buffer_radius, bi_df, rest)
-                    ]
-                )
+                ]
+            )
 
-            # Only create idf if the BI is 
-            # not entirely composed of shading blocks
+            # If it's all shading, skip
             shading_vals_temp = bi_df['shading'].to_numpy()
             shading_vals = [_assert_bool(v) for v in shading_vals_temp]
             if not np.asarray(shading_vals).all():
-                # -> create geometry
+                # Create geometry etc.
                 self._createidfs(temp_idf, bi_df)
             else:
-                # if it's all shading, skip
                 continue
 
-            # Check that if we are not using diveristy, 
-            # that the schedules have already been read from file
+            # Check if we are NOT in diversity mode, we must have read schedules from CSV
             if not self._diversity and not self._read_schedules:
                 raise ValueError("Schedules must be read from file before creating IDFs.")
-            
-            # If we want to use diveristy then start using the schedule manager
-            if self._diversity:
                 
+            # If we are in diversity mode, use the schedule manager
+            if self._diversity:
                 # Iterate over the non-shading buildings in this BI
-                for _, row in bi_df[bi_df["shading"]==False].iterrows():
+                for _, row in bi_df[bi_df["shading"] == False].iterrows():
                     
-                    # Get the building id and number of floors
                     building_id = row.get("osgb")
                     nofloors = int(row.get("nofloors", 0))
-                    
-                    # Iterate over the floors
-                    for floor_idx in range(1, nofloors+1):
                         
-                        # Get the usage type for this floor
+                    # For each floor
+                    for floor_idx in range(1, nofloors + 1):
+                            
                         usage_type = row.get(f"FLOOR_{floor_idx}: use")
-                        
-                        # Check it has a usage type
                         if usage_type:
-
-                            # Get the zone name, e.g. "osgb8687234627_floor_1"
+                            
+                            # Zone name, e.g. "osgb1234_floor_2"
                             zone_name = f"{building_id}_floor_{floor_idx}"
 
-                            # Get the schedule dict and rule for this zone
-                            schedules_dict = self.schedule_manager.get_schedules_for_zone(usage_type, zone_name)
+                            # Get the schedule dict and usage rule
+                            schedules_dict = self.schedule_manager.get_schedules_for_zone(
+                                usage_type, zone_name
+                            )
                             rule_obj = self.schedule_manager.get_rule_obj(usage_type)
 
-                            # occupant fraction lumps
+                            # occupant fraction lumps (0..1)
                             occ_sched_name = f"{usage_type}_Occ_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf,
@@ -1526,77 +1495,142 @@ class SimstockDataframe:
                                 "Fraction",
                                 schedules_dict["occupancy"]
                             )
-
-                            # occupant gains lumps
-                            activity_sched_name= f"{usage_type}_Activity_{zone_name}"
+                            # occupant activity lumps (Any Number)
+                            activity_sched_name = f"{usage_type}_Activity_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf,
                                 activity_sched_name,
                                 "Any Number",
                                 schedules_dict["activity"]
                             )
-                            
-                            # Now create a PEOPLE object with “People/Area” = rule_obj.occupant_density
-                            # and referencing those two schedule names:
-                            temp_idf.newidfobject(
-                                "PEOPLE",
-                                Name=f"People_{usage_type}_{zone_name}",
-                                Zone_or_ZoneList_Name=zone_name,
-                                Number_of_People_Schedule_Name=occ_sched_name,
-                                Number_of_People_Calculation_Method="People/Area",
-                                People_per_Zone_Floor_Area=rule_obj.occupant_density,
-                                Fraction_Radiant=0.3,
-                                Sensible_Heat_Fraction="AutoCalculate",
-                                Activity_Level_Schedule_Name=activity_sched_name
-                            )
 
-                            # lighting lumps
+                            # lighting lumps (Fraction or Any Number)
                             light_sched_name = f"{usage_type}_Light_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf, 
                                 light_sched_name, 
-                                "Fraction", 
+                                "Fraction",  # or "Any Number," up to your design
                                 schedules_dict["lighting"]
                             )
-                            
-                            # And now create a lights object that references that schedule
-                            temp_idf.newidfobject(
-                                "LIGHTS",
-                                Name=f"Lights_{usage_type}_{zone_name}",
-                                Zone_or_ZoneList_Name=zone_name,
-                                Schedule_Name=light_sched_name,
-                                Design_Level_Calculation_Method="Watts/Area",
-                                Watts_per_Zone_Floor_Area=rule_obj.lighting_power,
-                                Return_Air_Fraction=0.0,
-                                Fraction_Radiant=0.42,
-                                Fraction_Visible=0.18,
-                                Fraction_Replaceable=1.0,
-                                EndUse_Subcategory="General"
-                            )
-                            
-                            # equipment lumps
+
+                            # equipment lumps (Fraction or Any Number)
                             equip_sched_name = f"{usage_type}_Equip_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf, 
                                 equip_sched_name, 
-                                "Fraction", 
+                                "Any Number",
                                 schedules_dict["equipment"]
                             )
-                            
-                            # And now create an electric equipment object that references that schedule
-                            temp_idf.newidfobject(
-                                "ELECTRICEQUIPMENT",
-                                Name=f"Equip_{usage_type}_{zone_name}",
-                                Zone_or_ZoneList_Name=zone_name,
-                                Schedule_Name=equip_sched_name,
-                                Design_Level_Calculation_Method="Watts/Area",
-                                Watts_per_Zone_Floor_Area=rule_obj.equipment_power,
-                                Fraction_Latent=0.0,
-                                Fraction_Radiant=0.2,
-                                Fraction_Lost=0.0
-                            )
-                            
-                            # heating lumps
+
+                            # Distinguish non-domestic vs. domestic usage by occupant_density
+                            # If occupant_density is not None => non-domestic approach
+                            if hasattr(rule_obj, "occupant_density") and rule_obj.occupant_density is not None:
+                                # -- Non-Domestic: PEOPLE object with People/Area
+                                temp_idf.newidfobject(
+                                    "PEOPLE",
+                                    Name=f"People_{usage_type}_{zone_name}",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Number_of_People_Schedule_Name=occ_sched_name,
+                                    Number_of_People_Calculation_Method="People/Area",
+                                    People_per_Zone_Floor_Area=rule_obj.occupant_density,
+                                    Fraction_Radiant=0.3,
+                                    Sensible_Heat_Fraction="AutoCalculate",
+                                    Activity_Level_Schedule_Name=activity_sched_name
+                                )
+
+                                # LIGHTS object if lighting_power is set
+                                if hasattr(rule_obj, "lighting_power") and rule_obj.lighting_power is not None:
+                                    temp_idf.newidfobject(
+                                        "LIGHTS",
+                                        Name=f"Lights_{usage_type}_{zone_name}",
+                                        Zone_or_ZoneList_Name=zone_name,
+                                        Schedule_Name=light_sched_name,
+                                        Design_Level_Calculation_Method="Watts/Area",
+                                        Watts_per_Zone_Floor_Area=rule_obj.lighting_power,
+                                        Return_Air_Fraction=0.0,
+                                        Fraction_Radiant=0.42,
+                                        Fraction_Visible=0.18,
+                                        Fraction_Replaceable=1.0,
+                                        EndUse_Subcategory="General"
+                                    )
+
+                                # ELECTRICEQUIPMENT if equipment_power is set
+                                if hasattr(rule_obj, "equipment_power") and rule_obj.equipment_power is not None:
+                                    temp_idf.newidfobject(
+                                        "ELECTRICEQUIPMENT",
+                                        Name=f"Equip_{usage_type}_{zone_name}",
+                                        Zone_or_ZoneList_Name=zone_name,
+                                        Schedule_Name=equip_sched_name,
+                                        Design_Level_Calculation_Method="Watts/Area",
+                                        Watts_per_Zone_Floor_Area=rule_obj.equipment_power,
+                                        Fraction_Latent=0.0,
+                                        Fraction_Radiant=0.2,
+                                        Fraction_Lost=0.0
+                                    )
+
+                            else:
+                                # -- Domestic approach: occupant load in absolute W => use PEOPLE object in "DesignLevel"
+                                #    occupant_count=1, occupant fraction schedule=occ_sched_name or "Always 1",
+                                #    occupant activity = lumps in W
+                                # If you want occupant fraction (0..1) from 'occupancy' lumps => you can apply a second approach.
+                                # For simplicity, let's just do occupant fraction= "Always 1", occupant lumps => activity schedule
+                                # So occupant load = 1 occupant * occupant fraction=1 * activity schedule (W) => lumps W
+                                always_one_sched = "AlwaysOne"
+                                if not temp_idf.getobject("SCHEDULE:CONSTANT", "AlwaysOne"):
+                                    # create a constant schedule
+                                    temp_idf.newidfobject(
+                                        "SCHEDULE:CONSTANT",
+                                        Name="AlwaysOne",
+                                        Schedule_Type_Limits_Name="Fraction",
+                                        Hourly_Value=1.0
+                                    )
+
+                                temp_idf.newidfobject(
+                                    "PEOPLE",
+                                    Name=f"People_{usage_type}_{zone_name}",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Number_of_People_Calculation_Method="People",
+                                    Number_of_People=1.0,
+                                    Number_of_People_Schedule_Name=always_one_sched,
+                                    Fraction_Radiant=0.3,
+                                    Sensible_Heat_Fraction="AutoCalculate",
+                                    Activity_Level_Schedule_Name=activity_sched_name
+                                )
+
+                                # LIGHTS in "LightingLevel=1.0" if you want lumps in W or skip if you prefer
+                                # For example, if your 'lighting' lumps are (0..someW), do:
+                                temp_idf.newidfobject(
+                                    "LIGHTS",
+                                    Name=f"Lights_{usage_type}_{zone_name}",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Schedule_Name=light_sched_name,  # lumps => if you store W or fraction
+                                    Design_Level_Calculation_Method="LightingLevel",
+                                    Lighting_Level=1.0,  # We'll multiply by lumps if lumps are W
+                                    Fraction_Radiant=0.42,
+                                    Fraction_Visible=0.18,
+                                    Fraction_Replaceable=1.0,
+                                    EndUse_Subcategory="DomesticLights"
+                                )
+
+                                # E+ might expect lumps to be fraction or W. If lumps are absolute W, 
+                                # you'd do a "SCHEDULE:COMPACT" with e.g. 85, 450, etc. 
+                                # That multiplies 1.0 => 85..450 W. If lumps are 0..1 fraction, you'd get 0..1 W.  
+
+                                # Equipment in "EquipmentLevel=1.0"
+                                temp_idf.newidfobject(
+                                    "ELECTRICEQUIPMENT",
+                                    Name=f"Equip_{usage_type}_{zone_name}",
+                                    Zone_or_ZoneList_Name=zone_name,
+                                    Schedule_Name=equip_sched_name,   # lumps in W
+                                    Design_Level_Calculation_Method="EquipmentLevel",
+                                    Design_Level=1.0,
+                                    Fraction_Latent=0.0,
+                                    Fraction_Radiant=0.2,
+                                    Fraction_Lost=0.0,
+                                    EndUse_Subcategory="DomesticEquip"
+                                )
+
+                            # 5) Heating lumps
                             heat_sched_name = f"{usage_type}_Heat_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf, 
@@ -1605,7 +1639,7 @@ class SimstockDataframe:
                                 schedules_dict["heating"]
                             )
 
-                            # cooling lumps
+                            # 6) Cooling lumps
                             cool_sched_name = f"{usage_type}_Cool_{zone_name}"
                             _create_schedule_compact_obj(
                                 temp_idf, 
@@ -1613,8 +1647,8 @@ class SimstockDataframe:
                                 "Temperature", 
                                 schedules_dict["cooling"]
                             )
-                            
-                            # Create ThermostatSetpoint:DualSetpoint & ZoneControl:Thermostat
+                                
+                            # Thermostat setpoints
                             thermostat_name = f"{zone_name}_Thermostat"
                             temp_idf.newidfobject(
                                 "THERMOSTATSETPOINT:DUALSETPOINT",
@@ -1626,47 +1660,48 @@ class SimstockDataframe:
                                 "ZONECONTROL:THERMOSTAT",
                                 Name=f"{thermostat_name}_Controller",
                                 Zone_or_ZoneList_Name=zone_name,
-                                Control_Type_Schedule_Name="Always 4",  # or e.g. "ControlTypeSchedule"
+                                Control_Type_Schedule_Name="Always 4", 
                                 Control_1_Object_Type="ThermostatSetpoint:DualSetpoint",
                                 Control_1_Name=thermostat_name
                             )
-                            
-                            # --- (b) Add infiltration/vent if user’s rule overrides
-                            # get infiltration schedules from user rule, if any
-                            user_infil_series = rule_obj.infiltration_series_for_day(0)
-                            user_infil_ach = rule_obj.infiltration_ach()
 
-                            user_vent_series = rule_obj.ventilation_series_for_day(0)
+                            # COOLING CAPACITY from rule
+                            system_name = f"{zone_name}_HVAC"   # must match what's created in _createidfs
+                            ideal_sys = temp_idf.getobject("ZONEHVAC:IDEALLOADSAIRSYSTEM", system_name)
+                            if ideal_sys:
+                                capacity_w_m2 = rule_obj.nominal_cooling_capacity_w_m2()
+                                capacity_w    = rule_obj.nominal_cooling_capacity_w()
+
+                                if capacity_w_m2 is not None:
+                                    floor_area = row.get("area", 0.0)
+                                    max_cooling = floor_area * capacity_w_m2
+                                    ideal_sys.Cooling_Limit = "LimitCapacity"
+                                    ideal_sys.Maximum_Total_Cooling_Capacity = max_cooling
+                                elif capacity_w is not None:
+                                    max_cooling = capacity_w
+                                    ideal_sys.Cooling_Limit = "LimitCapacity"
+                                    ideal_sys.Maximum_Total_Cooling_Capacity = max_cooling
+                                # else => NoLimit
+
+                            # infiltration & ventilation
+                            user_infil_series = rule_obj.infiltration_series_for_day(zone_name, 0)
+                            user_infil_ach = rule_obj.infiltration_ach()
+                            user_vent_series = rule_obj.ventilation_series_for_day(zone_name, 0)
                             user_vent_ach = rule_obj.ventilation_ach()
-                            
-                            # We create infiltration from either user or fallback
+                                
+                            # Infiltration
                             if (user_infil_series is not None) or (user_infil_ach is not None):
-                                # user wants custom infiltration
-                                # infiltration lumps schedule
                                 if user_infil_series is not None:
-                                    # build lumps from schedule manager or custom approach
-                                    # let’s do lumps for day_of_week in [0..6]
                                     lumps = self.schedule_manager._build_weekly_lumps(
-                                        rule_obj,
-                                        what="infiltration",
-                                        clamp_fraction=False
+                                        rule_obj, "infiltration", clamp_fraction=False
                                     )
                                     infil_sched_name = f"{usage_type}_Infil_{zone_name}"
                                     _create_schedule_compact_obj(
-                                        temp_idf,
-                                        infil_sched_name,
-                                        "Fraction",  # or “Any Number”
-                                        lumps
+                                        temp_idf, infil_sched_name, "Fraction", lumps
                                     )
                                 else:
-                                    # fallback single all-day schedule if you prefer
                                     infil_sched_name = "On 24/7"
-
-                                # infiltration ACH value
-                                if user_infil_ach is not None:
-                                    infiltration_rate = user_infil_ach
-                                else:
-                                    infiltration_rate = 0.3
+                                infiltration_rate = user_infil_ach if user_infil_ach else 0.3
 
                                 temp_idf.newidfobject(
                                     "ZONEINFILTRATION:DESIGNFLOWRATE",
@@ -1681,43 +1716,28 @@ class SimstockDataframe:
                                     Velocity_Squared_Term_Coefficient=0.0
                                 )
                             else:
-                                # fallback infiltration from JSON
                                 zone_infiltration_dict = copy.deepcopy(self.infiltration_dict)
-                                zone_infiltration_dict["Name"] = zone_name + "_infiltration"
+                                zone_infiltration_dict["Name"] = f"{zone_name}_infiltration"
                                 zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone_name
-                                # use occupant schedule or “On 24/7”
                                 zone_infiltration_dict["Schedule_Name"] = "On 24/7"
-                                # etc. or fill in from row or from a column
-                                # Example:
                                 infiltration_rate = row.get("infiltration_rate", 0.2)
                                 zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
-
                                 temp_idf.newidfobject(**zone_infiltration_dict)
 
-                            # Similarly for ventilation
+                            # Ventilation
                             if (user_vent_series is not None) or (user_vent_ach is not None):
-                                # user wants custom ventilation
                                 if user_vent_series is not None:
                                     lumps = self.schedule_manager._build_weekly_lumps(
-                                        rule_obj,
-                                        what="ventilation",  # you define in rule
-                                        clamp_fraction=False
+                                        rule_obj, "ventilation", clamp_fraction=False
                                     )
                                     vent_sched_name = f"{usage_type}_Vent_{zone_name}"
                                     _create_schedule_compact_obj(
-                                        temp_idf,
-                                        vent_sched_name,
-                                        "Fraction",
-                                        lumps
+                                        temp_idf, vent_sched_name, "Fraction", lumps
                                     )
                                 else:
                                     vent_sched_name = "On 24/7"
 
-                                if user_vent_ach is not None:
-                                    ventilation_rate = user_vent_ach
-                                else:
-                                    ventilation_rate = 0.3
-
+                                ventilation_rate = user_vent_ach if user_vent_ach else 0.3
                                 temp_idf.newidfobject(
                                     "ZONEVENTILATION:DESIGNFLOWRATE",
                                     Name=f"{zone_name}_ventilation",
@@ -1729,27 +1749,21 @@ class SimstockDataframe:
                                     Constant_Term_Coefficient=1.0
                                 )
                             else:
-                                # fallback ventilation from JSON
                                 zone_ventilation_dict = copy.deepcopy(self.ventilation_dict)
-                                zone_ventilation_dict["Name"] = zone_name + "_ventilation"
+                                zone_ventilation_dict["Name"] = f"{zone_name}_ventilation"
                                 zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone_name
-                                # occupant schedule or “On 24/7”
                                 zone_ventilation_dict["Schedule_Name"] = occ_sched_name
-                                # e.g. get from row or a column
                                 ventilation_rate = row.get("ventilation_rate", 0.2)
                                 zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
-
                                 temp_idf.newidfobject(**zone_ventilation_dict)
-            
-            # After building occupant schedules, infiltration, etc, 
-            # clean up the infiltration and ventilation objects
-            # This is just belt and braces really; if things have
-            # gone wrong, this will fix them
+
+            # Cleanup infiltration & ventilation
             _cleanup_infiltration_and_ventilation(temp_idf)
             _fix_infiltration_vent_schedules(temp_idf)
-            
+                
             # Store the idf object for this built island
             self.bi_idf_list.append(temp_idf)
+
 
 
     def _createidfs(
