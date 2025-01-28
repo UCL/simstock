@@ -6,6 +6,7 @@ Module containing the base simstock objects:
 import warnings
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 import os
+import sqlite3
 import shutil
 import json
 import inspect
@@ -1701,7 +1702,7 @@ class SimstockDataframe:
                                     )
                                 else:
                                     infil_sched_name = "On 24/7"
-                                infiltration_rate = user_infil_ach if user_infil_ach else 0.3
+                                infiltration_rate = user_infil_ach if user_infil_ach else 0.8
 
                                 temp_idf.newidfobject(
                                     "ZONEINFILTRATION:DESIGNFLOWRATE",
@@ -1720,7 +1721,7 @@ class SimstockDataframe:
                                 zone_infiltration_dict["Name"] = f"{zone_name}_infiltration"
                                 zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone_name
                                 zone_infiltration_dict["Schedule_Name"] = "On 24/7"
-                                infiltration_rate = row.get("infiltration_rate", 0.2)
+                                infiltration_rate = row.get("infiltration_rate", 0.9)
                                 zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
                                 temp_idf.newidfobject(**zone_infiltration_dict)
 
@@ -1737,7 +1738,7 @@ class SimstockDataframe:
                                 else:
                                     vent_sched_name = "On 24/7"
 
-                                ventilation_rate = user_vent_ach if user_vent_ach else 0.3
+                                ventilation_rate = user_vent_ach if user_vent_ach else 0.5
                                 temp_idf.newidfobject(
                                     "ZONEVENTILATION:DESIGNFLOWRATE",
                                     Name=f"{zone_name}_ventilation",
@@ -1753,7 +1754,7 @@ class SimstockDataframe:
                                 zone_ventilation_dict["Name"] = f"{zone_name}_ventilation"
                                 zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone_name
                                 zone_ventilation_dict["Schedule_Name"] = occ_sched_name
-                                ventilation_rate = row.get("ventilation_rate", 0.2)
+                                ventilation_rate = row.get("ventilation_rate", 0.3)
                                 zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
                                 temp_idf.newidfobject(**zone_ventilation_dict)
 
@@ -1934,6 +1935,8 @@ class SimstockDataframe:
         save_idfs: bool = False,
         include_cooling: bool = True,
         include_heating: bool = True,
+        report_cooling_summary: bool = False,
+        report_heating_summary: bool = False,
         **kwargs
         ) -> pd.Series:
         """
@@ -2000,26 +2003,6 @@ class SimstockDataframe:
         # Now do output handling by default
         print("Compiling outputs")
         _make_output_csvs(self.out_dir, self._readVarsESO_path)
-        building_dict = _get_building_file_dict(self.out_dir)
+        # building_dict = _get_building_file_dict(self.out_dir)
 
-        # Populate a summary database
-        power_ts = _build_summary_database(self.out_dir, building_dict)
-
-        # Add some summary stats back into the dataframe and return that
-        self._df = _add_building_totals(
-            self.out_dir,
-            self._df,
-            include_cooling=include_cooling,
-            include_heating=include_heating
-            )
-        self._df = _add_overheating_flags(
-            self.out_dir,
-            self._df,
-            28.0,
-            10.0,
-            6.0,
-            6.0
-            )
-        print("Simulations complete.")
-
-        return power_ts, self._df
+            

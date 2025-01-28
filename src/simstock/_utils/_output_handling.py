@@ -148,7 +148,9 @@ def _process_timestamp(dt: str, year: int) -> pd.Timestamp:
 def _build_summary_database(
     out_dir: str,
     building_dict: dict,
-    efficiency_dict=None
+    efficiency_dict=None,
+    report_cooling_summary: bool = False,
+    report_heating_summary: bool = False
     ) -> pd.Series:
     """
     Builds a summary SQLite database with:
@@ -419,7 +421,12 @@ def _build_summary_database(
         conn.commit()
 
         # Return the aggregated total energy time-series
-        return total_energy
+        out_dict = {
+            "total_energy": total_energy,
+            "total_cooling": total_cooling if report_cooling_summary else None,
+            "total_heating": total_heating if report_heating_summary else None,
+        }
+        return out_dict
 
     finally:
         conn.close()

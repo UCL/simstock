@@ -99,7 +99,7 @@ def _compute_criterion3(outdoor_temp, indoor_temp, offset):
     trm = _compute_trm(daily_max_outdoor)
 
     # Calculate the adaptive comfort threshold (Tmax) using Trm
-    tmax = 0.33 * trm + 21.8 + offset
+    tmax = 0.33 * trm + 18.8 + offset
 
     # Calculate the daily maximum indoor temperatures
     daily_max_indoor = indoor_temp.resample("D").max()
@@ -183,7 +183,7 @@ def _add_overheating_flags(
                     overheating_criteria.append(c3)
 
                     # Overheated if at least 2 criteria are met
-                    is_overheated = sum(overheating_criteria) >= 2
+                    is_overheated = sum(overheating_criteria) >= 1
                     overheating_flags.append(is_overheated)
 
                 except Exception as e:
