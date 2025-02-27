@@ -427,6 +427,20 @@ Each of the database layers above have unique entries for `Dwell`, `Office`, `Sh
    The uses are fixed; they cannot be added or renamed. Instead, you can personalise the database objects belonging to `Use3` and `Use4` to create your own use types if necessary. A future planned feature is to generalise the mixed-use handling to allow more flexibility.
 
 
+.. _Database relationships:
+
+Database relationships
+^^^^^^^^^
+Some objects in the database are dependent on an object from another layer. For example, the people, lights and equipment objects will reference schedules.
+
+The figure below provides a map of these dependencies. It is important to consider these relationships when editing the database, since a change to one object can have a knock-on effect.
+
+.. figure:: Figures/QG-database-dependencies.png
+   :width: 650px
+   :alt: alternate text
+   :align: left
+
+
 Running Simstock and the simulations
 ------------------------------------
 After the input data is setup, Simstock can be run. This will take in all the information (geometry, attribute table, database) and Simstock will produce EnergyPlus models of the area. These model idf files will be output into the cwd. The plugin will then automatically launch the EnergyPlus simulations. The results will be loaded as a new layer in QGIS. The raw results will also be output into the cwd.
