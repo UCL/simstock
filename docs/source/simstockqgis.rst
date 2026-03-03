@@ -125,11 +125,11 @@ The input data for each polygon is specified via the QGIS attribute table. Simst
    * '**height**' - Building height (m) *[float]*
       * Expressed in metres.
 
-   * '**shading**' *[boolean string]*
+   * '**shading**' *[bool]*
       * FALSE - The internal condition of the building is thermally simulated, and results will be reported for the polygon. Note that the building's geometry still acts as shading in this case.
       * TRUE - Building is treated *solely* as a shading block; the internal condition of the building is not simulated. In this case, the only other attributes required for the given polygon are the UID and building height.
 
-   * '**wwr**' - Window-to-wall/glazing ratio (%) *[float]*
+   * '**wwr**' - Window-to-wall/glazing ratio (%) *[integer]*
       * The ratio between the surface area of the window to the surface area of the wall for the building. Expressed as a percentage value between 0-100.
 
    * '**nofloors**' - Number of floors *[integer]*
