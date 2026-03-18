@@ -1120,7 +1120,6 @@ class SimstockDataframe:
         except KeyError:
             pass
 
-    # This could be refactored as a map
     def collinear_exterior(self, **kwargs) -> None:
         """
         Function that removes collinear points from polygons and determines exterior surfaces.
