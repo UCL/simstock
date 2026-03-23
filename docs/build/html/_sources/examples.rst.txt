@@ -40,7 +40,8 @@ By default this will create all the EnergyPlus output files and save them into a
 
 ----
 
-.. _Data requirements:
+.. _data_requirements_label:
+
 Data requirements
 -----------------
 
@@ -49,15 +50,16 @@ The input data may be in csv, json, geopackage, or parquet formats. The rows of 
 .. admonition:: Required fields \ \ 
 
    - ``polygon`` The geometric data for the building/premises. Allowable formats:
-    - Shapely geometries
-    - ``wkb`` strings
-    - ``wkt`` strings
+     - Shapely geometries
+     - ``wkb`` strings
+     - ``wkt`` strings
    - ``osgb`` :: ``string`` or ``integer`` (unique ID)
    - ``shading`` :: ``bool`` (whether or not the building is purely a shading object)
    - ``height`` :: ``integer`` or ``float`` (height of building)
    - ``wwr`` :: ``integer`` or ``float`` (window to wall ratio)
    - ``nofloors`` :: ``integer`` (number of floors)
    - ``construction`` :: ``string`` (the type of contrucion)
+
 
 If your geometry and unique ID columns are named something other than ``polygon`` or ``osgb``, then you must specify their names during the creation of a SimstockDataframe. This is done using the ``polygon_column_name`` and ``uid_columm_name`` parameters. E.g., if you have a data file called ``test_data.csv``, whereing your geometry column is named ``building_geom`` and your osgb unique ID is called ``building_ID``, then:
 
@@ -165,7 +167,7 @@ Working with the SimstockDataframe
 
 The purpose of the SimstockDataframe is to process geographic information into a form that is valid for an EnergyPlus simulation. It also allows an interface to adjust various settings like materials and schedules. 
 
-The geographic and contextual data, such as the ``polygon`` data or the ``height`` data (see the :ref:`Data requirements` section), can be accessed in exactly the same way as the data in a `Pandas Dataframe <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>`_. Indexing works in the same way, and all other pandas-like functionality is supported, such as filtering and mapping. The section provides some examples of this functionality.
+The geographic and contextual data, such as the ``polygon`` data or the ``height`` data (see the :ref:`data_requirements_label` section), can be accessed in exactly the same way as the data in a `Pandas Dataframe <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html>`_. Indexing works in the same way, and all other pandas-like functionality is supported, such as filtering and mapping. The section provides some examples of this functionality.
 
 Accessing data
 ~~~~~~~~~~~~~~
@@ -276,11 +278,12 @@ would produce the figure below.
 
 ----
 
-.. _Specifying weather data:
+.. _specifying_weather_data_label:
+
 Specifying weather data
 -----------------------
 
-In addition to containing the geographic and contextual data outlined in the  :ref:`Data requirements` section, SimstockDataframes also contain the settings and weather data, in ``epw`` format, to be used in the EnergyPlus simulation. This weather data can be accessed via 
+In addition to containing the geographic and contextual data outlined in the  :ref:`data_requirements_label` section, SimstockDataframes also contain the settings and weather data, in ``epw`` format, to be used in the EnergyPlus simulation. This weather data can be accessed via 
 
 .. code-block:: python
 
@@ -306,11 +309,12 @@ or specifiy the weather file when you first instantiate the SimstockDataframe; e
 
 ----
 
-.. _Specifying settings:
+.. _specifying_settings_label:
+
 Specifying schedules, materials, and constructions
 --------------------------------------------------
 
-As mentioned in the :ref:`Specifying weather data` section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an ``IDF`` object.
+As mentioned in the :ref:`specifying_weather_data_label` section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an ``IDF`` object.
 
 Each of these settings can be viewed as attributes of the SimstockDataframe. E.g.:
 
@@ -532,7 +536,7 @@ This will read in all of the settings from the csv directory into your SimstockD
 Running a simulation
 --------------------
 
-Once you have read in your data, set your settings (as detailed the :ref:`Specifying settings` section), and performed your preprocessing step, you are ready to create and run an EnergyPlus simulation. This is handled using the ``IDFmanager`` object, which uses the processed SimstockDataframe to create EnergyPlus thermal zones and then run a simulation. 
+Once you have read in your data, set your settings (as detailed the :ref:`specifying_settings_label` section), and performed your preprocessing step, you are ready to create and run an EnergyPlus simulation. This is handled using the ``IDFmanager`` object, which uses the processed SimstockDataframe to create EnergyPlus thermal zones and then run a simulation. 
 
 Here is an example:
 
@@ -575,4 +579,3 @@ This will save EnergyPlus output files into a directory called ``outs/`` in your
 .. *******************
 
 .. Specifiy this here.
-

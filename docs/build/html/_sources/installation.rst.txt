@@ -55,7 +55,7 @@ You will need to handle the project's dependencies. This can be done either usin
 Using Poetry
 ^^^^^^^^^^^^
 
-First, download and install Poetry on your system by following the `installation guide <https://python-poetry.org/docs/>`_. Once installed, navigate into the base of the ``simstock`` directory and type into the command line (or power shell):
+First, download and install Poetry on your system by following the `Poetry installation guide <https://python-poetry.org/docs/>`_. Once installed, navigate into the base of the ``simstock`` directory and type into the command line (or power shell):
 
 .. code-block:: bash
 
@@ -90,7 +90,7 @@ Note the inclusion of the ``poetry run`` before the usual python commands.
 Using Conda
 ^^^^^^^^^^^
 
-First, ensure Conda is installed (see `installation guide <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_).
+First, ensure Conda is installed (see `Conda installation guide <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_).
 
 Navigate into the base of the ``Simstock`` directory and type the commands below into the commnd line, one at a time:
 
@@ -111,4 +111,3 @@ to varify the ``Simstock`` installation. Any scripts can be run by the usual pyt
 .. code-block:: bash
 
     python script.py
-

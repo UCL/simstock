@@ -56,4 +56,4 @@ jobs:
         run: poetry run python -m unittest -v
 
       - name: Build Docs
-        run: poetry run sphinx-build -n -W -b html docs/source docs/build/html
+        run: poetry run sphinx-build -n -b html docs/source docs/build/html

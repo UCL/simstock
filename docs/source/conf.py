@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/simstock/'))
 
 project = 'Simstock'
-copyright = '2023, Oliver Smith, Shyam Amrith, Ivan Korolija'
+copyright = '2023, Ivan Korolija, Oliver Smith, Shyam Amrith'
 author = 'Oliver Smith'
 release = '0.2.4'
 
@@ -27,6 +27,7 @@ extensions = [
 ]
 
 autodoc_member_order = 'bysource'
+autosectionlabel_prefix_document = True
 
 templates_path = ['_templates']
 exclude_patterns = []

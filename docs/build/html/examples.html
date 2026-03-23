@@ -108,7 +108,7 @@
 <p>Simstock is structured around two objects: the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> and the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code>. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> is an extension of a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. It allows data to be read in from a variety of formats. It also performs geometruc simplification on the data. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> also contains the EnergyPlus settings, allowing easy manipulation of materials etc. Once these settings have been set, and any geometrical simplification perfomed, the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> then creates the necessary thermal zones from the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code>. The <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> can also be used to run an EnergyPlus simulation.</p>
 <p>Below is an example of a typical Simstock work flow.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the simstock package</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
+<span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
 
 <span class="c1"># Let&#39;s say we have some test data stored in a file called test.csv.</span>
 <span class="c1"># We can read it in as a SimstockDataframe:</span>
@@ -132,21 +132,15 @@
 <hr class="docutils" />
 </section>
 <section id="data-requirements">
-<span id="id1"></span><h2>Data requirements<a class="headerlink" href="#data-requirements" title="Permalink to this heading"></a></h2>
+<span id="data-requirements-label"></span><h2>Data requirements<a class="headerlink" href="#data-requirements" title="Permalink to this heading"></a></h2>
 <p>The input data may be in csv, json, geopackage, or parquet formats. The rows of the data should represent different buildings or premises. Simstock requires the following fields for each building or premises:</p>
 <div class="admonition-required-fields admonition">
 <p class="admonition-title">Required fields </p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">polygon</span></code> The geometric data for the building/premises. Allowable formats:</p></li>
-</ul>
-<blockquote>
-<div><ul class="simple">
-<li><p>Shapely geometries</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">wkb</span></code> strings</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">wkt</span></code> strings</p></li>
-</ul>
-</div></blockquote>
-<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">polygon</span></code> The geometric data for the building/premises. Allowable formats:
+- Shapely geometries
+- <code class="docutils literal notranslate"><span class="pre">wkb</span></code> strings
+- <code class="docutils literal notranslate"><span class="pre">wkt</span></code> strings</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">osgb</span></code> :: <code class="docutils literal notranslate"><span class="pre">string</span></code> or <code class="docutils literal notranslate"><span class="pre">integer</span></code> (unique ID)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">shading</span></code> :: <code class="docutils literal notranslate"><span class="pre">bool</span></code> (whether or not the building is purely a shading object)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> :: <code class="docutils literal notranslate"><span class="pre">integer</span></code> or <code class="docutils literal notranslate"><span class="pre">float</span></code> (height of building)</p></li>
@@ -237,7 +231,7 @@
 <section id="working-with-the-simstockdataframe">
 <h2>Working with the SimstockDataframe<a class="headerlink" href="#working-with-the-simstockdataframe" title="Permalink to this heading"></a></h2>
 <p>The purpose of the SimstockDataframe is to process geographic information into a form that is valid for an EnergyPlus simulation. It also allows an interface to adjust various settings like materials and schedules.</p>
-<p>The geographic and contextual data, such as the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> data or the <code class="docutils literal notranslate"><span class="pre">height</span></code> data (see the <a class="reference internal" href="#data-requirements"><span class="std std-ref">Data requirements</span></a> section), can be accessed in exactly the same way as the data in a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. Indexing works in the same way, and all other pandas-like functionality is supported, such as filtering and mapping. The section provides some examples of this functionality.</p>
+<p>The geographic and contextual data, such as the <code class="docutils literal notranslate"><span class="pre">polygon</span></code> data or the <code class="docutils literal notranslate"><span class="pre">height</span></code> data (see the <a class="reference internal" href="#data-requirements-label"><span class="std std-ref">Data requirements</span></a> section), can be accessed in exactly the same way as the data in a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. Indexing works in the same way, and all other pandas-like functionality is supported, such as filtering and mapping. The section provides some examples of this functionality.</p>
 <section id="accessing-data">
 <h3>Accessing data<a class="headerlink" href="#accessing-data" title="Permalink to this heading"></a></h3>
 <p>The data stored in a SimstockDataframe can be accessed using the standard Pandas method. For example, the SimstockDataframe contains a column called <code class="docutils literal notranslate"><span class="pre">Height</span></code>; this can accessed like</p>
@@ -291,7 +285,7 @@
 <h2>Plotting data<a class="headerlink" href="#plotting-data" title="Permalink to this heading"></a></h2>
 <p>Simstock comes with some basic options for visualising the geographic data stored in the SimstockDataframe, utilising <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>.</p>
 <p>E.g. the following code</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 
 <span class="c1"># Assuming we have previously instantiated a SimstockDataframe called sdf</span>
 <span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;lightblue&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
@@ -318,8 +312,8 @@
 <hr class="docutils" />
 </section>
 <section id="specifying-weather-data">
-<span id="id4"></span><h2>Specifying weather data<a class="headerlink" href="#specifying-weather-data" title="Permalink to this heading"></a></h2>
-<p>In addition to containing the geographic and contextual data outlined in the  <a class="reference internal" href="#data-requirements"><span class="std std-ref">Data requirements</span></a> section, SimstockDataframes also contain the settings and weather data, in <code class="docutils literal notranslate"><span class="pre">epw</span></code> format, to be used in the EnergyPlus simulation. This weather data can be accessed via</p>
+<span id="specifying-weather-data-label"></span><h2>Specifying weather data<a class="headerlink" href="#specifying-weather-data" title="Permalink to this heading"></a></h2>
+<p>In addition to containing the geographic and contextual data outlined in the  <a class="reference internal" href="#data-requirements-label"><span class="std std-ref">Data requirements</span></a> section, SimstockDataframes also contain the settings and weather data, in <code class="docutils literal notranslate"><span class="pre">epw</span></code> format, to be used in the EnergyPlus simulation. This weather data can be accessed via</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Assuming we have previously instantiated a SimstockDataframe called sdf</span>
 <span class="n">sdf</span><span class="o">.</span><span class="n">epw</span>
 </pre></div>
@@ -329,7 +323,7 @@
 </pre></div>
 </div>
 <p>or specifiy the weather file when you first instantiate the SimstockDataframe; e.g.,</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
 
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
         <span class="s2">&quot;your_data.csv&quot;</span><span class="p">,</span>
@@ -340,10 +334,10 @@
 <hr class="docutils" />
 </section>
 <section id="specifying-schedules-materials-and-constructions">
-<span id="specifying-settings"></span><h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
-<p>As mentioned in the <a class="reference internal" href="#specifying-weather-data"><span class="std std-ref">Specifying weather data</span></a> section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an <code class="docutils literal notranslate"><span class="pre">IDF</span></code> object.</p>
+<span id="specifying-settings-label"></span><h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
+<p>As mentioned in the <a class="reference internal" href="#specifying-weather-data-label"><span class="std std-ref">Specifying weather data</span></a> section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an <code class="docutils literal notranslate"><span class="pre">IDF</span></code> object.</p>
 <p>Each of these settings can be viewed as attributes of the SimstockDataframe. E.g.:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
 
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">)</span>
 
@@ -527,7 +521,7 @@
 <hr class="docutils" />
 <section id="running-a-simulation">
 <h2>Running a simulation<a class="headerlink" href="#running-a-simulation" title="Permalink to this heading"></a></h2>
-<p>Once you have read in your data, set your settings (as detailed the <a class="reference internal" href="#specifying-settings"><span class="std std-ref">Specifying schedules, materials, and constructions</span></a> section), and performed your preprocessing step, you are ready to create and run an EnergyPlus simulation. This is handled using the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> object, which uses the processed SimstockDataframe to create EnergyPlus thermal zones and then run a simulation.</p>
+<p>Once you have read in your data, set your settings (as detailed the <a class="reference internal" href="#specifying-settings-label"><span class="std std-ref">Specifying schedules, materials, and constructions</span></a> section), and performed your preprocessing step, you are ready to create and run an EnergyPlus simulation. This is handled using the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> object, which uses the processed SimstockDataframe to create EnergyPlus thermal zones and then run a simulation.</p>
 <p>Here is an example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Say we have a processed SimstockDataframe sdf</span>
 <span class="c1"># We now use it to create an IDFmanager:</span>
@@ -559,7 +553,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith, Ivan Korolija.</p>
+    <p>&#169; Copyright 2023, Ivan Korolija, Oliver Smith, Shyam Amrith.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
