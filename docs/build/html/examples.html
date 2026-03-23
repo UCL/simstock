@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usage and basic examples &mdash; Simstock 0.0.1 documentation</title>
+  <title>Usage and basic examples &mdash; Simstock 0.2.4 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -108,7 +108,7 @@
 <p>Simstock is structured around two objects: the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> and the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code>. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> is an extension of a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">Pandas Dataframe</a>. It allows data to be read in from a variety of formats. It also performs geometruc simplification on the data. The <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code> also contains the EnergyPlus settings, allowing easy manipulation of materials etc. Once these settings have been set, and any geometrical simplification perfomed, the <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> then creates the necessary thermal zones from the <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code>. The <code class="docutils literal notranslate"><span class="pre">IDFmanager</span></code> can also be used to run an EnergyPlus simulation.</p>
 <p>Below is an example of a typical Simstock work flow.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import the simstock package</span>
-<span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># Let&#39;s say we have some test data stored in a file called test.csv.</span>
 <span class="c1"># We can read it in as a SimstockDataframe:</span>
@@ -291,7 +291,7 @@
 <h2>Plotting data<a class="headerlink" href="#plotting-data" title="Permalink to this heading"></a></h2>
 <p>Simstock comes with some basic options for visualising the geographic data stored in the SimstockDataframe, utilising <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code>.</p>
 <p>E.g. the following code</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 <span class="c1"># Assuming we have previously instantiated a SimstockDataframe called sdf</span>
 <span class="n">sim</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sdf</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;lightblue&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
@@ -329,7 +329,7 @@
 </pre></div>
 </div>
 <p>or specifiy the weather file when you first instantiate the SimstockDataframe; e.g.,</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
         <span class="s2">&quot;your_data.csv&quot;</span><span class="p">,</span>
@@ -343,7 +343,7 @@
 <span id="specifying-settings"></span><h2>Specifying schedules, materials, and constructions<a class="headerlink" href="#specifying-schedules-materials-and-constructions" title="Permalink to this heading"></a></h2>
 <p>As mentioned in the <a class="reference internal" href="#specifying-weather-data"><span class="std std-ref">Specifying weather data</span></a> section, SimstockDataframes contain the settings that specify the EnergyPlus simulation: materials, constructions, and schedules. The SimstockDataframe acts as an interface to view and edit each of these. Internally, these settings are stored as an <code class="docutils literal notranslate"><span class="pre">IDF</span></code> object.</p>
 <p>Each of these settings can be viewed as attributes of the SimstockDataframe. E.g.:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">)</span>
 
@@ -559,7 +559,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith.</p>
+    <p>&#169; Copyright 2023, Oliver Smith, Shyam Amrith, Ivan Korolija.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

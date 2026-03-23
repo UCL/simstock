@@ -1,6 +1,9 @@
 # SimStock
 
 ![Tests](https://github.com/UCL/simstock/actions/workflows/test.yaml/badge.svg) ![Tests](https://github.com/UCL/simstock/actions/workflows/release.yaml/badge.svg)
+![Docs](https://github.com/UCL/simstock/actions/workflows/docs.yaml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/simstock/badge/?version=latest)](https://simstock.readthedocs.io/en/latest/?badge=latest)
+
 
 SimStock is a python package for taking geographical and contextual data, processing it into a form compatible with EnergyPlus, and running thermal simulations. This provides an intermediate layer between various data types and EnergyPlus, allowing urban building energy models (UBEMs) to be run straightforwardly from QGIS etc. The software performs the following setps: 
 
@@ -57,3 +60,8 @@ Below is an example of a typical Simstock work flow.
 ```
 
 
+## Community and Support
+
+Contributions to SimStock are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidance on testing, bug reporting and constributing code.
+
+Contribution to SimStock is covered by [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

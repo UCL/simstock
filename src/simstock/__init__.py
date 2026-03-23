@@ -23,6 +23,5 @@ __all__ = [
     "read_json",
     "get_gpkg_layer_names",
     "IDFmanager",
-    "create_idf",
     "plot"
     ]

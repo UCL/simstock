@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimised / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -31,6 +31,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST 
+.vscode/
 
 # Django stuff:
 *.log
@@ -38,7 +39,7 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal 
 
-# E+ data 
+# E+ data
 src/simstock/idf_files
 
 # Ignore any local jupyter notebooks
@@ -54,3 +55,5 @@ processed_croydon.csv
 simstock_v2_pt2_selection_202203170624.csv
 processed_sdf
 model_idfs/
+test.idd
+paper.md

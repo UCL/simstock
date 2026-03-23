@@ -1349,11 +1349,7 @@ class IDFmanager:
         dict
 
     :raises TypeError:
-        If the input data is not of type *str*, :class:`simstock.SimstockDataframe`, or :class:`DataFrame`
-    :raises FileNotFoundError: 
-        If the input data is a file name and path, but that file cannot be found
-    :raises IOError: 
-        If the input data is a file name and path, but that file cannot be read
+        If the input data is not of type :class:`simstock.SimstockDataframe`
     :raises SimstockException:
         If the input data does not contain the necessary fields. (See data specification above)
 
@@ -1407,18 +1403,14 @@ class IDFmanager:
         self.data_fname = data_fname
         self.save_building_count = save_building_count
 
-        # Try and load data from simstockdataframe
-        try:
-            self._get_df(data)
-        except TypeError as exc:
-            msg = f"Type: {type(data)} cannot be loaded."
-            raise TypeError(msg) from exc
-        except FileNotFoundError as exc:
-            msg = f"File {data} not found."
-            raise FileNotFoundError(msg) from exc
-        except IOError as exc:
-            msg = f"Data in {data} cannot be read."
-            raise IOError(msg) from exc
+        # IDFmanager expects a fully configured SimstockDataframe.
+        if not isinstance(data, SimstockDataframe):
+            msg = (
+                "IDFmanager expects a SimstockDataframe. "
+                "Use sim.read_csv/read_parquet/read_json/read_geopackage_layer first."
+            )
+            raise TypeError(msg)
+        self._get_df(data)
         
         # Validate the df
         if not self.is_valid:
@@ -1436,8 +1428,7 @@ class IDFmanager:
         # Set the weather file to be the one specified in the 
         # SimstockDataframe, unless user has specified it 
         # as a keyword argument at initialisation
-        if epw == None:
-            self.epw = data.epw
+        self.epw = data.epw if epw is None else epw
 
         # Get simstock directory
         current_file_path = inspect.getframeinfo(inspect.currentframe()).filename
@@ -1473,57 +1464,27 @@ class IDFmanager:
     def __repr__(self) -> str:
         return "IDFobject()"
 
-    def _get_df(self,
-                data: Union[SimstockDataframe, DataFrame, str]
-                ) -> None:
+    def _get_df(self, data: SimstockDataframe) -> None:
         """
-        Function to extract the simstock or pandas
-        data frame from `data` and store it in 
-        the IDFcreator object.
+        Function to extract the dataframe from a SimstockDataframe
+        and store it in the IDFmanager object.
 
         :param data:
-            The data that should contain somehow a dataframe.
-            This data can either already be a simstock or 
-            pandas data frame, or it can be a filename 
-            (including path) containing such.
+            Input data in SimstockDataframe format.
         :type data: 
-            :class:`simstock.SimstockDataframe`, :class:`DataFrame`, str
+            :class:`simstock.SimstockDataframe`
 
         :Raises TypeError:
             If the data is an invalid format.
         """
 
-        # Extract the data frame using the appropriate
-        # method based on type
-        if type(data) == SimstockDataframe:
+        if isinstance(data, SimstockDataframe):
             self._sdf_to_df(data)
-        elif type(data) == DataFrame:
-            self._df_to_df(data)
-        elif type(data) == str:
-            self._str_to_df(data)
         else:
-            raise TypeError  
+            raise TypeError
     
     def _sdf_to_df(self, data: SimstockDataframe) -> None:
         self.df = data._df.copy()
-
-    def _df_to_df(self, data: DataFrame) -> None:
-        self.df = data.copy()
-
-    def _str_to_df(self, data: str) -> None:
-        if not os.path.exists(data):
-            raise FileNotFoundError
-        try:
-            if data["-3:"] == "csv":
-                self.df = pd.read_csv(data)
-            elif data["-7:"] == "parquet":
-                self.df = pd.read_parquet(data)
-            elif data["-4:"] == "json":
-                self.df = pd.read_json(data)
-            else:
-                raise IOError
-        except IOError as exc:
-            raise IOError from exc
         
     @property
     def is_valid(self) -> bool:
@@ -1553,7 +1514,7 @@ class IDFmanager:
             return value.to_numpy()[0]
         except KeyError:
             return 0.0
-    
+
 
     def create_model_idf(self, **kwargs) -> None:
         """
@@ -1601,9 +1562,11 @@ class IDFmanager:
             self.data_fname = _generate_unique_string()
 
         if os.path.exists(self.out_dir):
-                shutil.rmtree(self.out_dir)
-        else:
-            os.makedirs(self.out_dir)
+            shutil.rmtree(self.out_dir)
+        os.makedirs(self.out_dir, exist_ok=True)
+
+        # Store model IDFs created by either bi_mode branch.
+        self.bi_idf_list = []
             
         # If the dataframe contains a built island column
         if self.bi_mode:
@@ -1616,7 +1579,6 @@ class IDFmanager:
                     )
 
             # Iterate over unique building islands
-            self.bi_idf_list = []
             for bi in self.df['bi'].unique().tolist():
 
                 # Revert idf to settings idf
@@ -1686,10 +1648,14 @@ class IDFmanager:
             if self.buffer_radius != 0:
                 df1 = pd.concat([df1, shading_df]).drop_duplicates(subset="osgb", keep="first")
 
-            # If shading radius is zero, i.e. no shading is to be included
+            # If shading radius is zero
             elif self.buffer_radius == 0:
-                # Overwrite touching column with empty data to avoid errors
-                df1.loc[:, "touching"] = ["[]"] * len(df1)
+                # then we overwrite the touching column with empty data to avoid errors
+                df1.loc[:, "touching"] = pd.Series(
+                    [[] for _ in range(len(df1))],
+                    index=df1.index,
+                    dtype=object,
+                )
 
             # Only create idf if it is not entirely composed of shading blocks
             shading_vals_temp = df1['shading'].to_numpy()
@@ -1862,8 +1828,6 @@ class IDFmanager:
             # This will have created, by default a directory called outs/
             # containing at least one subdirectory containing E+ outputs
         """
-
-
         self.__dict__.update(kwargs)
 
         # Iterate over the list of idfs that have been created

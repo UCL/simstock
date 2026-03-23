@@ -3,9 +3,9 @@ name = "simstock"
 version = "0.2.4"
 description = "A Python package for building stock simulations"
 authors = [
-    "Olly Smith <olly.smith@ucl.ac.uk>",
     "Ivan Korolija <i.korolija@ucl.ac.uk>",
-    "Shyam Amrith <email>"
+    "Shyam Amrith <email>",
+    "Olly Smith <olly.smith@ucl.ac.uk>"
     ]
 readme = "README.md"
 packages = [{include = "simstock", from = "src"}]

@@ -16,34 +16,21 @@ jobs:
           python-version: 3.9
 
       # Cache the installation of Poetry itself, e.g. the next step. This prevents the workflow
-      # from installing Poetry every time, which can be slow. Note the use of the Poetry version
-      # number in the cache key, and the "-0" suffix: this allows you to invalidate the cache
-      # manually if/when you want to upgrade Poetry, or if something goes wrong. This could be
-      # mildly cleaner by using an environment variable, but I don't really care.
+      # from installing Poetry every time which can be slow
       - name: Cache Poetry install
         uses: actions/cache@v3
         with:
           path: ~/.local
           key: poetry-1.4.2
 
-      # Install Poetry. You could do this manually, or there are several actions that do this.
-      # `snok/install-poetry` seems to be minimal yet complete, and really just calls out to
-      # Poetry's default install script, which feels correct. I pin the Poetry version here
-      # because Poetry does occasionally change APIs between versions and I don't want my
-      # actions to break if it does.
-      #
-      # The key configuration value here is `virtualenvs-in-project: true`: this creates the
-      # venv as a `.venv` in your testing directory, which allows the next step to easily
-      # cache it.
+      # Install Poetry
       - uses: snok/install-poetry@v1
         with:
           version: 1.4.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
-      # Cache your dependencies (i.e. all the stuff in your `pyproject.toml`). Note the cache
-      # key: if you're using multiple Python versions, or multiple OSes, you'd need to include
-      # them in the cache key. I'm not, so it can be simple and just depend on the poetry.lock.
+      # Cache your dependencies
       - name: Cache deps
         id: cache-deps
         uses: actions/cache@v3
@@ -51,21 +38,22 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
-      # Install dependencies. `--no-root` means "install all dependencies but not the project
-      # itself", which is what you want to avoid caching _your_ code. The `if` statement
-      # ensures this only runs on a cache miss.
+      # Install dependencies
       - run: poetry install --no-interaction --no-root
         if: steps.cache-deps.outputs.cache-hit != 'true'
 
-      # Now install _your_ project. This isn't necessary for many types of projects -- particularly
-      # things like Django apps don't need this. But it's a good idea since it fully-exercises the
-      # pyproject.toml and makes that if you add things like console-scripts at some point that
-      # they'll be installed and working.
+      # Now install _your_ project
       - run: poetry install --no-interaction
 
       # And finally run tests
+      # Need to grab the IDD file for the tests to run, and we don't want to include it in the repo, so we download it here
       - name: Download Energy+ IDD file
         run: wget https://raw.githubusercontent.com/NREL/EnergyPlus/2ad5b542c761abde2179225b08ce7af0b94a5d3b/idd/versions/V8-9-0-Energy%2B.idd -O test.idd
 
       - name: Run Tests
-        run: IDD_FILE="$(pwd)/test.idd" poetry run python -m unittest
+        env:
+          IDD_FILE: ${{ github.workspace }}/test.idd
+        run: poetry run python -m unittest -v
+
+      - name: Build Docs
+        run: poetry run sphinx-build -n -W -b html docs/source docs/build/html
