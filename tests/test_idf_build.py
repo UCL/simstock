@@ -18,7 +18,7 @@ class IDFTestBuild(unittest.TestCase):
         read input data, preprocess geometry, create an IDF, and save it.
         We assert that one IDF is created, that it contains some zones, and that the file is saved.
         """
-        csv_path = Path(__file__).resolve().parent / "data" / "buildings1.csv"
+        csv_path = Path(__file__).resolve().parent / "buildings1.csv"
 
         sdf = sim.read_csv(str(csv_path))
         sdf.preprocessing()
@@ -50,7 +50,7 @@ class IDFTestBuild(unittest.TestCase):
         (this input data is known to have 5 separate physically unconnected building clusters, 
         so we expect 5 built islands and thus 5 IDFs).
         """
-        csv_path = Path(__file__).resolve().parent / "data" / "buildings1.csv"
+        csv_path = Path(__file__).resolve().parent / "buildings1.csv"
 
         sdf = sim.read_csv(str(csv_path))
         sdf.preprocessing()
