@@ -16,8 +16,7 @@ from shapely.geometry import (
     LineString,
     MultiPolygon
 )
-from pandas.core.series import Series
-from pandas.core.frame import DataFrame
+from pandas import Series, DataFrame
 from simstock.base import SimstockDataframe
 
 

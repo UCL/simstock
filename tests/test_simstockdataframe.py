@@ -106,6 +106,56 @@ class SimstockDataframeSetUpTestCase(unittest.TestCase):
         """
         with self.assertRaises(TypeError):
             SimstockDataframe(self.df_invalid_geoms)
+            
+    def test_touching_lists_are_independent(self) -> None:
+        """ 
+        Regression test to check that the lists in the ``touching`` column are independent 
+        of each other after upgrading to later pandas version syntax.
+        """
+        df = pd.DataFrame({
+            "id": ["a", "b"],
+            "osgb": ["osgb_a", "osgb_b"],
+            "polygon": [
+                "POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))",
+                "POLYGON ((3 0, 3 1, 4 1, 4 0, 3 0))",
+            ],
+            "shading": [False, False],
+            "height": [5.0, 5.0],
+            "wwr": [0.2, 0.2],
+            "nofloors": [2, 2],
+            "construction": ["x", "x"],
+        })
+        sdf = SimstockDataframe(df)
+        sdf.polygon_topology()
+
+        self.assertIsNot(sdf._df.at[0, "touching"], sdf._df.at[1, "touching"])
+        sdf._df.at[0, "touching"].append("probe")
+        self.assertEqual(sdf._df.at[0, "touching"], ["probe"])
+        self.assertEqual(sdf._df.at[1, "touching"], [])
+
+    def test_osgb_string_dtype_in_topology(self) -> None:
+        """ 
+        Regression test to check that the osgb column is still of string dtype
+        after upgrading to later pandas version syntax in the polygon_topology method.
+        """
+        df = pd.DataFrame({
+            "id": ["a", "b"],
+            "osgb": pd.Series(["osgb_a", "osgb_b"], dtype="string"),
+            "polygon": [
+                "POLYGON ((0 0, 0 1, 1 1, 1 0, 0 0))",
+                "POLYGON ((1 0, 1 1, 2 1, 2 0, 1 0))",
+            ],
+            "shading": [False, False],
+            "height": [5.0, 5.0],
+            "wwr": [0.2, 0.2],
+            "nofloors": [2, 2],
+            "construction": ["x", "x"],
+        })
+        sdf = SimstockDataframe(df)
+        sdf.polygon_topology()
+
+        self.assertIn("osgb_b", sdf._df.at[0, "touching"])
+        self.assertIn("osgb_a", sdf._df.at[1, "touching"])
 
     def test_simstockdf_invalid_df_osgbnames(self) -> None:
         """
