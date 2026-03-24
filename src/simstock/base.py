@@ -928,7 +928,11 @@ class SimstockDataframe:
         # Create column named ``touching``. Each element
         # is an empty list
         length_range = range(self._df.__len__())
-        self._df['touching'] = pd.Series([] for _ in length_range)
+        self._df["touching"] = pd.Series(
+            [[] for _ in length_range],
+            index=self._df.index,
+            dtype=object,
+        )
 
         # Iterate over all possible pairs of polygons in the data
         for i, j in itertools.combinations(length_range, 2):
@@ -943,8 +947,8 @@ class SimstockDataframe:
                 # also add i's osbg to j's 
                 # ``touching`` column
                 if algs._is_touching(poly_i, poly_j):
-                    self._df['touching'][i].append(osgb_j)
-                    self._df['touching'][j].append(osgb_i)
+                    self._df.at[i, "touching"].append(osgb_j)
+                    self._df.at[j, "touching"].append(osgb_i)
             
             # If polygon i intersects polygon j, then the
             # _is_touching function will throw a ValueError.
@@ -993,7 +997,11 @@ class SimstockDataframe:
         # Create column named ``poly_within_hole``. Each element
         # is an empty list
         length_range = range(self._df.__len__())
-        self._df['poly_within_hole'] = pd.Series([] for _ in length_range)
+        self._df["poly_within_hole"] = pd.Series(
+            [[] for _ in length_range],
+            index=self._df.index,
+            dtype=object,
+        )
 
         # Iterate over the cartesian product of polygons
         for i, j in itertools.product(length_range, length_range):
@@ -1001,7 +1009,7 @@ class SimstockDataframe:
 
                 # If polygon i has interiors, then check if polygon j
                 # touches polygon i
-                touches = self._df['osgb'][j] in self._df['touching'][i]
+                touches = self._df.at[j, "osgb"] in self._df.at[i, "touching"]
 
                 # Now iterate over the interiors of polygon i
                 for item in self._df['polygon'][i].interiors:
@@ -1010,10 +1018,8 @@ class SimstockDataframe:
                     # If the interior both touchs and contains j, then we know
                     # j exists within a hole inside i
                     # We make a note of this in the `poly_within_hole` column
-                    if item_poly.contains(self._df['polygon'][j]) and touches:
-                        self._df['poly_within_hole'][i].append(
-                            self._df['osgb'][j]
-                            )
+                    if item_poly.contains(self._df.at[j, "polygon"]) and touches:
+                        self._df.at[i, "poly_within_hole"].append(self._df.at[j, "osgb"])
                        
     def _polygon_buffer(self) -> None:
         for i, polygon in enumerate(self._df['polygon']):

@@ -14,7 +14,7 @@ packages = [{include = "simstock", from = "src"}]
 python = ">=3.11,<3.14"
 shapely = ">=2.0,<3.0"
 eppy = ">=0.5.63,<0.6.0"
-pandas = ">=2.2,<3.0"
+pandas = ">=2.2,<4.0"
 numpy = ">=1.26,<3.0"
 matplotlib = ">=3.8,<4.0"
 geopandas = ">=1.0,<2.0"
