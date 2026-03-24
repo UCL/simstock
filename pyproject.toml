@@ -11,14 +11,14 @@ readme = "README.md"
 packages = [{include = "simstock", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
-shapely = "^2.0.1"
-eppy = ">=0.5.63,<0.5.64"
-pandas = "^1.5.3"
-numpy = "^1.24.2"
-fastparquet = "^2023.2.0"
-matplotlib = "^3.7.1"
-geopandas = "^0.13.2"
+python = ">=3.11,<3.14"
+shapely = ">=2.0,<3.0"
+eppy = ">=0.5.63,<0.6.0"
+pandas = ">=2.2,<3.0"
+numpy = ">=1.26,<3.0"
+matplotlib = ">=3.8,<4.0"
+geopandas = ">=1.0,<2.0"
+pyarrow = ">=16,<20"
 
 [tool.poetry.group.dev.dependencies]
 pdoc = "^13.0.0"
@@ -34,6 +34,7 @@ name = "simstock"
 [tool.poetry2conda.dependencies]
 eppy = {name = "eppy-core", channel = "conda-forge"}
 geopandas = {channel = "conda-forge"}
+pyarrow = {channel = "conda-forge"}
 
 [build-system]
 requires = ["poetry-core"]

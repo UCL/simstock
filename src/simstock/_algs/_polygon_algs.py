@@ -18,7 +18,7 @@ from shapely.geometry import (
     MultiLineString,
     MultiPolygon
 )
-from pandas.core.frame import DataFrame
+from pandas import DataFrame
 import simstock._algs._coords_algs as calgs
 from simstock._utils._serialisation import _load_gdf
 from shapely.wkt import loads

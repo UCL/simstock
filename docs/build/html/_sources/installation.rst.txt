@@ -5,16 +5,16 @@ Installation
 
 .. admonition:: Requirements \ \ 
 
-   Simstock requires an installation of EnergyPlus, and Python version 3.8 or above. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
+   SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
 
-Simstock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.
+SimStock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.
 
 ----
 
 Installation from PyPI (recommended)
 ====================================
 
-After ensuring you have EnergyPlus installed, and python >= v3.8, simply run 
+After ensuring you have EnergyPlus installed, simply run 
 
 .. code-block:: bash
 
@@ -27,7 +27,7 @@ in the command line.
 Installation for developers
 ===========================
 
-First, clone the Simstock repository from `Github <https://github.com/UCL/simstock>`_ by typing into the command line: 
+First, clone the SimStock repository from `Github <https://github.com/UCL/simstock>`_ by typing into the command line: 
 
 .. code-block:: bash
 
@@ -45,7 +45,7 @@ Alternatively, download the `zip <https://github.com/UCL/simstock>`_ from Github
 | ├── tests/
 | └── docs/
 
-The source code for Simstock is contained within ``src/simstock``. The ``docs`` folder contains the documentation you are currently reading. The ``tests`` folder contains unit tests that can be run with Python's unittest suite. 
+The source code for SimStock is contained within ``src/simstock``. The ``docs`` folder contains the documentation you are currently reading. The ``tests`` folder contains unit tests that can be run with Python's unittest suite. 
 
 Handling dependencies
 *********************
@@ -106,7 +106,7 @@ The interactive python shell can now be invoked simply by typing ``python`` into
 
     import simstock as sim
 
-to varify the ``Simstock`` installation. Any scripts can be run by the usual python command; e.g., to run a script you have created called ``script.py``:
+to varify the ``simstock`` installation. Any scripts can be run by the usual python command; e.g., to run a script you have created called ``script.py``:
 
 .. code-block:: bash
 

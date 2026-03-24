@@ -18,10 +18,10 @@ Full docs are available at [ReadtheDocs](https://simstock.readthedocs.io/en/late
 
 ## Installation
 
-> **_NOTE:_**  SimStock requires Python 3.8 or above, as well as an EnergyPlus installation.
+> **_NOTE:_**  SimStock requires Python 3.11 to 3.13, as well as an EnergyPlus installation.
 
 
-After ensuring you have EnergyPlus installed, and python >= v3.8, simply run 
+After ensuring you have EnergyPlus installed, and Python 3.11-3.13, simply run 
 
 ``` bash
     pip install simstock

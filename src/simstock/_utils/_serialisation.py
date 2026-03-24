@@ -13,7 +13,7 @@ from typing import Any, Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from pandas.core.frame import DataFrame
+from pandas import DataFrame
 from shapely import wkt
 from shapely.errors import GEOSException
 from shapely.geometry.base import BaseGeometry

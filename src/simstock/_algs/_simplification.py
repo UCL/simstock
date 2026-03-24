@@ -14,7 +14,7 @@ from shapely.ops import unary_union
 import simstock._algs._coords_algs as calgs
 import simstock._algs._polygon_algs as algs
 from ast import literal_eval
-from pandas.core.frame import DataFrame
+from pandas import DataFrame
 
 # Should be redundant -- test this
 tolerance = 0.1

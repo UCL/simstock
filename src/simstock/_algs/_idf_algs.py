@@ -8,8 +8,8 @@ import math
 from shapely.geometry import LineString
 import simstock._algs._coords_algs as calgs
 import simstock._algs._polygon_algs as palgs
-from pandas.core.series import Series
-from pandas.core.frame import DataFrame
+from pandas import Series
+from pandas import DataFrame
 from eppy.modeleditor import IDF
 from shapely.geometry import Polygon
 
