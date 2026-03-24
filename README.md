@@ -1,6 +1,7 @@
 # SimStock
 
-![Tests](https://github.com/UCL/simstock/actions/workflows/test.yaml/badge.svg) [![PyPI version](https://img.shields.io/pypi/v/simstock.svg)](https://pypi.org/project/simstock/)
+[![Tests](https://github.com/UCL/simstock/actions/workflows/test.yaml/badge.svg)](https://github.com/UCL/simstock/actions/workflows/test.yaml)
+[![PyPI version](https://img.shields.io/pypi/v/simstock.svg)](https://pypi.org/project/simstock/)
 [![Documentation Status](https://readthedocs.org/projects/simstock/badge/?version=latest)](https://simstock.readthedocs.io/en/latest/?badge=latest)
 
 
