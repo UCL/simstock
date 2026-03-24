@@ -559,23 +559,3 @@ This will save EnergyPlus output files into a directory called ``outs/`` in your
     # To save EnergyPlus output files into some other directory:
     simulation = sim.IDFmanager(sdf, out_dir="some_other_directory")
 
-
-.. Finer grained control
-.. ---------------------
-
-.. This can be done like this. 
-
-
-.. Using built island mode
-.. -----------------------
-
-.. That can be switched on or off like this.
-
-
-.. Common problems
-.. ---------------
-
-.. .idd file not found
-.. *******************
-
-.. Specifiy this here.

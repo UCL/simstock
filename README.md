@@ -19,7 +19,7 @@ Full docs are available at [ReadtheDocs](https://simstock.readthedocs.io/en/late
 
 ## Installation
 
-> **_NOTE:_**  SimStock requires Python 3.11 to 3.13, as well as an EnergyPlus installation.
+> **_NOTE:_**  SimStock requires Python 3.11 to 3.13, as well as an EnergyPlus 8.9 installation.
 
 
 After ensuring you have EnergyPlus installed, and Python 3.11-3.13, simply run 
@@ -58,6 +58,12 @@ Below is an example of a typical Simstock work flow.
     # Run the energy plus simulation
     simulation.run()
 ```
+
+### Troubleshooting
+
+SimStock requires an EnergyPlus 8.9 install. In particular, SimStock needs access to the Energy+.idd file that ships with EnergyPlus. 
+If SimStock cannot find your EnergyPlus IDD file, it will emit a ``FileNotFoundError``, see the
+[IDD troubleshooting guide](https://simstock.readthedocs.io/en/latest/installation.html#idd-troubleshooting).
 
 
 ## Community and Support
