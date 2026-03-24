@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from matplotlib.collections import PatchCollection
-from matplotlib.axes._axes import Axes
+from matplotlib.axes import Axes
 from shapely.geometry import (
     Polygon,
     Point,

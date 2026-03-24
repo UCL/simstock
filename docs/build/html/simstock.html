@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Instructions for developers" href="devinstructions.html" />
-    <link rel="prev" title="Simstock QGIS Plugin Documentation" href="simstockqgis.html" /> 
+    <link rel="prev" title="SimStock QGIS Plugin Documentation" href="simstockqgis.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,7 +46,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a></li>
-<li class="toctree-l1"><a class="reference internal" href="simstockqgis.html">Simstock QGIS Plugin Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simstockqgis.html">SimStock QGIS Plugin Documentation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Simstock API docs</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#the-simstock-simstockdataframe-class">The <code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.SimstockDataframe</span></code> class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#simstock.SimstockDataframe"><code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code></a><ul>
@@ -189,7 +189,7 @@ your ID column is named something other than <code class="docutils literal notra
 </dl>
 <p><strong>See also</strong>: <a class="reference internal" href="#simstock.IDFmanager" title="simstock.IDFmanager"><code class="xref py py-class docutils literal notranslate"><span class="pre">IDFmanager</span></code></a></p>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># Create a SimstockDataframe from an already existing dict d</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">SimstockDataframe</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
@@ -637,7 +637,7 @@ SimstockDataframe properties</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;path/to/file.csv&quot;</span><span class="p">)</span>
 <span class="n">sdf</span><span class="o">.</span><span class="n">remove_duplicate_coords</span><span class="p">()</span>
 </pre></div>
@@ -660,7 +660,7 @@ SimstockDataframe properties</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;path/to/file.csv&quot;</span><span class="p">)</span>
 <span class="n">sdf</span><span class="o">.</span><span class="n">polygon_topology</span><span class="p">()</span>
 </pre></div>
@@ -944,7 +944,7 @@ i.e., it must contain a <code class="docutils literal notranslate"><span class="
 shapely geometry data or similar as well as a column of unique IDs called “osgb”. Additional columns “shading”, “height”, “wwr”, “nofloors” and “construction” must be present. See <a class="reference internal" href="#simstock.SimstockDataframe" title="simstock.SimstockDataframe"><code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.SimstockDataframe</span></code></a> for full data specifications.</p>
 <p>If the unique ID and geometry data columns are named something other than <code class="docutils literal notranslate"><span class="pre">osgb</span></code> and <code class="docutils literal notranslate"><span class="pre">polygon</span></code> respectively, then their names can be specified using the kwargs. See example below.</p>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># To read in data with that has column names osgb, polygon etc</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;/pathtofile/examplefile.csv&quot;</span><span class="p">)</span>
@@ -992,7 +992,7 @@ i.e., it must contain a <code class="docutils literal notranslate"><span class="
 shapely geometry data or similar as well as a column of unique IDs called “osgb”. Additional columns “shading”, “height”, “wwr”, “nofloors” and “construction” must be present. See <a class="reference internal" href="#simstock.SimstockDataframe" title="simstock.SimstockDataframe"><code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.SimstockDataframe</span></code></a> for full data specifications.</p>
 <p>If the unique ID and geometry data columns are named something other than <code class="docutils literal notranslate"><span class="pre">osgb</span></code> and <code class="docutils literal notranslate"><span class="pre">polygon</span></code> respectively, then their names can be specified using the kwargs. See example below.</p>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># To read in data with that has column names osgb, polygon etc</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="s2">&quot;/pathtofile/examplefile.json&quot;</span><span class="p">)</span>
@@ -1040,7 +1040,7 @@ i.e., it must contain a <code class="docutils literal notranslate"><span class="
 shapely geometry data or similar as well as a column of unique IDs called “osgb”. Additional columns “shading”, “height”, “wwr”, “nofloors” and “construction” must be present. See <a class="reference internal" href="#simstock.SimstockDataframe" title="simstock.SimstockDataframe"><code class="xref py py-class docutils literal notranslate"><span class="pre">simstock.SimstockDataframe</span></code></a> for full data specifications.</p>
 <p>If the unique ID and geometry data columns are named something other than <code class="docutils literal notranslate"><span class="pre">osgb</span></code> and <code class="docutils literal notranslate"><span class="pre">polygon</span></code> respectively, then their names can be specified using the kwargs. See example below.</p>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># To read in data with that has column names osgb, polygon etc</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;/pathtofile/examplefile.parquet&quot;</span><span class="p">)</span>
@@ -1091,7 +1091,7 @@ docs for full list of attributes, properties and methods.</p>
 <p>The name of the layer must be specified. If you do not know the layer names in your geopackage, you can use the helper function <a class="reference internal" href="#simstock.get_gpkg_layer_names" title="simstock.get_gpkg_layer_names"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_gpkg_layer_names()</span></code></a>.</p>
 </div>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># To read in data with that has column names osgb, polygon etc</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_geopackage_layer</span><span class="p">(</span><span class="s2">&quot;/pathtofile/examplefile.gpkg&quot;</span><span class="p">,</span> <span class="s2">&quot;my_layer&quot;</span><span class="p">)</span>
@@ -1124,7 +1124,7 @@ docs for full list of attributes, properties and methods.</p>
 <dd><p>Function to get thr names of all geographical layers from a
 geopackage file</p>
 <p class="rubric">Example</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># Print all the layer names in a file</span>
 <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_gpkg_layer_names</span><span class="p">(</span><span class="s2">&quot;pathto/myfile.gpkg&quot;</span><span class="p">):</span>
@@ -1169,8 +1169,8 @@ the plotted geometric data</p>
 </dl>
 <p class="rubric">Example</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Basic usage</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># Create test simstockdataframe</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;testdata.csv&quot;</span><span class="p">)</span>
@@ -1182,8 +1182,8 @@ the plotted geometric data</p>
 </div>
 <p>Advanced example: plotting to an already existing
 axes in order to add a background image</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">simstock</span> <span class="k">as</span> <span class="nn">sim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
 
 <span class="c1"># Create test simstockdataframe</span>
 <span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;testdata.csv&quot;</span><span class="p">)</span>
@@ -1225,7 +1225,7 @@ axes in order to add a background image</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="simstockqgis.html" class="btn btn-neutral float-left" title="Simstock QGIS Plugin Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="simstockqgis.html" class="btn btn-neutral float-left" title="SimStock QGIS Plugin Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="devinstructions.html" class="btn btn-neutral float-right" title="Instructions for developers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

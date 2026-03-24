@@ -9,7 +9,6 @@ various file types. Currently supported:
 
 import pandas as pd
 import sqlite3
-import fastparquet
 from simstock.base import SimstockDataframe
 import geopandas as gpd
 
@@ -219,7 +218,7 @@ def read_parquet(path: str, **kwargs) -> SimstockDataframe:
     :raises TypeError:
         If ``parquet`` file does not conform to Simstock standards.
     """
-    df = pd.read_parquet(path)
+    df = pd.read_parquet(path, engine="pyarrow")
     return SimstockDataframe(df, **kwargs)
 
 
@@ -274,78 +273,3 @@ def read_json(path: str, **kwargs) -> SimstockDataframe:
     """
     df = pd.read_json(path)
     return SimstockDataframe(df, **kwargs)
-
-
-# def to_csv(sdf: SimstockDataframe, path: str, **kwargs) -> None:
-#     """
-#     Function to save a SimstockDataframe object to a csv file
-
-#     Parameters
-#     ----------
-
-#     ``sdf : SimstockDataframe``
-#         The simstock dataframe to save.
-
-#     ``path : str``
-#         The file path to save to.
-
-#     ``kwargs : dict``
-#         optional keyword argumetns to be passed to the
-#         SimstockDataframe initialiser. See SimstockDataframe
-#         docs for details of allowed arguments.
-
-
-#     Example
-#     -------
-#     ```python
-#     sim.to_csv(sdf, "/pathtofile/examplefile.csv")
-#     ```
-#     """
-#     sdf._df.to_csv(path, **kwargs)
-
-
-# def to_parquet(sdf: SimstockDataframe, path: str) -> None:
-#     """
-#     Function to save a SimstockDataframe object to a parquet file
-
-#     Parameters
-#     ----------
-
-#     ``sdf : SimstockDataframe``
-#         The simstock dataframe to save.
-
-#     ``path : str``
-#         The file path to save to.
-
-
-#     Example
-#     -------
-#     ```python
-#     sim.to_csv(sdf, "/pathtofile/examplefile.parquet")
-#     ```
-#     """
-#     sdf._df.to_parquet(path, engine="fastparquet")
-
-
-# def to_json(sdf: SimstockDataframe, path: str) -> None:
-#     """
-#     Function to save a SimstockDataframe object to a json file
-
-#     Parameters
-#     ----------
-
-#     ``sdf : SimstockDataframe``
-#         The simstock dataframe to save.
-
-#     ``path : str``
-#         The file path to save to.
-
-
-#     Example
-#     -------
-#     ```python
-#     sim.to_csv(sdf, "/pathtofile/examplefile.json")
-#     ```
-#     """
-#     sdf._df.to_json(path)
-

@@ -1,4 +1,4 @@
-Simstock QGIS Plugin Documentation
+SimStock QGIS Plugin Documentation
 **********************************
 
 .. _Installation:
@@ -16,11 +16,11 @@ The non-LTR versions are likely to work too, however sometimes the Python versio
 Installation
 ------------
 
-1. The Simstock QGIS plugin is available from the official `QGIS Python Plugins Repository <https://plugins.qgis.org/plugins/>`_. It can be installed directly in QGIS by navigating to Plugins -> Manage and install plugins.
+1. The SimStock QGIS plugin is available from the official `QGIS Python Plugins Repository <https://plugins.qgis.org/plugins/>`_. It can be installed directly in QGIS by navigating to Plugins -> Manage and install plugins.
     
 2. After installing this, you may need to restart QGIS.
     
-3. If the Simstock QGIS plugin has successfully been installed, you should be able to see it listed under the 'Plugins' list as well as a new icon on the toolbar.
+3. If the SimStock QGIS plugin has successfully been installed, you should be able to see it listed under the 'Plugins' list as well as a new icon on the toolbar.
 
 4. The plugin will now need to be setup - see the next section for information.
 

@@ -15,7 +15,7 @@ from typing import Any, Union
 import platform
 import itertools
 import pandas as pd
-from pandas.core.frame import DataFrame
+from pandas import DataFrame
 import shapely as shp
 from shapely.geometry import (
     Polygon,

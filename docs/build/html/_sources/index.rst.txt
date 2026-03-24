@@ -1,4 +1,4 @@
-.. Simstock documentation master file
+.. SimStock documentation master file
 
 .. figure:: logo.svg
    :width: 450px
@@ -7,10 +7,10 @@
    :alt: alternate text
    :align: left
 
-Simstock 
+SimStock 
 ========
 
-Simstock is a python package for taking geographical data, processing it into a form compatible with EnergyPlus, and running thermal simulations. SimStock thereby provides an intermediate
+SimStock is a python package for taking geographical data, processing it into a form compatible with EnergyPlus, and running thermal simulations. SimStock thereby provides an intermediate
 layer between various data types and EnergyPlus, allowing
 UBEMs to be run straightforwardly from QGIS etc. The software performs the following setps: 
 
@@ -19,7 +19,7 @@ UBEMs to be run straightforwardly from QGIS etc. The software performs the follo
    3. Running the simulation and handling the results. 
 
 
-Simstock is provided by  `Building Stock Lab <https://www.ucl.ac.uk/bartlett/energy/research/building-stock-lab>`_ within UCL's Bartlett Energy Institute `Bartlett Energy Institute <https://www.ucl.ac.uk/bartlett/energy/>`_.
+SimStock is provided by  `Building Stock Lab <https://www.ucl.ac.uk/bartlett/energy/research/building-stock-lab>`_ within UCL's Bartlett Energy Institute `Bartlett Energy Institute <https://www.ucl.ac.uk/bartlett/energy/>`_.
 
 ---- 
 

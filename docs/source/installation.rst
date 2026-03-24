@@ -5,7 +5,7 @@ Installation
 
 .. admonition:: Requirements \ \ 
 
-   SimStock requires an installation of EnergyPlus. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
+   SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
 
 SimStock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.
 
