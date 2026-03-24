@@ -26,5 +26,5 @@ authors:
 license: "MIT"
 repository-code: "https://github.com/UCL/simstock"
 url: "https://simstock.readthedocs.io/"
-version: "0.2.5"
-date-released: 2026-03-23
+version: "0.3.0"
+date-released: 2026-03-24
