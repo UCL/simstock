@@ -31,8 +31,8 @@ EnergyPlus IDD file location
 
 SimStock requires an EnergyPlus 8.9 IDD file (typically called ``Energy+.idd``).
 When creating a ``SimstockDataframe``, SimStock first looks for 
-a user-specified IDD location. User can specify the location of their IDD file
-either by seeting it with an environment variable:
+a user-specified IDD location. Users can specify the location of their IDD file
+either by setting it with an environment variable:
 
 .. code-block:: bash
 
@@ -46,12 +46,13 @@ or by passing the location as an optional parameter in Python, e.g.:
    sdf = sim.read_csv("test.csv", idd_file="/path/to/Energy+.idd")
 
 If no user-specified location is found, SimStock looks for an IDD file in the default locations:
+
    - Windows: ``C:\\EnergyPlus*\\Energy+.idd``
    - macOS/Linux: ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``
 
 If no IDD file is found, SimStock raises ``FileNotFoundError``.
 
----
+----
 
 Installation for developers
 ===========================
