@@ -32,6 +32,7 @@ share/python-wheels/
 *.egg
 MANIFEST 
 .vscode/
+.venv/
 
 # Django stuff:
 *.log
