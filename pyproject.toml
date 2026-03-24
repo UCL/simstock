@@ -11,9 +11,9 @@ readme = "README.md"
 packages = [{include = "simstock", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8,<3.12"
 shapely = "^2.0.1"
-eppy = "^0.5.63"
+eppy = ">=0.5.63,<0.5.64"
 pandas = "^1.5.3"
 numpy = "^1.24.2"
 fastparquet = "^2023.2.0"
