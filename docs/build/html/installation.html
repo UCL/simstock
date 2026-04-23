@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; SimStock 0.2.6 documentation</title>
+  <title>Installation &mdash; SimStock 0.3.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -45,15 +45,11 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#installation-from-pypi-recommended">Installation from PyPI (recommended)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation-for-developers">Installation for developers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#handling-dependencies">Handling dependencies</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#using-poetry">Using Poetry</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#using-conda">Using Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation-from-pypi-recommended">Installation from PyPI (recommended)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#energyplus-idd-file-location">EnergyPlus IDD file location</a></li>
 </ul>
 </li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#installation-for-developers">Installation for developers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html">Usage and basic examples</a></li>
@@ -90,7 +86,7 @@
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
 <div class="admonition-requirements admonition">
 <p class="admonition-title">Requirements </p>
-<p>SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus. It is recommended that EnergyPlus .idd files are installed to <code class="docutils literal notranslate"><span class="pre">C:\\EnergyPlus*\\Energy+.idd</span></code> if using Windows, where <code class="docutils literal notranslate"><span class="pre">*</span></code> will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either <code class="docutils literal notranslate"><span class="pre">/usr/local/EnergyPlus*/Energy+.idd</span></code> or <code class="docutils literal notranslate"><span class="pre">/Applications/EnergyPlus*/Energy+.idd</span></code>. Silicone Mac users should also have Rosetta installed.</p>
+<p>SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus 8.9. It is recommended that EnergyPlus .idd files are installed to <code class="docutils literal notranslate"><span class="pre">C:\\EnergyPlus*\\Energy+.idd</span></code> if using Windows, where <code class="docutils literal notranslate"><span class="pre">*</span></code> will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either <code class="docutils literal notranslate"><span class="pre">/usr/local/EnergyPlus*/Energy+.idd</span></code> or <code class="docutils literal notranslate"><span class="pre">/Applications/EnergyPlus*/Energy+.idd</span></code>. Silicone Mac users should also have Rosetta installed.</p>
 </div>
 <p>SimStock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.</p>
 <hr class="docutils" />
@@ -101,6 +97,30 @@
 </pre></div>
 </div>
 <p>in the command line.</p>
+<hr class="docutils" />
+<section id="energyplus-idd-file-location">
+<span id="idd-troubleshooting"></span><h3>EnergyPlus IDD file location<a class="headerlink" href="#energyplus-idd-file-location" title="Permalink to this heading"></a></h3>
+<p>SimStock requires an EnergyPlus 8.9 IDD file (typically called <code class="docutils literal notranslate"><span class="pre">Energy+.idd</span></code>).
+When creating a <code class="docutils literal notranslate"><span class="pre">SimstockDataframe</span></code>, SimStock first looks for
+a user-specified IDD location. Users can specify the location of their IDD file
+either by setting it with an environment variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">IDD_FILE</span><span class="o">=</span><span class="s2">&quot;/path/to/Energy+.idd&quot;</span>
+</pre></div>
+</div>
+<p>or by passing the location as an optional parameter in Python, e.g.:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">simstock</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sim</span>
+<span class="n">sdf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;test.csv&quot;</span><span class="p">,</span> <span class="n">idd_file</span><span class="o">=</span><span class="s2">&quot;/path/to/Energy+.idd&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If no user-specified location is found, SimStock looks for an IDD file in the default locations:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Windows: <code class="docutils literal notranslate"><span class="pre">C:\\EnergyPlus*\\Energy+.idd</span></code></p></li>
+<li><p>macOS/Linux: <code class="docutils literal notranslate"><span class="pre">/usr/local/EnergyPlus*/Energy+.idd</span></code> or <code class="docutils literal notranslate"><span class="pre">/Applications/EnergyPlus*/Energy+.idd</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>If no IDD file is found, SimStock raises <code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code>.</p>
+</section>
 </section>
 <hr class="docutils" />
 <section id="installation-for-developers">
@@ -122,11 +142,7 @@
 <div class="line">└── docs/</div>
 </div>
 <p>The source code for SimStock is contained within <code class="docutils literal notranslate"><span class="pre">src/simstock</span></code>. The <code class="docutils literal notranslate"><span class="pre">docs</span></code> folder contains the documentation you are currently reading. The <code class="docutils literal notranslate"><span class="pre">tests</span></code> folder contains unit tests that can be run with Python’s unittest suite.</p>
-<section id="handling-dependencies">
-<h3>Handling dependencies<a class="headerlink" href="#handling-dependencies" title="Permalink to this heading"></a></h3>
 <p>You will need to handle the project’s dependencies. This can be done either using <a class="reference external" href="https://python-poetry.org/">Poetry</a> (recommended), or Conda. This is what the <code class="docutils literal notranslate"><span class="pre">.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">.lock</span></code> and <code class="docutils literal notranslate"><span class="pre">.yaml</span></code> files are for.</p>
-<section id="using-poetry">
-<h4>Using Poetry<a class="headerlink" href="#using-poetry" title="Permalink to this heading"></a></h4>
 <p>First, download and install Poetry on your system by following the <a class="reference external" href="https://python-poetry.org/docs/">Poetry installation guide</a>. Once installed, navigate into the base of the <code class="docutils literal notranslate"><span class="pre">simstock</span></code> directory and type into the command line (or power shell):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install
 </pre></div>
@@ -148,9 +164,6 @@
 </pre></div>
 </div>
 <p>Note the inclusion of the <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span></code> before the usual python commands.</p>
-</section>
-<section id="using-conda">
-<h4>Using Conda<a class="headerlink" href="#using-conda" title="Permalink to this heading"></a></h4>
 <p>First, ensure Conda is installed (see <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/install/index.html">Conda installation guide</a>).</p>
 <p>Navigate into the base of the <code class="docutils literal notranslate"><span class="pre">Simstock</span></code> directory and type the commands below into the commnd line, one at a time:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yaml
@@ -166,8 +179,6 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>script.py
 </pre></div>
 </div>
-</section>
-</section>
 </section>
 </section>
 

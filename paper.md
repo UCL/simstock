@@ -1,13 +1,17 @@
 ---
 title: 'SimStock: An Urban building energy modelling platform for complex urban neighbourhoods'
 tags:
-  - 
+  - Python
+  - Urban Building Energy Modelling
+  - EnergyPlus
+  - GIS
+  - QGIS
 authors:
   - name: Ivan Korolija
     orcid: 0000-0000-0000-0000
-    affiliation: "2" 
+    affiliation: "1" 
   - name: Oliver Smith
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0001-7698-0103
     affiliation: "2" 
   - name: Shyam Amrith
     orcid: 0000-0000-0000-0000
@@ -27,7 +31,7 @@ affiliations:
 
 date:   30 March 2026
 bibliography: JOSS_references.bib
-
+---
 
 
 # Summary
@@ -52,19 +56,16 @@ Simstock is structured around two objects: the SimstockDataframe and the IDFmana
 
 # Research impact statement
 
-`SimStock` has been under continuous development since 2013. Amongst other applications, `Simstock` has been used to evaluate retrofit options in a historic city centre in France [@claude_evaluating_2019], explore the impact of input uncertainty on model outcomes in London [@fennell_comparison_2021] evaluate thermal comfort in informal settlements in Lima [@oraiopoulos_reducing_2024] and explore development pathways in Ahmedabad [@mathur_assessing_2021].`Simstock` is a core component of - a core component of the Modelling Platform for Schools [@schwartz_modelling_2022], used to evaluate London school-building stock climate resilience [@schwartz_school_2024] and has been used as a teaching tool [@fennell_developing_2023], to support the development of a stock-level optimisation methodology [@amrith_optimising_2025], to evaluate smart-energy transition pathways [@kourgiozou_development_2023] and predict district heating/cooling energy demand [@al-saegh_investigating_2025] of a university campus, to develop a methodology for planning, modelling, and evaluating renewable energy communities with a focus on urban contexts [@barone_planning_2024], to assess the impact of the future climate on the performance of retrofit strategies in Beijing, China [@deng_simulation-based_2023] and to model domestic, commercial and industrial heating/electricity demand for the Scottish islands [@matthew_time-use_2023].
+`SimStock` has been under continuous development since 2013. Amongst other applications, `Simstock` has been used to evaluate retrofit options in a historic city centre in France [@claude_evaluating_2019], explore the impact of input uncertainty on model outcomes in London [@fennell_comparison_2021], evaluate thermal comfort in informal settlements in Lima [@oraiopoulos_reducing_2024] and explore development pathways in Ahmedabad [@mathur_assessing_2021]. `Simstock` is a core component of the Modelling Platform for Schools [@schwartz_modelling_2022], used to evaluate London school-building stock climate resilience [@schwartz_school_2024] and has been used as a teaching tool [@fennell_developing_2023], to support the development of a stock-level optimisation methodology [@amrith_optimising_2025], to evaluate smart-energy transition pathways [@kourgiozou_development_2023] and predict district heating/cooling energy demand [@al-saegh_investigating_2025] of a university campus, to develop a methodology for planning, modelling, and evaluating renewable energy communities with a focus on urban contexts [@barone_planning_2024], to assess the impact of the future climate on the performance of retrofit strategies in Beijing, China [@deng_simulation-based_2023] and to model domestic, commercial and industrial heating/electricity demand for the Scottish islands [@matthew_time-use_2023].
 
-
-Since its initial release in September 2023, the Simstock QGIS plugin has received 4,925 total downloads as of March 2026.
-[include something about the number of downloads here]
-
+Since its initial release in September 2023, the Simstock QGIS plugin has received 4,925 total downloads, while the SimStock core package has been downloaded 13k times from PyPI, as of March 2026.
 
 # AI usage disclosure
 
-No generative AI tools were used in the development of this software, the writing of this manuscript, or the preparation of supporting materials.
+This manuscript and the source code of `SimStock` were written by the authors without generative AI, with source code development spanning several years and early core work predating the current GitHub repo. OpenAI Codex 5.3 was used to assist with packaging-related and code documentation tasks: CI pipeline development, docstring generation, and additional in-code comments. All AI-assisted outputs were reviewed and validated by the authors.
 
 # Acknowledgements
 
-We acknowledge contributions from Steve Evans and Rob Liddiard to support data processing for the UK, CEPT University, Ahmedabad, hosts of the first teaching initiatives using `SimSock`. Computational resources have been provided via UCL Research Computing Platforms (Legion@UCL, Myriad@UCL). Work on this paper is supported by the iNUMBER project, [grant number EP/R008620/1] and Engineering and Physical Sciences Research Council (EPSRC) Research Councils UK (RCUK) Centre for Energy  Epidemiology grant EP/K011839/1.
+We acknowledge contributions from Steve Evans and Rob Liddiard to support data processing for the UK, CEPT University, Ahmedabad, hosts of the first teaching initiatives using `SimStock`. Computational resources have been provided via UCL Research Computing Platforms (Legion@UCL, Myriad@UCL). Work on this paper is supported by the iNUMBER project, [grant number EP/R008620/1] and Engineering and Physical Sciences Research Council (EPSRC) Research Councils UK (RCUK) Centre for Energy  Epidemiology grant EP/K011839/1.
 
 # References

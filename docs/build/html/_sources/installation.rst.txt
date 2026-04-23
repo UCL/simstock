@@ -5,7 +5,7 @@ Installation
 
 .. admonition:: Requirements \ \ 
 
-   SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
+   SimStock supports Python versions 3.11 to 3.13 and requires an installation of EnergyPlus 8.9. It is recommended that EnergyPlus .idd files are installed to ``C:\\EnergyPlus*\\Energy+.idd`` if using Windows, where ``*`` will be the EnergyPlus version number. If using Mac or Linux, it is recommended to have the EnergyPlus idd files at either ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``. Silicone Mac users should also have Rosetta installed.
 
 SimStock can either being installed from PyPI (recommended for most users) or in developer mode by cloning the repository.
 
@@ -21,6 +21,36 @@ After ensuring you have EnergyPlus installed, simply run
     pip install simstock
 
 in the command line.
+
+----
+
+.. _idd-troubleshooting:
+
+EnergyPlus IDD file location
+----------------------------
+
+SimStock requires an EnergyPlus 8.9 IDD file (typically called ``Energy+.idd``).
+When creating a ``SimstockDataframe``, SimStock first looks for 
+a user-specified IDD location. Users can specify the location of their IDD file
+either by setting it with an environment variable:
+
+.. code-block:: bash
+
+   export IDD_FILE="/path/to/Energy+.idd"
+
+or by passing the location as an optional parameter in Python, e.g.:
+
+.. code-block:: python
+
+   import simstock as sim
+   sdf = sim.read_csv("test.csv", idd_file="/path/to/Energy+.idd")
+
+If no user-specified location is found, SimStock looks for an IDD file in the default locations:
+
+   - Windows: ``C:\\EnergyPlus*\\Energy+.idd``
+   - macOS/Linux: ``/usr/local/EnergyPlus*/Energy+.idd`` or ``/Applications/EnergyPlus*/Energy+.idd``
+
+If no IDD file is found, SimStock raises ``FileNotFoundError``.
 
 ----
 
