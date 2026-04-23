@@ -12,6 +12,7 @@ authors:
     affiliation: "1" 
   - name: Oliver Smith
     orcid: 0000-0001-7698-0103
+    corresponding: true
     affiliation: "2" 
   - name: Shyam Amrith
     orcid: 0000-0000-0000-0000
@@ -24,12 +25,12 @@ authors:
     affiliation: "2" 
   
 affiliations:
- - name: UCL Institute for Environmental Design and Engineering, United Kingdom
+ - name: Institute for Environmental Design and Engineering, University College London, United Kingdom
    index: 1
- - name: UCL Energy Institute, United Kingdom
+ - name: Energy Institute, University College London, United Kingdom
    index: 2
 
-date:   30 March 2026
+date:   23 April 2026
 bibliography: JOSS_references.bib
 ---
 
