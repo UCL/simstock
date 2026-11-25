@@ -8,20 +8,20 @@ tags:
   - QGIS
 authors:
   - name: Ivan Korolija
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0003-3153-6070
     affiliation: "1" 
   - name: Oliver Smith
     orcid: 0000-0001-7698-0103
     corresponding: true
     affiliation: "2" 
   - name: Shyam Amrith
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-8726-891X
     affiliation: "2"
   - name: Pamela Fennell
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-3935-3466
     affiliation: "2" 
   - name: Paul Ruyssevelt
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-4406-4458
     affiliation: "2" 
   
 affiliations:
